@@ -1,7 +1,11 @@
-import React from 'react'
+import { ModulePageShell } from "@/components/module-page-shell";
 
-export default function page() {
+export default function DashboardDevPage() {
   return (
-    <div>page</div>
-  )
+    <ModulePageShell
+      section="Principal"
+      title="Dashboard Dev"
+      description="Espaco reservado para o painel executivo do time de desenvolvimento."
+    />
+  );
 }

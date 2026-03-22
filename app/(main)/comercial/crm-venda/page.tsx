@@ -1,3 +1,11 @@
+import { ModulePageShell } from "@/components/module-page-shell";
+
 export default function CommercialCrmVendaPage() {
-  return <div>page</div>;
+  return (
+    <ModulePageShell
+      section="Comercial"
+      title="CRM de Venda"
+      description="Espaco reservado para a operacao de CRM de venda e acompanhamento do pipeline comercial."
+    />
+  );
 }

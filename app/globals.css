@@ -128,3 +128,28 @@
     @apply font-sans;
   }
 }
+
+@layer utilities {
+  .scrollbar-minimal {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(15 23 42 / 0.18) transparent;
+  }
+
+  .scrollbar-minimal::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-minimal::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-minimal::-webkit-scrollbar-thumb {
+    border-radius: 9999px;
+    background: rgb(15 23 42 / 0.18);
+  }
+
+  .scrollbar-minimal:hover::-webkit-scrollbar-thumb {
+    background: rgb(15 23 42 / 0.28);
+  }
+}

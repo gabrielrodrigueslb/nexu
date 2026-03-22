@@ -1,0 +1,272 @@
+import type { GoalsState, Lead, Origin, SDR, Ticket, User } from './types';
+
+export const users: User[] = [
+  { id: 'u1', name: 'Bianca Souza', sector: 'Closer Comercial' },
+  { id: 'u2', name: 'Lucas Lima', sector: 'Closer Comercial' },
+  { id: 'u3', name: 'Carla Mendes', sector: 'Closer Comercial' },
+];
+
+export const origins: Origin[] = [
+  { id: 'o1', name: 'Inbound' },
+  { id: 'o2', name: 'Indicacao' },
+  { id: 'o3', name: 'Meta Ads' },
+  { id: 'o4', name: 'Evento' },
+];
+
+export const sdrs: SDR[] = [
+  { id: 's1', name: 'Marina' },
+  { id: 's2', name: 'Leo' },
+  { id: 's3', name: 'Joao' },
+];
+
+export const leads: Lead[] = [
+  {
+    id: 'L1',
+    company: 'Atlas Energia',
+    createdAt: '2026-03-02',
+    status: 'Leads',
+    value: 5200,
+    sdrId: 's1',
+    originId: 'o2',
+    tasks: [
+      {
+        title: 'Primeiro contato',
+        type: 'reuniao',
+        done: false,
+        date: '2026-03-20',
+      },
+    ],
+  },
+  {
+    id: 'L2',
+    company: 'Prisma Log',
+    createdAt: '2026-03-03',
+    status: 'Qualificados',
+    value: 8600,
+    sellerId: 'u2',
+    sdrId: 's2',
+    originId: 'o1',
+    tasks: [
+      { title: 'Demo comercial', type: 'demo', done: true, date: '2026-03-15' },
+      {
+        title: 'Apresentacao executiva',
+        type: 'reuniao',
+        done: false,
+        date: '2026-03-21',
+      },
+    ],
+  },
+  {
+    id: 'L3',
+    company: 'Nova Clin',
+    createdAt: '2026-03-04',
+    status: 'Oportunidade Futura',
+    value: 4700,
+    sellerId: 'u3',
+    sdrId: 's1',
+    originId: 'o3',
+    tasks: [
+      {
+        title: 'Visita tecnica',
+        type: 'visita',
+        done: false,
+        date: '2026-03-22',
+      },
+    ],
+  },
+  {
+    id: 'L4',
+    company: 'ValeNet',
+    createdAt: '2026-03-05',
+    status: 'Apresentacao',
+    value: 9400,
+    sellerId: 'u1',
+    sdrId: 's3',
+    originId: 'o4',
+    tasks: [
+      {
+        title: 'Reuniao de proposta',
+        type: 'reuniao',
+        done: true,
+        date: '2026-03-14',
+      },
+    ],
+  },
+  {
+    id: 'L5',
+    company: 'Orbit Telecom',
+    createdAt: '2026-03-07',
+    status: 'Em Negociacao',
+    value: 12800,
+    sellerId: 'u2',
+    sdrId: 's2',
+    originId: 'o1',
+    tasks: [
+      {
+        title: 'Negociacao final',
+        type: 'demo',
+        done: false,
+        date: '2026-03-18',
+      },
+    ],
+  },
+  {
+    id: 'L6',
+    company: 'Aster Labs',
+    createdAt: '2026-03-08',
+    status: 'No Show',
+    value: 3900,
+    sellerId: 'u1',
+    sdrId: 's3',
+    originId: 'o4',
+    tasks: [
+      {
+        title: 'Nova tentativa',
+        type: 'reuniao',
+        done: false,
+        date: '2026-03-20',
+      },
+    ],
+  },
+  {
+    id: 'L7',
+    company: 'Urban Food',
+    createdAt: '2026-03-10',
+    status: 'Ganho',
+    value: 8100,
+    sellerId: 'u3',
+    sdrId: 's2',
+    originId: 'o1',
+    tasks: [
+      {
+        title: 'Kickoff inicial',
+        type: 'reuniao',
+        done: true,
+        date: '2026-03-12',
+      },
+    ],
+  },
+  {
+    id: 'L8',
+    company: 'Solaris Hub',
+    createdAt: '2026-03-12',
+    status: 'Ganho',
+    value: 10400,
+    sellerId: 'u1',
+    sdrId: 's1',
+    originId: 'o2',
+    tasks: [
+      { title: 'Demo final', type: 'demo', done: true, date: '2026-03-13' },
+      {
+        title: 'Visita de implantacao',
+        type: 'visita',
+        done: true,
+        date: '2026-03-16',
+      },
+    ],
+  },
+  {
+    id: 'L9',
+    company: 'Nexa Tech',
+    createdAt: '2026-03-13',
+    status: 'Perdido',
+    value: 5300,
+    sellerId: 'u3',
+    sdrId: 's1',
+    originId: 'o3',
+    tasks: [
+      {
+        title: 'Ultimo follow-up',
+        type: 'reuniao',
+        done: false,
+        date: '2026-03-19',
+      },
+    ],
+  },
+  {
+    id: 'L10',
+    company: 'Bravus Seg',
+    createdAt: '2026-03-18',
+    status: 'Ganho',
+    value: 9600,
+    sellerId: 'u1',
+    originId: 'o2',
+    tasks: [
+      {
+        title: 'Documentacao inicial',
+        type: 'visita',
+        done: false,
+        date: '2026-03-23',
+      },
+    ],
+  },
+];
+
+export const tickets: Ticket[] = [
+  {
+    id: 'T1',
+    createdAt: '2026-03-10',
+    status: 'pendente_financeiro',
+    createdBy: 'u3',
+    assignee: 'u3',
+    setupAmount: 3200,
+    recurringAmount: 890,
+  },
+  {
+    id: 'T2',
+    createdAt: '2026-03-12',
+    status: 'pagamento_confirmado',
+    createdBy: 'u1',
+    assignee: 'u1',
+    setupAmount: 4100,
+    recurringAmount: 1190,
+  },
+  {
+    id: 'T3',
+    createdAt: '2026-03-14',
+    status: 'em_implantacao',
+    createdBy: 'u2',
+    assignee: 'u2',
+    setupAmount: 3800,
+    recurringAmount: 980,
+  },
+  {
+    id: 'T4',
+    createdAt: '2026-03-18',
+    status: 'concluido',
+    createdBy: 'u1',
+    assignee: 'u1',
+    setupAmount: 5200,
+    recurringAmount: 1480,
+  },
+  {
+    id: 'T5',
+    createdAt: '2026-03-19',
+    status: 'cancelado',
+    createdBy: 'u3',
+    assignee: 'u3',
+    setupAmount: 1800,
+    recurringAmount: 450,
+  },
+];
+
+export const defaultGoals: GoalsState = {
+  leadsTotal: 14,
+  salesTotal: 32000,
+  sdrs: { s1: 5, s2: 5, s3: 4 },
+  sellers: { u1: 14000, u2: 11000, u3: 10000 },
+  activitiesMeta: 10,
+  activitiesIndividual: { u1: 4, u2: 3, u3: 3 },
+};
+
+export const taskLabels: Record<string, string> = {
+  reuniao: 'Reuniao',
+  demo: 'Demo',
+  visita: 'Visita',
+};
+
+export const taskColors: Record<string, string> = {
+  reuniao: '#2563eb',
+  demo: '#7c3aed',
+  visita: '#d97706',
+};
