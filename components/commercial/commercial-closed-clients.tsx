@@ -1,0 +1,1686 @@
+'use client';
+
+import { useDeferredValue, useEffect, useMemo, useState } from 'react';
+import {
+  CalendarDays,
+  CheckCircle2,
+  CircleOff,
+  ClipboardList,
+  Copy,
+  Download,
+  ExternalLink,
+  FileText,
+  Filter,
+  Globe,
+  Hammer,
+  Mail,
+  Plus,
+  Search,
+  User,
+  WalletCards,
+  X,
+} from 'lucide-react';
+
+import { leads as initialLeads, tickets as initialTickets, users } from '@/components/data';
+import { ModalShell } from '@/components/modal-shell';
+import type { TicketStatus } from '@/components/types';
+import { formatMoney } from '@/components/utils';
+
+import {
+  createEmptyPriceRows,
+  INTEGRATION_CATALOG,
+  PRODUCT_CATALOG,
+  type CommercialPriceRow,
+} from './types';
+
+type ClosedClientTicketType = 'novo' | 'inclusao';
+
+type ClosedClientTask = {
+  id: string;
+  label: string;
+  done: boolean;
+  assigneeId?: string;
+  dueDate?: string;
+};
+
+type ClosedClientLog = {
+  id: string;
+  message: string;
+  createdAt: string;
+};
+
+type ClosedClientTicketRecord = {
+  id: string;
+  proto: string;
+  leadId?: string;
+  type: ClosedClientTicketType;
+  company: string;
+  cnpj: string;
+  contact: string;
+  phone: string;
+  email: string;
+  website: string;
+  instance: string;
+  plan: string;
+  paymentMethod: string;
+  installment: string;
+  assigneeId?: string;
+  technicalAssigneeId?: string;
+  status: TicketStatus;
+  csStatus: string;
+  createdAt: string;
+  updatedAt?: string;
+  notes: string;
+  products: CommercialPriceRow[];
+  integrations: CommercialPriceRow[];
+  tasks: ClosedClientTask[];
+  logs: ClosedClientLog[];
+};
+
+type TicketFilterValue =
+  | 'all'
+  | 'historico'
+  | TicketStatus
+  | ClosedClientTicketType;
+
+const PLAN_OPTIONS = ['Lite', 'Basico', 'Profissional', 'Unico'];
+const PAYMENT_OPTIONS = ['Boleto Bancario', 'Pix', 'Cartao de Credito', 'Transferencia'];
+const INSTALLMENT_OPTIONS = ['A vista', '2x', '3x', '4x', '5x', '6x', '10x', '12x'];
+
+function ClockStatusIcon(props: React.ComponentProps<typeof ClipboardList>) {
+  return <ClipboardList {...props} />;
+}
+
+const STATUS_META: Record<
+  TicketStatus,
+  { label: string; badge: string; icon: React.ComponentType<{ className?: string }>; step: number }
+> = {
+  pendente_financeiro: {
+    label: 'Ag. Pagamento',
+    badge: 'border-[#fde68a] bg-[#fffbeb] text-[#d97706]',
+    icon: ClockStatusIcon,
+    step: 0,
+  },
+  pagamento_confirmado: {
+    label: 'Pagamento Confirmado',
+    badge: 'border-[#ddd6fe] bg-[#f5f3ff] text-[#7c3aed]',
+    icon: CheckCircle2,
+    step: 1,
+  },
+  em_implantacao: {
+    label: 'Em Implantacao',
+    badge: 'border-[#bfdbfe] bg-[#eff6ff] text-[#2563eb]',
+    icon: Hammer,
+    step: 2,
+  },
+  concluido: {
+    label: 'Concluido',
+    badge: 'border-[#a7f3d0] bg-[#ecfdf5] text-[#059669]',
+    icon: CheckCircle2,
+    step: 3,
+  },
+  cancelado: {
+    label: 'Cancelado',
+    badge: 'border-[#fecaca] bg-[#fef2f2] text-[#dc2626]',
+    icon: CircleOff,
+    step: 0,
+  },
+};
+
+const TYPE_META: Record<ClosedClientTicketType, { label: string; badge: string }> = {
+  novo: {
+    label: 'Novo',
+    badge: 'border-[#bfdbfe] bg-[#eff6ff] text-[#2563eb]',
+  },
+  inclusao: {
+    label: 'Inclusao',
+    badge: 'border-[#ddd6fe] bg-[#f5f3ff] text-[#7c3aed]',
+  },
+};
+
+const JOURNEY_STEPS = ['Cadastro', 'Pagamento', 'Implantacao', 'Concluido'];
+
+function makeId(prefix: string) {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function todayIsoDate() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function normalizeText(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function onlyDigits(value: string) {
+  return value.replace(/\D/g, '');
+}
+
+function formatCnpjInput(value: string) {
+  const digits = onlyDigits(value).slice(0, 14);
+
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 5) return `${digits.slice(0, 2)}.${digits.slice(2)}`;
+  if (digits.length <= 8) return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5)}`;
+  if (digits.length <= 12) {
+    return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8)}`;
+  }
+
+  return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8, 12)}-${digits.slice(12)}`;
+}
+
+function formatPhoneInput(value: string) {
+  const digits = onlyDigits(value).slice(0, 11);
+
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+}
+
+function normalizeWebsiteInput(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+}
+
+function inDateRange(date: string, from: string, to: string) {
+  if (from && date < from) return false;
+  if (to && date > to) return false;
+  return true;
+}
+
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function formatDate(value?: string) {
+  if (!value) return '-';
+  const [year, month, day] = value.split('-');
+  if (!year || !month || !day) return value;
+  return `${day}/${month}/${year}`;
+}
+
+function copyText(value: string) {
+  if (!value) return;
+  if (typeof navigator !== 'undefined' && navigator.clipboard) {
+    navigator.clipboard.writeText(value).catch(() => undefined);
+  }
+}
+
+function sumSetupValue(ticket: Pick<ClosedClientTicketRecord, 'products' | 'integrations'>) {
+  return [...ticket.products, ...ticket.integrations]
+    .filter((item) => item.enabled)
+    .reduce((sum, item) => sum + item.setup, 0);
+}
+
+function sumRecurringValue(ticket: Pick<ClosedClientTicketRecord, 'products' | 'integrations'>) {
+  return [...ticket.products, ...ticket.integrations]
+    .filter((item) => item.enabled)
+    .reduce((sum, item) => sum + item.recurring, 0);
+}
+
+function buildSeedTickets(): ClosedClientTicketRecord[] {
+  return initialTickets.map((ticket, index) => {
+    const linkedLead =
+      initialLeads.find((lead) => lead.generatedTicketId === ticket.id) ??
+      initialLeads.find((lead) => lead.status === 'Ganho' && index % 2 === 0);
+    const plan = linkedLead?.isLite ? 'Lite' : 'Profissional';
+    const defaultProducts = createEmptyPriceRows(PRODUCT_CATALOG).map((item, itemIndex) =>
+      itemIndex === 0
+        ? {
+            ...item,
+            name: `Plataforma ${plan}`,
+            enabled: true,
+            setup: ticket.setupAmount,
+            recurring: ticket.recurringAmount,
+          }
+        : item,
+    );
+    const defaultIntegrations = createEmptyPriceRows(INTEGRATION_CATALOG).map((item, itemIndex) =>
+      itemIndex === 0 && linkedLead?.paymentMethod === 'Cartao'
+        ? { ...item, enabled: true, setup: 0, recurring: 0 }
+        : item,
+    );
+
+    const tasks: ClosedClientTask[] =
+      ticket.status === 'em_implantacao' || ticket.status === 'concluido'
+        ? [
+            {
+              id: makeId('task'),
+              label: 'Configuracao inicial da plataforma',
+              done: ticket.status === 'concluido',
+              assigneeId: ticket.assignee,
+              dueDate: ticket.createdAt,
+            },
+            {
+              id: makeId('task'),
+              label: 'Validacao final com o cliente',
+              done: ticket.status === 'concluido',
+              assigneeId: ticket.assignee,
+              dueDate: linkedLead?.wonAt ?? ticket.createdAt,
+            },
+          ]
+        : [];
+
+    return {
+      id: ticket.id,
+      proto: ticket.id,
+      leadId: linkedLead?.id,
+      type: index % 3 === 0 ? 'inclusao' : 'novo',
+      company: linkedLead?.company ?? `Cliente ${ticket.id}`,
+      cnpj: linkedLead?.cnpj ?? '-',
+      contact: linkedLead?.contact ?? '',
+      phone: '',
+      email: linkedLead ? `${slugify(linkedLead.company)}@cliente.com.br` : '',
+      website: linkedLead ? `https://www.${slugify(linkedLead.company)}.com.br` : '',
+      instance: linkedLead ? slugify(linkedLead.company) : slugify(ticket.id),
+      plan,
+      paymentMethod: linkedLead?.paymentMethod ?? 'Boleto Bancario',
+      installment: 'A vista',
+      assigneeId: ticket.assignee,
+      technicalAssigneeId:
+        ticket.status === 'em_implantacao' || ticket.status === 'concluido'
+          ? ticket.assignee
+          : undefined,
+      status: ticket.status,
+      csStatus:
+        ticket.status === 'concluido'
+          ? 'Bercario'
+          : ticket.status === 'em_implantacao'
+            ? 'Em configuracao'
+            : 'Novo Ticket',
+      createdAt: ticket.createdAt,
+      updatedAt: linkedLead?.wonAt ?? ticket.createdAt,
+      notes:
+        ticket.status === 'cancelado'
+          ? 'Ticket cancelado apos revisao comercial.'
+          : 'Cliente fechado aguardando acompanhamento operacional.',
+      products: defaultProducts,
+      integrations: defaultIntegrations,
+      tasks,
+      logs: [
+        { id: makeId('log'), message: 'Ticket criado', createdAt: ticket.createdAt },
+        {
+          id: makeId('log'),
+          message: `Status atualizado para ${STATUS_META[ticket.status].label}`,
+          createdAt: linkedLead?.wonAt ?? ticket.createdAt,
+        },
+      ],
+    };
+  });
+}
+
+function emptyDraft(): ClosedClientTicketRecord {
+  return {
+    id: makeId('ticket'),
+    proto: `COM-${Date.now().toString().slice(-6)}`,
+    type: 'novo',
+    company: '',
+    cnpj: '',
+    contact: '',
+    phone: '',
+    email: '',
+    website: '',
+    instance: '',
+    plan: '',
+    paymentMethod: '',
+    installment: 'A vista',
+    assigneeId: undefined,
+    technicalAssigneeId: undefined,
+    status: 'pendente_financeiro',
+    csStatus: 'Novo Ticket',
+    createdAt: todayIsoDate(),
+    updatedAt: todayIsoDate(),
+    notes: '',
+    products: createEmptyPriceRows(PRODUCT_CATALOG),
+    integrations: createEmptyPriceRows(INTEGRATION_CATALOG),
+    tasks: [],
+    logs: [],
+  };
+}
+
+function cloneRows(rows: CommercialPriceRow[]) {
+  return rows.map((row) => ({ ...row }));
+}
+
+function cloneTicket(ticket: ClosedClientTicketRecord): ClosedClientTicketRecord {
+  return {
+    ...ticket,
+    products: cloneRows(ticket.products),
+    integrations: cloneRows(ticket.integrations),
+    tasks: ticket.tasks.map((task) => ({ ...task })),
+    logs: ticket.logs.map((log) => ({ ...log })),
+  };
+}
+
+function csvEscape(value: string | number) {
+  const normalized = String(value ?? '');
+  return `"${normalized.replaceAll('"', '""')}"`;
+}
+
+function exportTicketsCsv(tickets: ClosedClientTicketRecord[]) {
+  const header = [
+    'Protocolo',
+    'Empresa',
+    'CNPJ',
+    'Tipo',
+    'Status',
+    'Responsavel',
+    'Plano',
+    'Setup',
+    'Recorrencia',
+    'Criado em',
+  ];
+  const rows = tickets.map((ticket) => [
+    ticket.proto,
+    ticket.company,
+    ticket.cnpj,
+    TYPE_META[ticket.type].label,
+    STATUS_META[ticket.status].label,
+    users.find((user) => user.id === ticket.assigneeId)?.name ?? '',
+    ticket.plan,
+    sumSetupValue(ticket),
+    sumRecurringValue(ticket),
+    ticket.createdAt,
+  ]);
+
+  const csv = [header, ...rows]
+    .map((row) => row.map(csvEscape).join(';'))
+    .join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `clientes-fechados-${todayIsoDate()}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function statusOptions(): Array<{ value: TicketFilterValue; label: string }> {
+  return [
+    { value: 'all', label: 'Todos ativos' },
+    { value: 'pendente_financeiro', label: 'Ag. Pagamento' },
+    { value: 'pagamento_confirmado', label: 'Pagamento confirmado' },
+    { value: 'em_implantacao', label: 'Em implantacao' },
+    { value: 'cancelado', label: 'Cancelados' },
+    { value: 'novo', label: 'Novos' },
+    { value: 'inclusao', label: 'Upsell' },
+    { value: 'historico', label: 'Historico' },
+  ];
+}
+
+function PriceRowsEditor({
+  title,
+  subtitle,
+  rows,
+  onChange,
+}: {
+  title: string;
+  subtitle: string;
+  rows: CommercialPriceRow[];
+  onChange: (rows: CommercialPriceRow[]) => void;
+}) {
+  const totals = rows
+    .filter((row) => row.enabled)
+    .reduce(
+      (sum, row) => ({
+        setup: sum.setup + row.setup,
+        recurring: sum.recurring + row.recurring,
+      }),
+      { setup: 0, recurring: 0 },
+    );
+
+  return (
+    <div className="mb-4">
+      <div className="mb-[10px] border-b border-[#e2e8f0] pb-2 text-[13px] font-bold text-[#0f172a]">
+        {title}
+      </div>
+      <div className="mb-[6px] text-[12px] text-[#64748b]">{subtitle}</div>
+
+      <div className="space-y-2">
+        {rows.map((row, index) => (
+          <div
+            key={row.id}
+            className="grid gap-2 rounded-[10px] border border-[#e2e8f0] bg-[#f8fafc] p-3 md:grid-cols-[1.4fr_.8fr_.8fr]"
+          >
+            <label className="flex items-center gap-2 text-[13px] font-semibold text-[#0f172a]">
+              <input
+                type="checkbox"
+                checked={row.enabled}
+                onChange={(event) =>
+                  onChange(
+                    rows.map((item, itemIndex) =>
+                      itemIndex === index
+                        ? { ...item, enabled: event.target.checked }
+                        : item,
+                    ),
+                  )
+                }
+                className="size-4 rounded border-[#cbd5e1]"
+              />
+              <span>{row.name}</span>
+            </label>
+
+            <input
+              type="number"
+              min={0}
+              step="0.01"
+              value={row.setup || ''}
+              disabled={!row.enabled}
+              onChange={(event) =>
+                onChange(
+                  rows.map((item, itemIndex) =>
+                    itemIndex === index
+                      ? { ...item, setup: Number(event.target.value) || 0 }
+                      : item,
+                  ),
+                )
+              }
+              placeholder="Setup"
+              className="rounded-[8px] border border-[#e2e8f0] bg-white px-3 py-[7px] text-[13px] text-[#0f172a] outline-none disabled:cursor-not-allowed disabled:bg-[#f1f5f9]"
+            />
+
+            <input
+              type="number"
+              min={0}
+              step="0.01"
+              value={row.recurring || ''}
+              disabled={!row.enabled}
+              onChange={(event) =>
+                onChange(
+                  rows.map((item, itemIndex) =>
+                    itemIndex === index
+                      ? { ...item, recurring: Number(event.target.value) || 0 }
+                      : item,
+                  ),
+                )
+              }
+              placeholder="Recorrencia"
+              className="rounded-[8px] border border-[#e2e8f0] bg-white px-3 py-[7px] text-[13px] text-[#0f172a] outline-none disabled:cursor-not-allowed disabled:bg-[#f1f5f9]"
+            />
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-3 grid gap-3 md:grid-cols-2">
+        <div className="rounded-[10px] border border-[#bfdbfe] bg-[#eff6ff] p-3">
+          <div className="text-[10px] font-bold tracking-[.06em] text-[#2563eb] uppercase">
+            Total Setup
+          </div>
+          <div className="mt-1 text-[18px] font-extrabold text-[#2563eb]">
+            {formatMoney(totals.setup)}
+          </div>
+        </div>
+        <div className="rounded-[10px] border border-[#ddd6fe] bg-[#f5f3ff] p-3">
+          <div className="text-[10px] font-bold tracking-[.06em] text-[#7c3aed] uppercase">
+            Total Recorrencia
+          </div>
+          <div className="mt-1 text-[18px] font-extrabold text-[#7c3aed]">
+            {formatMoney(totals.recurring)}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InfoField({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-[10px] border border-[#e2e8f0] bg-[#f8fafc] px-3 py-3">
+      <div className="text-[10px] font-bold tracking-[.06em] text-[#64748b] uppercase">
+        {label}
+      </div>
+      <div className="mt-1 text-[13px] font-semibold text-[#0f172a]">{value}</div>
+    </div>
+  );
+}
+
+function TicketValueTable({
+  title,
+  icon,
+  rows,
+}: {
+  title: string;
+  icon: React.ReactNode;
+  rows: CommercialPriceRow[];
+}) {
+  return (
+    <div className="rounded-[12px] border border-[#e2e8f0] bg-white p-4">
+      <div className="mb-3 inline-flex items-center gap-2 text-[12px] font-bold tracking-[.06em] text-[#64748b] uppercase">
+        {icon}
+        <span>{title}</span>
+      </div>
+      {rows.length ? (
+        <div className="overflow-hidden rounded-[10px] border border-[#e2e8f0]">
+          <table className="w-full border-collapse text-[12px]">
+            <thead>
+              <tr className="bg-[#f8fafc]">
+                <th className="px-3 py-2 text-left text-[10px] font-bold uppercase text-[#64748b]">
+                  Item
+                </th>
+                <th className="px-3 py-2 text-right text-[10px] font-bold uppercase text-[#64748b]">
+                  Setup
+                </th>
+                <th className="px-3 py-2 text-right text-[10px] font-bold uppercase text-[#64748b]">
+                  Recorrencia
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.id} className="border-t border-[#e2e8f0]">
+                  <td className="px-3 py-[10px] font-semibold text-[#0f172a]">{row.name}</td>
+                  <td className="px-3 py-[10px] text-right text-[#2563eb]">
+                    {formatMoney(row.setup)}
+                  </td>
+                  <td className="px-3 py-[10px] text-right text-[#7c3aed]">
+                    {formatMoney(row.recurring)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="rounded-[10px] border border-dashed border-[#cbd5e1] bg-[#f8fafc] px-4 py-6 text-center text-[13px] text-[#64748b]">
+          Nenhum item selecionado.
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TicketFormModal({
+  open,
+  ticket,
+  onClose,
+  onSave,
+}: {
+  open: boolean;
+  ticket: ClosedClientTicketRecord | null;
+  onClose: () => void;
+  onSave: (ticket: ClosedClientTicketRecord) => void;
+}) {
+  const [draft, setDraft] = useState<ClosedClientTicketRecord>(ticket ?? emptyDraft());
+
+  useEffect(() => {
+    setDraft(ticket ? cloneTicket(ticket) : emptyDraft());
+  }, [ticket]);
+
+  function update<K extends keyof ClosedClientTicketRecord>(
+    key: K,
+    value: ClosedClientTicketRecord[K],
+  ) {
+    setDraft((current) => ({ ...current, [key]: value }));
+  }
+
+  function handleSave() {
+    if (!draft.company.trim()) return;
+    if (!draft.cnpj.trim()) return;
+    if (!draft.instance.trim()) return;
+    if (!draft.plan.trim()) return;
+    if (!draft.paymentMethod.trim()) return;
+
+    onSave({
+      ...draft,
+      updatedAt: todayIsoDate(),
+      logs: draft.logs.length
+        ? [
+            ...draft.logs,
+            {
+              id: makeId('log'),
+              message: ticket ? 'Ticket atualizado' : 'Ticket criado',
+              createdAt: todayIsoDate(),
+            },
+          ]
+        : [
+            {
+              id: makeId('log'),
+              message: 'Ticket criado',
+              createdAt: todayIsoDate(),
+            },
+          ],
+    });
+  }
+
+  return (
+    <ModalShell
+      open={open}
+      title={ticket ? 'Editar Ticket' : 'Novo Ticket - Comercial'}
+      description="Migracao do fluxo de Cliente Fechado para React com a mesma estrutura principal do legado."
+      maxWidthClassName="max-w-[920px]"
+      onClose={onClose}
+      footer={
+        <>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-[8px] border border-[#e2e8f0] bg-white px-4 py-[9px] text-[13px] font-semibold text-[#64748b]"
+          >
+            Fechar
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            className="rounded-[8px] bg-[#2563eb] px-4 py-[9px] text-[13px] font-semibold text-white"
+          >
+            Salvar ticket
+          </button>
+        </>
+      }
+    >
+      <div className="grid gap-4">
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <label className="mb-[5px] block text-[11px] font-bold tracking-[.06em] text-[#64748b] uppercase">
+              Tipo do ticket
+            </label>
+            <select
+              value={draft.type}
+              onChange={(event) => update('type', event.target.value as ClosedClientTicketType)}
+              className="w-full rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] px-3 py-[9px] text-[13px] text-[#0f172a] outline-none"
+            >
+              <option value="novo">Cliente Novo</option>
+              <option value="inclusao">Inclusao (Upsell)</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-[5px] block text-[11px] font-bold tracking-[.06em] text-[#64748b] uppercase">
+              Responsavel pela solicitacao
+            </label>
+            <select
+              value={draft.assigneeId ?? ''}
+              onChange={(event) => update('assigneeId', event.target.value || undefined)}
+              className="w-full rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] px-3 py-[9px] text-[13px] text-[#0f172a] outline-none"
+            >
+              <option value="">- Sem responsavel -</option>
+              {users.map((user) => (
+                <option key={user.id} value={user.id}>
+                  {user.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="border-b border-[#e2e8f0] pb-2 text-[13px] font-bold text-[#0f172a]">
+          Dados do cliente
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <label className="mb-[5px] block text-[11px] font-bold tracking-[.06em] text-[#64748b] uppercase">
+              Nome da empresa
+            </label>
+            <input
+              value={draft.company}
+              onChange={(event) => update('company', event.target.value)}
+              className="w-full rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] px-3 py-[9px] text-[13px] text-[#0f172a] outline-none"
+              placeholder="Ex: Farmacia Sao Joao"
+            />
+          </div>
+
+          <div>
+            <label className="mb-[5px] block text-[11px] font-bold tracking-[.06em] text-[#64748b] uppercase">
+              CNPJ
+            </label>
+            <input
+              value={draft.cnpj}
+              onChange={(event) => update('cnpj', formatCnpjInput(event.target.value))}
+              inputMode="numeric"
+              maxLength={18}
+              className="w-full rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] px-3 py-[9px] text-[13px] text-[#0f172a] outline-none"
+              placeholder="00.000.000/0001-00"
+            />
+          </div>
+
+          <div>
+            <label className="mb-[5px] block text-[11px] font-bold tracking-[.06em] text-[#64748b] uppercase">
+              Contato
+            </label>
+            <input
+              value={draft.contact}
+              onChange={(event) => update('contact', event.target.value)}
+              className="w-full rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] px-3 py-[9px] text-[13px] text-[#0f172a] outline-none"
+              placeholder="Nome do contato"
+            />
+          </div>
+
+          <div>
+            <label className="mb-[5px] block text-[11px] font-bold tracking-[.06em] text-[#64748b] uppercase">
+              Telefone
+            </label>
+            <input
+              value={draft.phone}
+              onChange={(event) => update('phone', formatPhoneInput(event.target.value))}
+              inputMode="tel"
+              maxLength={15}
+              className="w-full rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] px-3 py-[9px] text-[13px] text-[#0f172a] outline-none"
+              placeholder="(11) 99999-9999"
+            />
+          </div>
+
+          <div>
+            <label className="mb-[5px] block text-[11px] font-bold tracking-[.06em] text-[#64748b] uppercase">
+              E-mail do cliente
+            </label>
+            <input
+              value={draft.email}
+              onChange={(event) => update('email', event.target.value.trim().toLowerCase())}
+              type="email"
+              inputMode="email"
+              className="w-full rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] px-3 py-[9px] text-[13px] text-[#0f172a] outline-none"
+              placeholder="cliente@empresa.com.br"
+            />
+          </div>
+
+          <div>
+            <label className="mb-[5px] block text-[11px] font-bold tracking-[.06em] text-[#64748b] uppercase">
+              Site
+            </label>
+            <input
+              value={draft.website}
+              onChange={(event) => update('website', event.target.value.trim())}
+              onBlur={(event) => update('website', normalizeWebsiteInput(event.target.value))}
+              inputMode="url"
+              className="w-full rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] px-3 py-[9px] text-[13px] text-[#0f172a] outline-none"
+              placeholder="https://www.empresa.com.br"
+            />
+          </div>
+
+          <div>
+            <label className="mb-[5px] block text-[11px] font-bold tracking-[.06em] text-[#64748b] uppercase">
+              Instancia
+            </label>
+            <input
+              value={draft.instance}
+              onChange={(event) => update('instance', slugify(event.target.value))}
+              className="w-full rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] px-3 py-[9px] text-[13px] text-[#0f172a] outline-none"
+              placeholder="empresa-unidade"
+            />
+          </div>
+        </div>
+
+        <div className="border-b border-[#e2e8f0] pb-2 text-[13px] font-bold text-[#0f172a]">
+          Plano e pagamento
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-3">
+          <div>
+            <label className="mb-[5px] block text-[11px] font-bold tracking-[.06em] text-[#64748b] uppercase">
+              Plano
+            </label>
+            <select
+              value={draft.plan}
+              onChange={(event) => update('plan', event.target.value)}
+              className="w-full rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] px-3 py-[9px] text-[13px] text-[#0f172a] outline-none"
+            >
+              <option value="">Selecione...</option>
+              {PLAN_OPTIONS.map((plan) => (
+                <option key={plan} value={plan}>
+                  {plan}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-[5px] block text-[11px] font-bold tracking-[.06em] text-[#64748b] uppercase">
+              Forma de pagamento
+            </label>
+            <select
+              value={draft.paymentMethod}
+              onChange={(event) => update('paymentMethod', event.target.value)}
+              className="w-full rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] px-3 py-[9px] text-[13px] text-[#0f172a] outline-none"
+            >
+              <option value="">Selecione...</option>
+              {PAYMENT_OPTIONS.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-[5px] block text-[11px] font-bold tracking-[.06em] text-[#64748b] uppercase">
+              Parcelamento
+            </label>
+            <select
+              value={draft.installment}
+              onChange={(event) => update('installment', event.target.value)}
+              className="w-full rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] px-3 py-[9px] text-[13px] text-[#0f172a] outline-none"
+            >
+              {INSTALLMENT_OPTIONS.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <PriceRowsEditor
+          title="Produtos e valores"
+          subtitle="Selecione os produtos e informe setup e recorrencia."
+          rows={draft.products}
+          onChange={(rows) => update('products', rows)}
+        />
+
+        <PriceRowsEditor
+          title="Integracoes e valores"
+          subtitle="Selecione as integracoes contratadas."
+          rows={draft.integrations}
+          onChange={(rows) => update('integrations', rows)}
+        />
+
+        <div>
+          <label className="mb-[5px] block text-[11px] font-bold tracking-[.06em] text-[#64748b] uppercase">
+            Observacoes
+          </label>
+          <textarea
+            value={draft.notes}
+            onChange={(event) => update('notes', event.target.value)}
+            rows={4}
+            className="w-full rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] px-3 py-[9px] text-[13px] text-[#0f172a] outline-none"
+            placeholder="Anotacoes livres sobre este ticket..."
+          />
+        </div>
+      </div>
+    </ModalShell>
+  );
+}
+
+function TicketDetailsModal({
+  open,
+  ticket,
+  onClose,
+  onEdit,
+  onAdvanceStatus,
+  onToggleTask,
+}: {
+  open: boolean;
+  ticket: ClosedClientTicketRecord | null;
+  onClose: () => void;
+  onEdit: () => void;
+  onAdvanceStatus: () => void;
+  onToggleTask: (taskId: string) => void;
+}) {
+  if (!ticket) return null;
+
+  const statusMeta = STATUS_META[ticket.status];
+  const typeMeta = TYPE_META[ticket.type];
+  const StatusIcon = statusMeta.icon;
+  const canAdvance = ticket.status !== 'concluido' && ticket.status !== 'cancelado';
+  const assigneeName = users.find((user) => user.id === ticket.assigneeId)?.name ?? '-';
+  const technicalName =
+    users.find((user) => user.id === ticket.technicalAssigneeId)?.name ?? '-';
+  const completedTasks = ticket.tasks.filter((task) => task.done).length;
+  const progressPercent = ticket.tasks.length
+    ? Math.round((completedTasks / ticket.tasks.length) * 100)
+    : 0;
+  const visibleProducts = ticket.products.filter((item) => item.enabled);
+  const visibleIntegrations = ticket.integrations.filter((item) => item.enabled);
+  const historyItems = [...ticket.logs].reverse();
+  const advanceLabel =
+    ticket.status === 'pendente_financeiro'
+      ? 'Marcar cobranca gerada'
+      : ticket.status === 'pagamento_confirmado'
+        ? 'Enviar para implantacao'
+        : 'Concluir implantacao';
+
+  return (
+    <ModalShell
+      open={open}
+      title={ticket.company}
+      description={`${ticket.cnpj || '-'} - ${statusMeta.label}`}
+      maxWidthClassName="max-w-[980px]"
+      onClose={onClose}
+      footer={
+        <>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-[8px] border border-[#e2e8f0] bg-white px-4 py-[9px] text-[13px] font-semibold text-[#64748b]"
+          >
+            Fechar
+          </button>
+          {ticket.status !== 'concluido' ? (
+            <button
+              type="button"
+              onClick={onEdit}
+              className="rounded-[8px] border border-[#e2e8f0] bg-white px-4 py-[9px] text-[13px] font-semibold text-[#0f172a]"
+            >
+              Editar ticket
+            </button>
+          ) : null}
+          {canAdvance ? (
+            <button
+              type="button"
+              onClick={onAdvanceStatus}
+              className="rounded-[8px] bg-[#2563eb] px-4 py-[9px] text-[13px] font-semibold text-white"
+            >
+              {advanceLabel}
+            </button>
+          ) : null}
+        </>
+      }
+    >
+      <div className="grid gap-4">
+        {ticket.status === 'concluido' ? (
+          <div className="flex flex-wrap items-center gap-3 rounded-[12px] border border-[#86efac] bg-[#f0fdf4] px-4 py-3">
+            <span className="inline-flex items-center gap-2 text-[11px] font-bold tracking-[.06em] text-[#15803d] uppercase">
+              <CheckCircle2 className="size-4" />
+              Somente leitura
+            </span>
+            <span className="text-[12px] text-[#166534]">
+              Ticket finalizado. Visualizacao ajustada para ficar mais proxima do layout
+              original.
+            </span>
+          </div>
+        ) : null}
+
+        <div className="flex flex-col gap-3 rounded-[12px] border border-[#d7dfeb] bg-[#f8fafc] p-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-[11px] font-bold tracking-[.12em] text-[#0f172a] uppercase">
+              Protocolo
+            </span>
+            <span className="font-mono text-[15px] font-extrabold tracking-[.04em] text-[#1d4ed8]">
+              {ticket.proto}
+            </span>
+            <button
+              type="button"
+              onClick={() => copyText(ticket.proto)}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-[8px] border border-[#d7dfeb] bg-white text-[#64748b]"
+            >
+              <Copy className="size-4" />
+            </button>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 md:justify-end">
+            <span
+              className={`inline-flex items-center gap-1 rounded-full border px-[10px] py-[4px] text-[11px] font-bold ${statusMeta.badge}`}
+            >
+              <StatusIcon className="size-3.5" />
+              {statusMeta.label}
+            </span>
+            <span
+              className={`inline-flex rounded-full border px-[10px] py-[4px] text-[11px] font-bold ${typeMeta.badge}`}
+            >
+              {typeMeta.label}
+            </span>
+            {ticket.csStatus ? (
+              <span className="inline-flex rounded-full border border-[#e2e8f0] bg-white px-[10px] py-[4px] text-[11px] font-bold text-[#475569]">
+                {ticket.csStatus}
+              </span>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-[#e2e8f0] bg-white px-3 py-1.5 text-[11px] font-medium text-[#475569]">
+            <CalendarDays className="size-3.5 text-[#64748b]" />
+            Criado em {formatDate(ticket.createdAt)}
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-[#e2e8f0] bg-white px-3 py-1.5 text-[11px] font-medium text-[#475569]">
+            <User className="size-3.5 text-[#64748b]" />
+            Resp. solicitacao: {assigneeName}
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-[#e2e8f0] bg-white px-3 py-1.5 text-[11px] font-medium text-[#475569]">
+            <Hammer className="size-3.5 text-[#64748b]" />
+            Resp. tecnico: {technicalName}
+          </span>
+          {ticket.updatedAt ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[#e2e8f0] bg-white px-3 py-1.5 text-[11px] font-medium text-[#475569]">
+              <ClipboardList className="size-3.5 text-[#64748b]" />
+              Atualizado em {formatDate(ticket.updatedAt)}
+            </span>
+          ) : null}
+        </div>
+
+        <div className="rounded-[12px] border border-[#e2e8f0] bg-white p-4">
+          <div className="mb-4 text-[12px] font-bold tracking-[.06em] text-[#64748b] uppercase">
+            Jornada do ticket
+          </div>
+          <div className="flex flex-col gap-3 md:flex-row md:items-center">
+            {JOURNEY_STEPS.map((step, index) => {
+              const active = index === statusMeta.step;
+              const done = index < statusMeta.step || ticket.status === 'concluido';
+
+              return (
+                <div key={step} className="flex min-w-0 flex-1 items-center gap-3">
+                  <div
+                    className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-[13px] font-bold ${
+                      active
+                        ? 'border-[#2563eb] bg-[#2563eb] text-white'
+                        : done
+                          ? 'border-[#93c5fd] bg-[#dbeafe] text-[#1d4ed8]'
+                          : 'border-[#d7dfeb] bg-white text-[#64748b]'
+                    }`}
+                  >
+                    {index + 1}
+                  </div>
+                  <div className="min-w-0 text-[13px] font-semibold text-[#0f172a]">
+                    {step}
+                  </div>
+                  {index < JOURNEY_STEPS.length - 1 ? (
+                    <div className="hidden h-px flex-1 bg-[#d7dfeb] md:block" />
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="rounded-[12px] border border-[#bfdbfe] bg-[#eff6ff] p-4">
+            <div className="text-[10px] font-bold tracking-[.06em] text-[#2563eb] uppercase">
+              Total Setup
+            </div>
+            <div className="mt-1 text-[24px] font-extrabold text-[#2563eb]">
+              {formatMoney(sumSetupValue(ticket))}
+            </div>
+          </div>
+          <div className="rounded-[12px] border border-[#ddd6fe] bg-[#f5f3ff] p-4">
+            <div className="text-[10px] font-bold tracking-[.06em] text-[#7c3aed] uppercase">
+              Recorrencia
+            </div>
+            <div className="mt-1 text-[24px] font-extrabold text-[#7c3aed]">
+              {formatMoney(sumRecurringValue(ticket))}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid gap-4 xl:grid-cols-[1.2fr_.8fr]">
+          <div className="grid gap-4">
+          <div className="rounded-[12px] border border-[#e2e8f0] bg-white p-4">
+            <div className="mb-3 text-[12px] font-bold tracking-[.06em] text-[#64748b] uppercase">
+              Dados do cliente
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <InfoField label="Empresa" value={ticket.company} />
+              <InfoField label="CNPJ" value={ticket.cnpj} />
+              <InfoField label="Contato" value={ticket.contact || '-'} />
+              <InfoField label="Telefone" value={ticket.phone || '-'} />
+              <InfoField label="Instancia" value={ticket.instance || '-'} />
+              <InfoField label="Plano" value={ticket.plan || '-'} />
+              <InfoField label="Pagamento" value={ticket.paymentMethod || '-'} />
+              <InfoField label="Parcelamento" value={ticket.installment || '-'} />
+              <InfoField label="Responsavel" value={assigneeName} />
+              <InfoField label="Resp. tecnico" value={technicalName} />
+              <InfoField label="Criado em" value={formatDate(ticket.createdAt)} />
+              <InfoField label="Atualizado em" value={formatDate(ticket.updatedAt)} />
+            </div>
+          </div>
+
+          <div className="rounded-[12px] border border-[#e2e8f0] bg-white p-4">
+            <div className="mb-3 text-[12px] font-bold tracking-[.06em] text-[#64748b] uppercase">
+              Canais e observacoes
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="rounded-[10px] border border-[#e2e8f0] bg-[#f8fafc] p-3">
+                <div className="mb-1 text-[11px] font-bold tracking-[.06em] text-[#64748b] uppercase">
+                  E-mail do cliente
+                </div>
+                <div className="inline-flex items-center gap-2 text-[13px] font-medium text-[#0f172a]">
+                  <Mail className="size-4 text-[#64748b]" />
+                  {ticket.email || '-'}
+                </div>
+              </div>
+
+              <div className="rounded-[10px] border border-[#e2e8f0] bg-[#f8fafc] p-3">
+                <div className="mb-1 text-[11px] font-bold tracking-[.06em] text-[#64748b] uppercase">
+                  Site do cliente
+                </div>
+                <div className="inline-flex items-center gap-2 text-[13px] font-medium text-[#0f172a]">
+                  <Globe className="size-4 text-[#64748b]" />
+                  {ticket.website || '-'}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-3 rounded-[10px] border border-[#e2e8f0] bg-[#f8fafc] p-3">
+              <div className="mb-1 text-[11px] font-bold tracking-[.06em] text-[#64748b] uppercase">
+                Observacoes
+              </div>
+              <p className="text-[13px] leading-6 text-[#475569]">
+                {ticket.notes || 'Sem observacoes registradas para este ticket.'}
+              </p>
+            </div>
+          </div>
+          </div>
+
+          <div className="rounded-[12px] border border-[#e2e8f0] bg-white p-4">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div className="text-[12px] font-bold tracking-[.06em] text-[#64748b] uppercase">
+                Tarefas
+              </div>
+              <div className="text-[12px] font-semibold text-[#475569]">
+                {completedTasks}/{ticket.tasks.length} ({progressPercent}%)
+              </div>
+            </div>
+            {ticket.tasks.length ? (
+              <div className="space-y-2">
+                <div className="mb-3 h-2 overflow-hidden rounded-full bg-[#e2e8f0]">
+                  <div
+                    className="h-full rounded-full bg-[#2563eb] transition-all"
+                    style={{ width: `${progressPercent}%` }}
+                  />
+                </div>
+                {ticket.tasks.map((task) => (
+                  <button
+                    type="button"
+                    key={task.id}
+                    onClick={() => onToggleTask(task.id)}
+                    className={`flex w-full items-start gap-3 rounded-[10px] border px-3 py-3 text-left ${
+                      task.done
+                        ? 'border-[#a7f3d0] bg-[#ecfdf5]'
+                        : 'border-[#e2e8f0] bg-[#f8fafc]'
+                    }`}
+                  >
+                    <span
+                      className={`mt-[1px] inline-flex h-5 w-5 items-center justify-center rounded-full border text-[11px] ${
+                        task.done
+                          ? 'border-[#059669] bg-[#059669] text-white'
+                          : 'border-[#cbd5e1] bg-white text-[#64748b]'
+                      }`}
+                    >
+                      {task.done ? '✓' : ''}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[13px] font-semibold text-[#0f172a]">
+                        {task.label}
+                      </div>
+                      <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-[#64748b]">
+                        {task.assigneeId ? (
+                          <span className="inline-flex items-center gap-1">
+                            <User className="size-3.5" />
+                            {users.find((user) => user.id === task.assigneeId)?.name ?? '-'}
+                          </span>
+                        ) : null}
+                        {task.dueDate ? (
+                          <span className="inline-flex items-center gap-1">
+                            <CalendarDays className="size-3.5" />
+                            {formatDate(task.dueDate)}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-[10px] border border-dashed border-[#cbd5e1] bg-[#f8fafc] px-4 py-6 text-center text-[13px] text-[#64748b]">
+                Nenhuma tarefa cadastrada para este ticket.
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="grid gap-4 xl:grid-cols-2">
+          <TicketValueTable
+            title="Produtos"
+            icon={<FileText className="size-4 text-[#2563eb]" />}
+            rows={visibleProducts}
+          />
+          <TicketValueTable
+            title="Integracoes"
+            icon={<ExternalLink className="size-4 text-[#7c3aed]" />}
+            rows={visibleIntegrations}
+          />
+        </div>
+
+        <div className="rounded-[12px] border border-[#e2e8f0] bg-white p-4">
+          <div className="mb-3 text-[12px] font-bold tracking-[.06em] text-[#64748b] uppercase">
+            Historico
+          </div>
+          {historyItems.length ? (
+            <div className="space-y-2">
+              {historyItems.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex gap-3 rounded-[10px] border border-[#e2e8f0] bg-[#f8fafc] px-3 py-3"
+                >
+                  <div className="mt-1 h-2.5 w-2.5 rounded-full bg-[#2563eb]" />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[13px] font-semibold text-[#0f172a]">
+                      {item.message}
+                    </div>
+                    <div className="mt-1 text-[11px] text-[#64748b]">
+                      {formatDate(item.createdAt)}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-[10px] border border-dashed border-[#cbd5e1] bg-[#f8fafc] px-4 py-6 text-center text-[13px] text-[#64748b]">
+              Sem historico registrado.
+            </div>
+          )}
+        </div>
+      </div>
+    </ModalShell>
+  );
+}
+
+export function CommercialClosedClients() {
+  const [tickets, setTickets] = useState<ClosedClientTicketRecord[]>(() => buildSeedTickets());
+  const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState<TicketFilterValue>('all');
+  const [responsibleFilter, setResponsibleFilter] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [editingTicketId, setEditingTicketId] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [viewingTicketId, setViewingTicketId] = useState<string | null>(null);
+
+  const deferredQuery = useDeferredValue(query);
+  const normalizedQuery = normalizeText(deferredQuery);
+
+  const filteredTickets = useMemo(() => {
+    return tickets.filter((ticket) => {
+      const matchesDate = inDateRange(ticket.createdAt, dateFrom, dateTo);
+      const searchable = normalizeText(
+        [
+          ticket.proto,
+          ticket.company,
+          ticket.cnpj,
+          ticket.contact,
+          ticket.instance,
+          ticket.email,
+        ].join(' '),
+      );
+      const matchesQuery = normalizedQuery ? searchable.includes(normalizedQuery) : true;
+      const matchesFilter =
+        filter === 'all'
+          ? ticket.status !== 'concluido'
+          : filter === 'historico'
+            ? ticket.status === 'concluido'
+            : filter === 'novo' || filter === 'inclusao'
+              ? ticket.type === filter
+              : ticket.status === filter;
+      const matchesResponsible = responsibleFilter
+        ? ticket.assigneeId === responsibleFilter
+        : true;
+
+      return matchesDate && matchesQuery && matchesFilter && matchesResponsible;
+    });
+  }, [dateFrom, dateTo, filter, normalizedQuery, responsibleFilter, tickets]);
+
+  const activeTickets = tickets.filter((ticket) => ticket.status !== 'concluido');
+  const responsibleOptions = users.filter((user) =>
+    activeTickets.some((ticket) => ticket.assigneeId === user.id),
+  );
+  const hasFilter = Boolean(query || filter !== 'all' || responsibleFilter || dateFrom || dateTo);
+  const totalSetup = filteredTickets.reduce((sum, ticket) => sum + sumSetupValue(ticket), 0);
+  const totalRecurring = filteredTickets.reduce(
+    (sum, ticket) => sum + sumRecurringValue(ticket),
+    0,
+  );
+
+  const editingTicket = useMemo(
+    () => tickets.find((ticket) => ticket.id === editingTicketId) ?? null,
+    [editingTicketId, tickets],
+  );
+  const viewingTicket = useMemo(
+    () => tickets.find((ticket) => ticket.id === viewingTicketId) ?? null,
+    [tickets, viewingTicketId],
+  );
+
+  function resetFilters() {
+    setQuery('');
+    setFilter('all');
+    setResponsibleFilter('');
+    setDateFrom('');
+    setDateTo('');
+  }
+
+  function handleSave(ticket: ClosedClientTicketRecord) {
+    setTickets((current) => {
+      const exists = current.some((item) => item.id === ticket.id);
+      if (!exists) return [ticket, ...current];
+      return current.map((item) => (item.id === ticket.id ? ticket : item));
+    });
+    setCreating(false);
+    setEditingTicketId(null);
+  }
+
+  function handleAdvanceStatus(ticketId: string) {
+    setTickets((current) =>
+      current.map((ticket) => {
+        if (ticket.id !== ticketId) return ticket;
+
+        const nextStatus: TicketStatus =
+          ticket.status === 'pendente_financeiro'
+            ? 'pagamento_confirmado'
+            : ticket.status === 'pagamento_confirmado'
+              ? 'em_implantacao'
+              : 'concluido';
+
+        const nextTasks =
+          nextStatus === 'em_implantacao' && !ticket.tasks.length
+            ? [
+                {
+                  id: makeId('task'),
+                  label: 'Configuracao inicial da plataforma',
+                  done: false,
+                  assigneeId: ticket.technicalAssigneeId ?? ticket.assigneeId,
+                  dueDate: todayIsoDate(),
+                },
+                {
+                  id: makeId('task'),
+                  label: 'Validacao final com o cliente',
+                  done: false,
+                  assigneeId: ticket.technicalAssigneeId ?? ticket.assigneeId,
+                  dueDate: todayIsoDate(),
+                },
+              ]
+            : nextStatus === 'concluido'
+              ? ticket.tasks.map((task) => ({ ...task, done: true }))
+              : ticket.tasks;
+
+        return {
+          ...ticket,
+          status: nextStatus,
+          csStatus: nextStatus === 'concluido' ? 'Bercario' : 'Em configuracao',
+          tasks: nextTasks,
+          updatedAt: todayIsoDate(),
+          logs: [
+            ...ticket.logs,
+            {
+              id: makeId('log'),
+              message: `Status atualizado para ${STATUS_META[nextStatus].label}`,
+              createdAt: todayIsoDate(),
+            },
+          ],
+        };
+      }),
+    );
+  }
+
+  function handleToggleTask(ticketId: string, taskId: string) {
+    setTickets((current) =>
+      current.map((ticket) => {
+        if (ticket.id !== ticketId) return ticket;
+
+        const tasks = ticket.tasks.map((task) =>
+          task.id === taskId ? { ...task, done: !task.done } : task,
+        );
+
+        return {
+          ...ticket,
+          tasks,
+          updatedAt: todayIsoDate(),
+          logs: [
+            ...ticket.logs,
+            {
+              id: makeId('log'),
+              message: `Tarefa atualizada: ${
+                tasks.find((task) => task.id === taskId)?.label ?? 'Tarefa'
+              }`,
+              createdAt: todayIsoDate(),
+            },
+          ],
+        };
+      }),
+    );
+  }
+
+  return (
+    <div className="animate-in fade-in slide-in-from-bottom-2 duration-200">
+      <div className="mb-[18px] flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="text-[19px] font-extrabold tracking-[-0.4px] text-[#0f172a]">
+            Cliente Fechado
+          </div>
+          <div className="mt-0.5 text-[13px] text-[#64748b]">
+            Jornada dos tickets comerciais, valores contratados e acompanhamento pos-venda.
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => exportTicketsCsv(filteredTickets)}
+            className="inline-flex items-center gap-2 rounded-[8px] border border-[#e2e8f0] bg-white px-[14px] py-2 text-[13px] font-semibold text-[#0f172a] transition-colors hover:bg-[#f8fafc]"
+          >
+            <Download className="h-[14px] w-[14px]" />
+            <span>Exportar</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setCreating(true);
+              setEditingTicketId(null);
+            }}
+            className="inline-flex items-center gap-2 rounded-[8px] bg-[#2563eb] px-[14px] py-2 text-[13px] font-semibold text-white transition-colors hover:bg-[#1d4ed8]"
+          >
+            <Plus className="h-[14px] w-[14px]" />
+            <span>Novo Ticket</span>
+          </button>
+        </div>
+      </div>
+
+      <div className="mb-4 rounded-[14px] border border-[#e2e8f0] bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,.05)]">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <div className="relative min-w-[180px] flex-1">
+            <span className="pointer-events-none absolute left-[10px] top-1/2 -translate-y-1/2 text-[#64748b]">
+              <Search className="h-[14px] w-[14px]" />
+            </span>
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Buscar por empresa, protocolo, CNPJ ou instancia..."
+              className="w-full rounded-[8px] border border-[#e2e8f0] bg-white py-[8px] pr-[10px] pl-[32px] text-[13px] text-[#0f172a] outline-none"
+            />
+          </div>
+
+          <select
+            value={filter}
+            onChange={(event) => setFilter(event.target.value as TicketFilterValue)}
+            className="min-w-[180px] rounded-[8px] border border-[#e2e8f0] bg-white px-[10px] py-[8px] text-[13px] text-[#0f172a] outline-none"
+          >
+            {statusOptions().map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={responsibleFilter}
+            onChange={(event) => setResponsibleFilter(event.target.value)}
+            className="min-w-[190px] rounded-[8px] border border-[#e2e8f0] bg-white px-[10px] py-[8px] text-[13px] text-[#0f172a] outline-none"
+          >
+            <option value="">Todos os responsaveis</option>
+            {responsibleOptions.map((user) => (
+              <option key={user.id} value={user.id}>
+                {user.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center gap-1 text-[12px] text-[#64748b]">
+            <CalendarDays className="h-[13px] w-[13px]" />
+            <span>De</span>
+          </span>
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(event) => setDateFrom(event.target.value)}
+            className="cursor-pointer rounded-[8px] border border-[#e2e8f0] bg-white px-2 py-[6px] text-[13px] text-[#0f172a] outline-none"
+          />
+          <span className="text-[12px] text-[#64748b]">ate</span>
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(event) => setDateTo(event.target.value)}
+            className="cursor-pointer rounded-[8px] border border-[#e2e8f0] bg-white px-2 py-[6px] text-[13px] text-[#0f172a] outline-none"
+          />
+
+          <div className="ml-auto flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1 rounded-full border border-[#bfdbfe] bg-[#eff6ff] px-[10px] py-[5px] text-[11px] font-bold text-[#2563eb]">
+              <WalletCards className="size-3.5" />
+              Setup {formatMoney(totalSetup)}
+            </span>
+            <span className="inline-flex items-center gap-1 rounded-full border border-[#ddd6fe] bg-[#f5f3ff] px-[10px] py-[5px] text-[11px] font-bold text-[#7c3aed]">
+              <Filter className="size-3.5" />
+              Recorrencia {formatMoney(totalRecurring)}
+            </span>
+            {hasFilter ? (
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="inline-flex items-center gap-1 rounded-[8px] border border-[#e2e8f0] bg-white px-3 py-[6px] text-[12px] font-semibold text-[#64748b] hover:bg-[#f8fafc]"
+              >
+                <X className="h-[13px] w-[13px]" />
+                <span>Limpar filtros</span>
+              </button>
+            ) : null}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
+        {filteredTickets.map((ticket) => {
+          const status = STATUS_META[ticket.status];
+          const type = TYPE_META[ticket.type];
+          const StatusIcon = status.icon;
+          const assignee = users.find((user) => user.id === ticket.assigneeId);
+          const techAssignee = users.find((user) => user.id === ticket.technicalAssigneeId);
+
+          return (
+            <div
+              key={ticket.id}
+              onClick={() => setViewingTicketId(ticket.id)}
+              className="rounded-[14px] border border-[#e2e8f0] bg-white p-4 text-left shadow-[0_8px_24px_rgba(15,23,42,.04)] transition-all hover:-translate-y-[1px] hover:border-[#bfdbfe] hover:shadow-[0_12px_28px_rgba(37,99,235,.08)]"
+            >
+              <div className="mb-3 flex items-start gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="mb-1 flex flex-wrap items-center gap-2">
+                    <span className="rounded-full border border-[#e2e8f0] bg-[#f8fafc] px-[8px] py-[3px] font-mono text-[10px] font-bold text-[#475569]">
+                      {ticket.proto}
+                    </span>
+                    <span
+                      className={`inline-flex items-center gap-1 rounded-full border px-[8px] py-[3px] text-[10px] font-bold ${status.badge}`}
+                    >
+                      <StatusIcon className="size-3.5" />
+                      {status.label}
+                    </span>
+                    <span
+                      className={`inline-flex rounded-full border px-[8px] py-[3px] text-[10px] font-bold ${type.badge}`}
+                    >
+                      {type.label}
+                    </span>
+                  </div>
+                  <div className="text-[15px] font-extrabold text-[#0f172a]">{ticket.company}</div>
+                  <div className="mt-1 text-[12px] text-[#64748b]">
+                    CNPJ: {ticket.cnpj || '-'}
+                    {ticket.instance ? ` / ${ticket.instance}` : ''}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    copyText(ticket.proto);
+                  }}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-[8px] border border-[#e2e8f0] bg-white text-[#64748b]"
+                >
+                  <Copy className="size-4" />
+                </button>
+              </div>
+
+              <div className="mb-3 flex flex-wrap gap-2 text-[12px] text-[#64748b]">
+                <span>
+                  Setup: <strong className="text-[#0f172a]">{formatMoney(sumSetupValue(ticket))}</strong>
+                </span>
+                <span>
+                  Recorrencia:{' '}
+                  <strong className="text-[#0f172a]">{formatMoney(sumRecurringValue(ticket))}</strong>
+                </span>
+              </div>
+
+              <div className="mb-3 text-[12px] text-[#64748b]">
+                {[...ticket.products, ...ticket.integrations]
+                  .filter((item) => item.enabled)
+                  .map((item) => item.name)
+                  .join(', ') || 'Sem itens selecionados'}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 text-[11px] text-[#64748b]">
+                <span className="inline-flex items-center gap-1 rounded-full border border-[#e2e8f0] bg-[#f8fafc] px-[8px] py-[4px]">
+                  <CalendarDays className="size-3.5" />
+                  {formatDate(ticket.createdAt)}
+                </span>
+                {assignee ? (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-[#e2e8f0] bg-[#f8fafc] px-[8px] py-[4px]">
+                    <User className="size-3.5" />
+                    {assignee.name}
+                  </span>
+                ) : null}
+                {techAssignee ? (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-[#ddd6fe] bg-[#f5f3ff] px-[8px] py-[4px] text-[#7c3aed]">
+                    <Hammer className="size-3.5" />
+                    {techAssignee.name.split(' ')[0]}
+                  </span>
+                ) : null}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {!filteredTickets.length ? (
+        <div className="mt-4 rounded-[16px] border border-dashed border-[#cbd5e1] bg-white px-6 py-12 text-center shadow-[0_8px_24px_rgba(15,23,42,.03)]">
+          <div className="mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-full bg-[#eff6ff] text-[#2563eb]">
+            <FileText className="size-5" />
+          </div>
+          <div className="text-[16px] font-bold text-[#0f172a]">Nenhum ticket encontrado</div>
+          <div className="mt-1 text-[13px] text-[#64748b]">
+            Ajuste os filtros ou crie um novo ticket para iniciar a jornada de Cliente Fechado.
+          </div>
+        </div>
+      ) : null}
+
+      <TicketFormModal
+        open={creating || Boolean(editingTicket)}
+        ticket={editingTicket}
+        onClose={() => {
+          setCreating(false);
+          setEditingTicketId(null);
+        }}
+        onSave={handleSave}
+      />
+
+      <TicketDetailsModal
+        open={Boolean(viewingTicket)}
+        ticket={viewingTicket}
+        onClose={() => setViewingTicketId(null)}
+        onEdit={() => {
+          if (!viewingTicket) return;
+          setViewingTicketId(null);
+          setEditingTicketId(viewingTicket.id);
+        }}
+        onAdvanceStatus={() => {
+          if (!viewingTicket) return;
+          handleAdvanceStatus(viewingTicket.id);
+        }}
+        onToggleTask={(taskId) => {
+          if (!viewingTicket) return;
+          handleToggleTask(viewingTicket.id, taskId);
+        }}
+      />
+    </div>
+  );
+}

@@ -1,11 +1,5 @@
-import { ModulePageShell } from "@/components/module-page-shell";
+import { CommercialClosedClients } from '@/components/commercial/commercial-closed-clients';
 
 export default function CommercialClienteFechadoPage() {
-  return (
-    <ModulePageShell
-      section="Comercial"
-      title="Cliente Fechado"
-      description="Espaco reservado para a visao dos clientes fechados e acompanhamento da etapa pos-venda."
-    />
-  );
+  return <CommercialClosedClients />;
 }

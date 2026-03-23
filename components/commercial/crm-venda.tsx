@@ -1,7 +1,8 @@
 'use client';
 
-import { useDeferredValue, useMemo, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { CalendarDays, Search, WalletCards, X } from 'lucide-react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import { leads as initialLeads, origins, sdrs, users } from '@/components/data';
 import { KanbanBoard } from '@/components/kanban-board';
@@ -26,6 +27,9 @@ function inDateRange(date: string, from: string, to: string) {
 }
 
 export function CommercialCrmVenda() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [crmLeads, setCrmLeads] = useState<CommercialLeadRecord[]>(() =>
     initialLeads.map(toCommercialLeadRecord),
   );
@@ -48,6 +52,18 @@ export function CommercialCrmVenda() {
     () => crmLeads.find((lead) => lead.id === editingLeadId) ?? null,
     [crmLeads, editingLeadId],
   );
+
+  useEffect(() => {
+    const leadId = searchParams.get('lead');
+    if (!leadId) return;
+
+    const leadExists = crmLeads.some((lead) => lead.id === leadId);
+    if (!leadExists) return;
+
+    setCreatingStatus(undefined);
+    setEditingLeadId(leadId);
+    router.replace(pathname, { scroll: false });
+  }, [crmLeads, pathname, router, searchParams]);
 
   const filteredLeads = useMemo(() => {
     return crmLeads.filter((lead) => {

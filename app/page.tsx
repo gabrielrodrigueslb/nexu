@@ -24,7 +24,7 @@ export default async function LoginPage() {
                 width={140}
                 height={40}
                 priority
-                className="w-[140px]"
+                className="w-35"
               />
             </a>
           </div>
