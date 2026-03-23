@@ -32,12 +32,18 @@ export type LeadTask = {
 export type Lead = {
   id: string;
   company: string;
+  cnpj?: string;
+  contact?: string;
   createdAt: string;
   status: LeadStatus;
   value: number;
   sellerId?: string;
   sdrId?: string;
   originId?: string;
+  paymentMethod?: string;
+  isLite?: boolean;
+  wonAt?: string;
+  generatedTicketId?: string;
   tasks: LeadTask[];
 };
 

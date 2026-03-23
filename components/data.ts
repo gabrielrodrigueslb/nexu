@@ -23,11 +23,15 @@ export const leads: Lead[] = [
   {
     id: 'L1',
     company: 'Atlas Energia',
+    cnpj: '12.345.678/0001-10',
+    contact: 'Renata Moura',
     createdAt: '2026-03-02',
     status: 'Leads',
     value: 5200,
     sdrId: 's1',
     originId: 'o2',
+    paymentMethod: 'Cartao',
+    isLite: true,
     tasks: [
       {
         title: 'Primeiro contato',
@@ -40,12 +44,15 @@ export const leads: Lead[] = [
   {
     id: 'L2',
     company: 'Prisma Log',
+    cnpj: '33.109.887/0001-22',
+    contact: 'Marcos Teixeira',
     createdAt: '2026-03-03',
     status: 'Qualificados',
     value: 8600,
     sellerId: 'u2',
     sdrId: 's2',
     originId: 'o1',
+    paymentMethod: 'Boleto',
     tasks: [
       { title: 'Demo comercial', type: 'demo', done: true, date: '2026-03-15' },
       {
@@ -59,12 +66,15 @@ export const leads: Lead[] = [
   {
     id: 'L3',
     company: 'Nova Clin',
+    cnpj: '08.556.910/0001-70',
+    contact: 'Patricia Nunes',
     createdAt: '2026-03-04',
     status: 'Oportunidade Futura',
     value: 4700,
     sellerId: 'u3',
     sdrId: 's1',
     originId: 'o3',
+    paymentMethod: 'Pix',
     tasks: [
       {
         title: 'Visita tecnica',
@@ -77,12 +87,15 @@ export const leads: Lead[] = [
   {
     id: 'L4',
     company: 'ValeNet',
+    cnpj: '45.222.900/0001-18',
+    contact: 'Eduardo Paes',
     createdAt: '2026-03-05',
     status: 'Apresentacao',
     value: 9400,
     sellerId: 'u1',
     sdrId: 's3',
     originId: 'o4',
+    paymentMethod: 'Cartao',
     tasks: [
       {
         title: 'Reuniao de proposta',
@@ -95,12 +108,15 @@ export const leads: Lead[] = [
   {
     id: 'L5',
     company: 'Orbit Telecom',
+    cnpj: '17.888.332/0001-49',
+    contact: 'Camila Porto',
     createdAt: '2026-03-07',
     status: 'Em Negociacao',
     value: 12800,
     sellerId: 'u2',
     sdrId: 's2',
     originId: 'o1',
+    paymentMethod: 'Boleto',
     tasks: [
       {
         title: 'Negociacao final',
@@ -113,12 +129,15 @@ export const leads: Lead[] = [
   {
     id: 'L6',
     company: 'Aster Labs',
+    cnpj: '52.310.440/0001-61',
+    contact: 'Diego Ferreira',
     createdAt: '2026-03-08',
     status: 'No Show',
     value: 3900,
     sellerId: 'u1',
     sdrId: 's3',
     originId: 'o4',
+    paymentMethod: 'Pix',
     tasks: [
       {
         title: 'Nova tentativa',
@@ -131,12 +150,17 @@ export const leads: Lead[] = [
   {
     id: 'L7',
     company: 'Urban Food',
+    cnpj: '64.221.330/0001-09',
+    contact: 'Talita Sampaio',
     createdAt: '2026-03-10',
     status: 'Ganho',
     value: 8100,
     sellerId: 'u3',
     sdrId: 's2',
     originId: 'o1',
+    paymentMethod: 'Boleto',
+    wonAt: '2026-03-16',
+    generatedTicketId: 'T1',
     tasks: [
       {
         title: 'Kickoff inicial',
@@ -149,12 +173,18 @@ export const leads: Lead[] = [
   {
     id: 'L8',
     company: 'Solaris Hub',
+    cnpj: '70.112.220/0001-33',
+    contact: 'Bianca Prado',
     createdAt: '2026-03-12',
     status: 'Ganho',
     value: 10400,
     sellerId: 'u1',
     sdrId: 's1',
     originId: 'o2',
+    paymentMethod: 'Cartao',
+    isLite: true,
+    wonAt: '2026-03-19',
+    generatedTicketId: 'T2',
     tasks: [
       { title: 'Demo final', type: 'demo', done: true, date: '2026-03-13' },
       {
@@ -168,12 +198,15 @@ export const leads: Lead[] = [
   {
     id: 'L9',
     company: 'Nexa Tech',
+    cnpj: '14.980.776/0001-52',
+    contact: 'Henrique Luz',
     createdAt: '2026-03-13',
     status: 'Perdido',
     value: 5300,
     sellerId: 'u3',
     sdrId: 's1',
     originId: 'o3',
+    paymentMethod: 'Pix',
     tasks: [
       {
         title: 'Ultimo follow-up',
@@ -186,11 +219,16 @@ export const leads: Lead[] = [
   {
     id: 'L10',
     company: 'Bravus Seg',
+    cnpj: '29.775.001/0001-61',
+    contact: 'Luciana Mello',
     createdAt: '2026-03-18',
     status: 'Ganho',
     value: 9600,
     sellerId: 'u1',
     originId: 'o2',
+    paymentMethod: 'Boleto',
+    wonAt: '2026-03-22',
+    generatedTicketId: 'T4',
     tasks: [
       {
         title: 'Documentacao inicial',

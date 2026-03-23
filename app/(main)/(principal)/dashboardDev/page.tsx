@@ -1,11 +1,5 @@
-import { ModulePageShell } from "@/components/module-page-shell";
+import { DashboardDevOverview } from '@/components/dashboard-dev-overview';
 
 export default function DashboardDevPage() {
-  return (
-    <ModulePageShell
-      section="Principal"
-      title="Dashboard Dev"
-      description="Espaco reservado para o painel executivo do time de desenvolvimento."
-    />
-  );
+  return <DashboardDevOverview />;
 }
