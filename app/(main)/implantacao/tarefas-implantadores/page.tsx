@@ -1,11 +1,5 @@
-import { ModulePageShell } from "@/components/module-page-shell";
+import { ImplantacaoTarefas } from '@/components/implantacao/implantacao-tarefas';
 
 export default function ImplantacaoTarefasPage() {
-  return (
-    <ModulePageShell
-      section="Implantacao"
-      title="Tarefas Implantadores"
-      description="Espaco reservado para a distribuicao e acompanhamento das tarefas da equipe de implantacao."
-    />
-  );
+  return <ImplantacaoTarefas />;
 }
