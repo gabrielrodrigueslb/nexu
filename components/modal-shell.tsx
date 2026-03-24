@@ -5,6 +5,7 @@ export function ModalShell({
   title,
   description,
   maxWidthClassName = 'max-w-[720px]',
+  headerActions,
   onClose,
   children,
   footer,
@@ -13,6 +14,7 @@ export function ModalShell({
   title: string;
   description?: string;
   maxWidthClassName?: string;
+  headerActions?: React.ReactNode;
   onClose: () => void;
   children: React.ReactNode;
   footer?: React.ReactNode;
@@ -34,13 +36,16 @@ export function ModalShell({
             ) : null}
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-[34px] w-[34px] items-center justify-center rounded-[8px] border-[1.5px] border-[#e2e8f0] text-[#64748b] transition-colors hover:bg-[#fef2f2] hover:text-[#dc2626]"
-          >
-            <X className="size-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            {headerActions}
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-[34px] w-[34px] items-center justify-center rounded-[8px] border-[1.5px] border-[#e2e8f0] text-[#64748b] transition-colors hover:bg-[#fef2f2] hover:text-[#dc2626]"
+            >
+              <X className="size-4" />
+            </button>
+          </div>
         </div>
 
         <div className="scrollbar-minimal flex-1 px-6 py-[22px]">

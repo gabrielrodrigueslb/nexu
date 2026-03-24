@@ -293,6 +293,7 @@ export function ImplantacaoKanban() {
                 ...ticket.history,
                 {
                   id: `${ticket.id}-hist-move-${Date.now()}`,
+                  actor: ticket.respSolicitacao || getTechNameById(ticket.respTec),
                   message: `Ticket movido para a etapa ${targetColumn}.`,
                   createdAt: new Date().toISOString().slice(0, 10),
                 },
@@ -323,8 +324,100 @@ export function ImplantacaoKanban() {
             ...ticket.history,
             {
               id: `${ticket.id}-hist-task-${taskId}-${Date.now()}`,
+              actor: getTechNameById(ticket.respTec),
               message: `Tarefa "${targetTask.title}" ${nextDone ? 'concluida' : 'reaberta'}.`,
               createdAt: new Date().toISOString().slice(0, 10),
+            },
+          ],
+        };
+      }),
+    );
+  }
+
+  function handleAddComment(ticketId: string, message: string) {
+    const today = new Date().toISOString().slice(0, 10);
+    setTickets((current) =>
+      current.map((ticket) =>
+        ticket.id === ticketId
+          ? {
+              ...ticket,
+              updatedAt: today,
+              comments: [
+                ...ticket.comments,
+                {
+                  id: `${ticket.id}-comment-${Date.now()}`,
+                  author: ticket.respSolicitacao || getTechNameById(ticket.respTec),
+                  message,
+                  createdAt: today,
+                },
+              ],
+            }
+          : ticket,
+      ),
+    );
+  }
+
+  function handleAddAttachments(ticketId: string, files: File[]) {
+    setTickets((current) =>
+      current.map((ticket) =>
+        ticket.id === ticketId
+          ? {
+              ...ticket,
+              attachments: [
+                ...ticket.attachments,
+                ...files.map((file) => ({
+                  id: `${ticket.id}-attachment-${Date.now()}-${file.name}`,
+                  name: file.name,
+                  subtitle: `${Math.max(1, Math.round(file.size / 1024))} KB`,
+                })),
+              ],
+            }
+          : ticket,
+      ),
+    );
+  }
+
+  function handleChangeTech(ticketId: string, techId: string) {
+    const today = new Date().toISOString().slice(0, 10);
+    setTickets((current) =>
+      current.map((ticket) =>
+        ticket.id === ticketId
+          ? {
+              ...ticket,
+              respTec: techId,
+              updatedAt: today,
+              history: [
+                ...ticket.history,
+                {
+                  id: `${ticket.id}-hist-tech-${Date.now()}`,
+                  actor: ticket.respSolicitacao || getTechNameById(techId),
+                  message: `Resp. tecnico atribuido: ${getTechNameById(techId)}.`,
+                  createdAt: today,
+                },
+              ],
+            }
+          : ticket,
+      ),
+    );
+  }
+
+  function handleChangeLabel(ticketId: string, label: ImplantacaoTicket['csStatus']) {
+    const today = new Date().toISOString().slice(0, 10);
+    setTickets((current) =>
+      current.map((ticket) => {
+        if (ticket.id !== ticketId || ticket.csStatus === label) return ticket;
+
+        return {
+          ...ticket,
+          csStatus: label,
+          updatedAt: today,
+          history: [
+            ...ticket.history,
+            {
+              id: `${ticket.id}-hist-label-${Date.now()}`,
+              actor: ticket.respSolicitacao || getTechNameById(ticket.respTec),
+              message: `Etiqueta alterada para ${label}.`,
+              createdAt: today,
             },
           ],
         };
@@ -497,6 +590,10 @@ export function ImplantacaoKanban() {
         ticket={viewingTicket}
         onClose={() => setViewingTicketId(null)}
         onToggleTask={toggleTask}
+        onAddComment={handleAddComment}
+        onAddAttachments={handleAddAttachments}
+        onChangeTech={handleChangeTech}
+        onChangeLabel={handleChangeLabel}
       />
     </div>
   );

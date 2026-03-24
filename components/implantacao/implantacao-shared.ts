@@ -17,6 +17,20 @@ export type ImplantacaoTask = SupportTask & {
 
 export type ImplantacaoHistoryItem = {
   id: string;
+  actor?: string;
+  message: string;
+  createdAt: string;
+};
+
+export type ImplantacaoAttachment = {
+  id: string;
+  name: string;
+  subtitle?: string;
+};
+
+export type ImplantacaoComment = {
+  id: string;
+  author: string;
   message: string;
   createdAt: string;
 };
@@ -51,6 +65,8 @@ export type ImplantacaoTicket = {
   tasks: ImplantacaoTask[];
   products: ImplantacaoValueRow[];
   integrations: ImplantacaoValueRow[];
+  attachments: ImplantacaoAttachment[];
+  comments: ImplantacaoComment[];
   history: ImplantacaoHistoryItem[];
 };
 
@@ -129,11 +145,13 @@ function historyForTicket(ticket: SupportTicket, respName: string): ImplantacaoH
     {
       id: `${ticket.id}-hist-1`,
       message: `Ticket aprovado para implantacao. ${ticket.tasks.length} tarefa(s) criada(s) automaticamente.`,
+      actor: respName,
       createdAt: ticket.createdAt,
     },
     {
       id: `${ticket.id}-hist-2`,
       message: `Resp. tecnico atribuido: ${respName}.`,
+      actor: respName,
       createdAt: ticket.createdAt,
     },
   ];
@@ -144,20 +162,22 @@ function historyForTicket(ticket: SupportTicket, respName: string): ImplantacaoH
       items.push({
         id: `${ticket.id}-hist-task-${index}`,
         message: `Tarefa "${task.title}" concluida.`,
+        actor: respName,
         createdAt: task.endDate ?? ticket.updatedAt ?? ticket.createdAt,
       });
     });
 
   if (ticket.updatedAt) {
-    items.push({
-      id: `${ticket.id}-hist-final`,
-      message:
-        ticket.status === 'done'
-          ? 'Implantacao concluida e enviada para o historico.'
-          : `Ticket atualizado: ${ticket.csStatus}.`,
-      createdAt: ticket.updatedAt,
-    });
-  }
+      items.push({
+        id: `${ticket.id}-hist-final`,
+        message:
+          ticket.status === 'done'
+            ? 'Implantacao concluida e enviada para o historico.'
+            : `Ticket atualizado: ${ticket.csStatus}.`,
+        actor: respName,
+        createdAt: ticket.updatedAt,
+      });
+    }
 
   return items;
 }
@@ -206,6 +226,8 @@ function buildSeedTickets(): ImplantacaoTicket[] {
       })),
       products,
       integrations,
+      attachments: [],
+      comments: [],
       history: historyForTicket(ticket, techName),
     };
   });
@@ -251,6 +273,8 @@ function normalizeStoredTickets(raw: unknown): ImplantacaoTicket[] {
         : ticket.tasks,
       products: Array.isArray(stored.products) ? stored.products : ticket.products,
       integrations: Array.isArray(stored.integrations) ? stored.integrations : ticket.integrations,
+      attachments: Array.isArray(stored.attachments) ? stored.attachments : ticket.attachments,
+      comments: Array.isArray(stored.comments) ? stored.comments : ticket.comments,
       history: Array.isArray(stored.history) ? stored.history : ticket.history,
     };
   });

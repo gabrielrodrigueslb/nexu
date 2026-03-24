@@ -7,6 +7,7 @@ import {
   CircleOff,
   ClipboardList,
   Copy,
+  FilePenLine,
   Download,
   ExternalLink,
   FileText,
@@ -16,6 +17,7 @@ import {
   Mail,
   Plus,
   Search,
+  Tag,
   User,
   WalletCards,
   X,
@@ -23,6 +25,7 @@ import {
 
 import { leads as initialLeads, tickets as initialTickets, users } from '@/components/data';
 import { ModalShell } from '@/components/modal-shell';
+import { TicketDetailsView } from '@/components/shared/ticket-details-view';
 import type { TicketStatus } from '@/components/types';
 import { formatMoney } from '@/components/utils';
 
@@ -43,8 +46,22 @@ type ClosedClientTask = {
   dueDate?: string;
 };
 
+type ClosedClientAttachment = {
+  id: string;
+  name: string;
+  subtitle?: string;
+};
+
+type ClosedClientComment = {
+  id: string;
+  author: string;
+  message: string;
+  createdAt: string;
+};
+
 type ClosedClientLog = {
   id: string;
+  actor?: string;
   message: string;
   createdAt: string;
 };
@@ -74,6 +91,8 @@ type ClosedClientTicketRecord = {
   products: CommercialPriceRow[];
   integrations: CommercialPriceRow[];
   tasks: ClosedClientTask[];
+  attachments: ClosedClientAttachment[];
+  comments: ClosedClientComment[];
   logs: ClosedClientLog[];
 };
 
@@ -86,6 +105,17 @@ type TicketFilterValue =
 const PLAN_OPTIONS = ['Lite', 'Basico', 'Profissional', 'Unico'];
 const PAYMENT_OPTIONS = ['Boleto Bancario', 'Pix', 'Cartao de Credito', 'Transferencia'];
 const INSTALLMENT_OPTIONS = ['A vista', '2x', '3x', '4x', '5x', '6x', '10x', '12x'];
+const COMMERCIAL_LABEL_OPTIONS = [
+  'Novo Ticket',
+  'Reuniao Agendada',
+  'Site',
+  'Portfolio',
+  'Implantacao',
+  'Reuniao de Alinhamento',
+  'Migracao de API',
+  'Em configuracao',
+  'Bercario',
+] as const;
 
 function ClockStatusIcon(props: React.ComponentProps<typeof ClipboardList>) {
   return <ClipboardList {...props} />;
@@ -206,6 +236,26 @@ function formatDate(value?: string) {
   return `${day}/${month}/${year}`;
 }
 
+function resolveUserName(userId?: string) {
+  return users.find((user) => user.id === userId)?.name;
+}
+
+function resolveCommercialActor(ticket: Pick<ClosedClientTicketRecord, 'assigneeId' | 'technicalAssigneeId'>) {
+  return (
+    resolveUserName(ticket.assigneeId) ??
+    resolveUserName(ticket.technicalAssigneeId) ??
+    'Equipe Comercial'
+  );
+}
+
+function resolveTechnicalActor(ticket: Pick<ClosedClientTicketRecord, 'assigneeId' | 'technicalAssigneeId'>) {
+  return (
+    resolveUserName(ticket.technicalAssigneeId) ??
+    resolveUserName(ticket.assigneeId) ??
+    'Equipe Comercial'
+  );
+}
+
 function copyText(value: string) {
   if (!value) return;
   if (typeof navigator !== 'undefined' && navigator.clipboard) {
@@ -223,6 +273,87 @@ function sumRecurringValue(ticket: Pick<ClosedClientTicketRecord, 'products' | '
   return [...ticket.products, ...ticket.integrations]
     .filter((item) => item.enabled)
     .reduce((sum, item) => sum + item.recurring, 0);
+}
+
+function buildKanbanChipItems(ticket: Pick<ClosedClientTicketRecord, 'type' | 'csStatus' | 'products' | 'integrations'>) {
+  const labels = [
+    ticket.type === 'inclusao' ? 'Upsell' : 'Novo Ticket',
+    ...ticket.products.filter((item) => item.enabled).map((item) => item.name),
+    ...ticket.integrations.filter((item) => item.enabled).map((item) => item.name),
+    ticket.csStatus,
+  ].filter(Boolean);
+
+  return [...new Set(labels)].map((label) => ({
+    id: label.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+    label,
+    active: label === ticket.csStatus,
+  }));
+}
+
+function InfoField({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-[10px] border border-[#e2e8f0] bg-[#f8fafc] px-3 py-3">
+      <div className="text-[10px] font-bold tracking-[.06em] text-[#64748b] uppercase">
+        {label}
+      </div>
+      <div className="mt-1 text-[13px] font-semibold text-[#0f172a]">{value}</div>
+    </div>
+  );
+}
+
+function TicketValueTable({
+  title,
+  icon,
+  rows,
+}: {
+  title: string;
+  icon: React.ReactNode;
+  rows: CommercialPriceRow[];
+}) {
+  return (
+    <div className="rounded-[12px] border border-[#e2e8f0] bg-white p-4">
+      <div className="mb-3 inline-flex items-center gap-2 text-[12px] font-bold tracking-[.06em] text-[#64748b] uppercase">
+        {icon}
+        <span>{title}</span>
+      </div>
+      {rows.length ? (
+        <div className="overflow-hidden rounded-[10px] border border-[#e2e8f0]">
+          <table className="w-full border-collapse text-[12px]">
+            <thead>
+              <tr className="bg-[#f8fafc]">
+                <th className="px-3 py-2 text-left text-[10px] font-bold uppercase text-[#64748b]">
+                  Item
+                </th>
+                <th className="px-3 py-2 text-right text-[10px] font-bold uppercase text-[#64748b]">
+                  Setup
+                </th>
+                <th className="px-3 py-2 text-right text-[10px] font-bold uppercase text-[#64748b]">
+                  Recorrencia
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.id} className="border-t border-[#e2e8f0]">
+                  <td className="px-3 py-[10px] font-semibold text-[#0f172a]">{row.name}</td>
+                  <td className="px-3 py-[10px] text-right text-[#2563eb]">
+                    {formatMoney(row.setup)}
+                  </td>
+                  <td className="px-3 py-[10px] text-right text-[#7c3aed]">
+                    {formatMoney(row.recurring)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="rounded-[10px] border border-dashed border-[#cbd5e1] bg-[#f8fafc] px-4 py-6 text-center text-[13px] text-[#64748b]">
+          Nenhum item selecionado.
+        </div>
+      )}
+    </div>
+  );
 }
 
 function buildSeedTickets(): ClosedClientTicketRecord[] {
@@ -304,10 +435,30 @@ function buildSeedTickets(): ClosedClientTicketRecord[] {
       products: defaultProducts,
       integrations: defaultIntegrations,
       tasks,
+      attachments: [],
+      comments: [],
       logs: [
-        { id: makeId('log'), message: 'Ticket criado', createdAt: ticket.createdAt },
         {
           id: makeId('log'),
+          actor: resolveCommercialActor({
+            assigneeId: ticket.assignee,
+            technicalAssigneeId:
+              ticket.status === 'em_implantacao' || ticket.status === 'concluido'
+                ? ticket.assignee
+                : undefined,
+          }),
+          message: 'Ticket criado',
+          createdAt: ticket.createdAt,
+        },
+        {
+          id: makeId('log'),
+          actor: resolveCommercialActor({
+            assigneeId: ticket.assignee,
+            technicalAssigneeId:
+              ticket.status === 'em_implantacao' || ticket.status === 'concluido'
+                ? ticket.assignee
+                : undefined,
+          }),
           message: `Status atualizado para ${STATUS_META[ticket.status].label}`,
           createdAt: linkedLead?.wonAt ?? ticket.createdAt,
         },
@@ -341,6 +492,8 @@ function emptyDraft(): ClosedClientTicketRecord {
     products: createEmptyPriceRows(PRODUCT_CATALOG),
     integrations: createEmptyPriceRows(INTEGRATION_CATALOG),
     tasks: [],
+    attachments: [],
+    comments: [],
     logs: [],
   };
 }
@@ -355,6 +508,8 @@ function cloneTicket(ticket: ClosedClientTicketRecord): ClosedClientTicketRecord
     products: cloneRows(ticket.products),
     integrations: cloneRows(ticket.integrations),
     tasks: ticket.tasks.map((task) => ({ ...task })),
+    attachments: ticket.attachments.map((attachment) => ({ ...attachment })),
+    comments: ticket.comments.map((comment) => ({ ...comment })),
     logs: ticket.logs.map((log) => ({ ...log })),
   };
 }
@@ -530,72 +685,6 @@ function PriceRowsEditor({
   );
 }
 
-function InfoField({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-[10px] border border-[#e2e8f0] bg-[#f8fafc] px-3 py-3">
-      <div className="text-[10px] font-bold tracking-[.06em] text-[#64748b] uppercase">
-        {label}
-      </div>
-      <div className="mt-1 text-[13px] font-semibold text-[#0f172a]">{value}</div>
-    </div>
-  );
-}
-
-function TicketValueTable({
-  title,
-  icon,
-  rows,
-}: {
-  title: string;
-  icon: React.ReactNode;
-  rows: CommercialPriceRow[];
-}) {
-  return (
-    <div className="rounded-[12px] border border-[#e2e8f0] bg-white p-4">
-      <div className="mb-3 inline-flex items-center gap-2 text-[12px] font-bold tracking-[.06em] text-[#64748b] uppercase">
-        {icon}
-        <span>{title}</span>
-      </div>
-      {rows.length ? (
-        <div className="overflow-hidden rounded-[10px] border border-[#e2e8f0]">
-          <table className="w-full border-collapse text-[12px]">
-            <thead>
-              <tr className="bg-[#f8fafc]">
-                <th className="px-3 py-2 text-left text-[10px] font-bold uppercase text-[#64748b]">
-                  Item
-                </th>
-                <th className="px-3 py-2 text-right text-[10px] font-bold uppercase text-[#64748b]">
-                  Setup
-                </th>
-                <th className="px-3 py-2 text-right text-[10px] font-bold uppercase text-[#64748b]">
-                  Recorrencia
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.id} className="border-t border-[#e2e8f0]">
-                  <td className="px-3 py-[10px] font-semibold text-[#0f172a]">{row.name}</td>
-                  <td className="px-3 py-[10px] text-right text-[#2563eb]">
-                    {formatMoney(row.setup)}
-                  </td>
-                  <td className="px-3 py-[10px] text-right text-[#7c3aed]">
-                    {formatMoney(row.recurring)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <div className="rounded-[10px] border border-dashed border-[#cbd5e1] bg-[#f8fafc] px-4 py-6 text-center text-[13px] text-[#64748b]">
-          Nenhum item selecionado.
-        </div>
-      )}
-    </div>
-  );
-}
-
 function TicketFormModal({
   open,
   ticket,
@@ -635,6 +724,7 @@ function TicketFormModal({
             ...draft.logs,
             {
               id: makeId('log'),
+              actor: resolveCommercialActor(draft),
               message: ticket ? 'Ticket atualizado' : 'Ticket criado',
               createdAt: todayIsoDate(),
             },
@@ -642,6 +732,7 @@ function TicketFormModal({
         : [
             {
               id: makeId('log'),
+              actor: resolveCommercialActor(draft),
               message: 'Ticket criado',
               createdAt: todayIsoDate(),
             },
@@ -905,6 +996,10 @@ function TicketDetailsModal({
   onEdit,
   onAdvanceStatus,
   onToggleTask,
+  onAddComment,
+  onAddAttachments,
+  onChangeTechnicalAssignee,
+  onChangeLabel,
 }: {
   open: boolean;
   ticket: ClosedClientTicketRecord | null;
@@ -912,6 +1007,10 @@ function TicketDetailsModal({
   onEdit: () => void;
   onAdvanceStatus: () => void;
   onToggleTask: (taskId: string) => void;
+  onAddComment: (message: string) => void;
+  onAddAttachments: (files: File[]) => void;
+  onChangeTechnicalAssignee: (technicalAssigneeId: string) => void;
+  onChangeLabel: (label: string) => void;
 }) {
   if (!ticket) return null;
 
@@ -929,13 +1028,277 @@ function TicketDetailsModal({
   const visibleProducts = ticket.products.filter((item) => item.enabled);
   const visibleIntegrations = ticket.integrations.filter((item) => item.enabled);
   const historyItems = [...ticket.logs].reverse();
+  const labelOptions = [...new Set([...COMMERCIAL_LABEL_OPTIONS, ticket.csStatus])];
   const advanceLabel =
     ticket.status === 'pendente_financeiro'
       ? 'Marcar cobranca gerada'
       : ticket.status === 'pagamento_confirmado'
         ? 'Enviar para implantacao'
         : 'Concluir implantacao';
+  const journeyLabels = ['Cadastro', 'Pagamento', 'Implantacao', 'Concluido'];
+  const journeySteps =
+    ticket.status === 'concluido'
+      ? journeyLabels.map((label) => ({ label, state: 'done' as const }))
+      : journeyLabels.map((label, index) => ({
+          label,
+          state:
+            index < statusMeta.step
+              ? ('done' as const)
+              : index === statusMeta.step
+                ? ('active' as const)
+                : ('pending' as const),
+        }));
 
+  return (
+    <TicketDetailsView
+      open={open}
+      onClose={onClose}
+      title={ticket.company}
+      description={`${ticket.cnpj || '-'} - ${statusMeta.label}`}
+      maxWidthClassName="max-w-[980px]"
+      protocol={ticket.proto}
+      badges={[
+        <span
+          key="status"
+          className={`inline-flex items-center gap-1 rounded-full border px-[10px] py-[4px] text-[11px] font-bold ${statusMeta.badge}`}
+        >
+          <StatusIcon className="size-3.5" />
+          {statusMeta.label}
+        </span>,
+        <span
+          key="type"
+          className={`inline-flex rounded-full border px-[10px] py-[4px] text-[11px] font-bold ${typeMeta.badge}`}
+        >
+          {typeMeta.label}
+        </span>,
+        ...(ticket.csStatus
+          ? [
+              <span
+                key="stage"
+                className="inline-flex rounded-full border border-[#e2e8f0] bg-white px-[10px] py-[4px] text-[11px] font-bold text-[#475569]"
+              >
+                {ticket.csStatus}
+              </span>,
+            ]
+          : []),
+      ]}
+      metaItems={[
+        <span
+          key="created"
+          className="inline-flex items-center gap-1.5 rounded-full border border-[#e2e8f0] bg-white px-3 py-1.5 text-[11px] font-medium text-[#475569]"
+        >
+          <CalendarDays className="size-3.5 text-[#64748b]" />
+          Criado em {formatDate(ticket.createdAt)}
+        </span>,
+        <span
+          key="requester"
+          className="inline-flex items-center gap-1.5 rounded-full border border-[#e2e8f0] bg-white px-3 py-1.5 text-[11px] font-medium text-[#475569]"
+        >
+          <User className="size-3.5 text-[#64748b]" />
+          Resp. solicitacao: {assigneeName}
+        </span>,
+        <span
+          key="tech"
+          className="inline-flex items-center gap-2 rounded-full border border-[#e2e8f0] bg-white px-3 py-1.5 text-[11px] font-medium text-[#475569]"
+        >
+          <Hammer className="size-3.5 text-[#64748b]" />
+          <span>Resp. tecnico:</span>
+          <select
+            value={ticket.technicalAssigneeId ?? ''}
+            onChange={(event) => onChangeTechnicalAssignee(event.target.value)}
+            className="min-w-[150px] bg-transparent text-[11px] font-semibold text-[#0f172a] outline-none"
+          >
+            <option value="">Sem responsavel</option>
+            {users.map((user) => (
+              <option key={user.id} value={user.id}>
+                {user.name}
+              </option>
+            ))}
+          </select>
+        </span>,
+        <span
+          key="label"
+          className="inline-flex items-center gap-2 rounded-full border border-[#e2e8f0] bg-white px-3 py-1.5 text-[11px] font-medium text-[#475569]"
+        >
+          <Tag className="size-3.5 text-[#64748b]" />
+          <span>Etiqueta:</span>
+          <select
+            value={ticket.csStatus}
+            onChange={(event) => onChangeLabel(event.target.value)}
+            className="min-w-[170px] bg-transparent text-[11px] font-semibold text-[#0f172a] outline-none"
+          >
+            {labelOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </span>,
+        ...(ticket.updatedAt
+          ? [
+              <span
+                key="updated"
+                className="inline-flex items-center gap-1.5 rounded-full border border-[#e2e8f0] bg-white px-3 py-1.5 text-[11px] font-medium text-[#475569]"
+              >
+                <ClipboardList className="size-3.5 text-[#64748b]" />
+                Atualizado em {formatDate(ticket.updatedAt)}
+              </span>,
+            ]
+          : []),
+      ]}
+      journeySteps={journeySteps}
+      setupTotal={formatMoney(sumSetupValue(ticket))}
+      recurringTotal={formatMoney(sumRecurringValue(ticket))}
+      infoFields={[
+        { label: 'Empresa', value: ticket.company },
+        { label: 'CNPJ', value: ticket.cnpj || '-' },
+        { label: 'Contato', value: ticket.contact || '-' },
+        { label: 'Telefone', value: ticket.phone || '-' },
+        { label: 'Instancia', value: ticket.instance || '-' },
+        {
+          label: 'E-mail',
+          value: ticket.email || '-',
+          icon: <Mail className="size-4 text-[#64748b]" />,
+        },
+        {
+          label: 'Site',
+          value: ticket.website || '-',
+          icon: <Globe className="size-4 text-[#64748b]" />,
+        },
+        { label: 'Plano', value: ticket.plan || '-' },
+        { label: 'Pagamento', value: ticket.paymentMethod || '-' },
+        { label: 'Parcelamento', value: ticket.installment || '-', fullWidth: true },
+        { label: 'Responsavel', value: assigneeName },
+        { label: 'Resp. tecnico', value: technicalName },
+        { label: 'Criado em', value: formatDate(ticket.createdAt) },
+        { label: 'Atualizado em', value: formatDate(ticket.updatedAt) },
+      ]}
+      notes={ticket.notes}
+      notesLabel="Observacao"
+      tasks={ticket.tasks.map((task) => ({
+        id: task.id,
+        label: task.label,
+        done: task.done,
+        assignee: task.assigneeId
+          ? users.find((user) => user.id === task.assigneeId)?.name ?? '-'
+          : undefined,
+        dueDate: task.dueDate ? formatDate(task.dueDate) : undefined,
+      }))}
+      onToggleTask={onToggleTask}
+      valueTables={[
+        {
+          title: 'Produtos',
+          icon: <FileText className="size-4 text-[#2563eb]" />,
+          rows: visibleProducts.map((row) => ({
+            id: row.id,
+            name: row.name,
+            setup: row.setup,
+            recurring: row.recurring,
+          })),
+        },
+        {
+          title: 'Integracoes',
+          icon: <ExternalLink className="size-4 text-[#7c3aed]" />,
+          rows: visibleIntegrations.map((row) => ({
+            id: row.id,
+            name: row.name,
+            setup: row.setup,
+            recurring: row.recurring,
+          })),
+        },
+      ]}
+      attachments={{
+        title: 'Anexos',
+        helperText: '(clique para adicionar)',
+        emptyText: 'Sem anexos',
+        actionLabel: 'Clique para adicionar PDF, imagem ou documento',
+        items: ticket.attachments,
+        onAdd: onAddAttachments,
+      }}
+      historyItems={historyItems.map((item) => ({
+        id: item.id,
+        actor: item.actor ?? resolveCommercialActor(ticket),
+        message: item.message,
+        createdAt: formatDate(item.createdAt),
+      }))}
+      comments={{
+        title: 'Comentarios',
+        emptyText: 'Nenhum comentario.',
+        inputPlaceholder: 'Comentario...',
+        submitLabel: 'Enviar',
+        items: ticket.comments.map((item) => ({
+          id: item.id,
+          author: item.author,
+          initials: item.author
+            .split(' ')
+            .filter(Boolean)
+            .slice(0, 2)
+            .map((part) => part[0]?.toUpperCase() ?? '')
+            .join(''),
+          message: item.message,
+          createdAt: formatDate(item.createdAt),
+        })),
+        onSubmit: onAddComment,
+      }}
+      banner={
+        ticket.status === 'concluido' ? (
+          <div className="flex flex-wrap items-center gap-3 rounded-[12px] border border-[#86efac] bg-[#f0fdf4] px-4 py-3">
+            <span className="inline-flex items-center gap-2 text-[11px] font-bold tracking-[.06em] text-[#15803d] uppercase">
+              <CheckCircle2 className="size-4" />
+              Somente leitura
+            </span>
+            <span className="text-[12px] text-[#166534]">
+              Ticket finalizado. Visualizacao ajustada para seguir o mesmo padrao da
+              modal principal.
+            </span>
+          </div>
+        ) : null
+      }
+      footer={
+        <>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-[8px] border border-[#e2e8f0] bg-white px-4 py-[9px] text-[13px] font-semibold text-[#64748b]"
+          >
+            Fechar
+          </button>
+          {ticket.status !== 'concluido' ? (
+            <button
+              type="button"
+              onClick={onEdit}
+              className="rounded-[8px] border border-[#e2e8f0] bg-white px-4 py-[9px] text-[13px] font-semibold text-[#0f172a]"
+            >
+              Editar ticket
+            </button>
+          ) : null}
+          {canAdvance ? (
+            <button
+              type="button"
+              onClick={onAdvanceStatus}
+              className="rounded-[8px] bg-[#2563eb] px-4 py-[9px] text-[13px] font-semibold text-white"
+            >
+              {advanceLabel}
+            </button>
+          ) : null}
+        </>
+      }
+      headerActions={
+        ticket.status !== 'concluido' ? (
+          <button
+            type="button"
+            onClick={onEdit}
+            className="inline-flex items-center gap-2 rounded-[8px] border border-[#e2e8f0] bg-white px-3 py-[7px] text-[13px] font-semibold text-[#0f172a]"
+          >
+            <FilePenLine className="size-4" />
+            Editar
+          </button>
+        ) : null
+      }
+    />
+  );
+
+  /* legacy block kept temporarily for reference
   return (
     <ModalShell
       open={open}
@@ -1269,6 +1632,7 @@ function TicketDetailsModal({
       </div>
     </ModalShell>
   );
+  */
 }
 
 export function CommercialClosedClients() {
@@ -1397,6 +1761,10 @@ export function CommercialClosedClients() {
             ...ticket.logs,
             {
               id: makeId('log'),
+              actor:
+                nextStatus === 'concluido'
+                  ? resolveTechnicalActor(ticket)
+                  : resolveCommercialActor(ticket),
               message: `Status atualizado para ${STATUS_META[nextStatus].label}`,
               createdAt: todayIsoDate(),
             },
@@ -1423,6 +1791,7 @@ export function CommercialClosedClients() {
             ...ticket.logs,
             {
               id: makeId('log'),
+              actor: resolveTechnicalActor(ticket),
               message: `Tarefa atualizada: ${
                 tasks.find((task) => task.id === taskId)?.label ?? 'Tarefa'
               }`,
@@ -1431,6 +1800,96 @@ export function CommercialClosedClients() {
           ],
         };
       }),
+    );
+  }
+
+  function handleAddComment(ticketId: string, message: string) {
+    setTickets((current) =>
+      current.map((ticket) =>
+        ticket.id === ticketId
+          ? {
+              ...ticket,
+              updatedAt: todayIsoDate(),
+              comments: [
+                ...ticket.comments,
+                {
+                  id: makeId('comment'),
+                  author: resolveCommercialActor(ticket),
+                  message,
+                  createdAt: todayIsoDate(),
+                },
+              ],
+            }
+          : ticket,
+      ),
+    );
+  }
+
+  function handleAddAttachments(ticketId: string, files: File[]) {
+    setTickets((current) =>
+      current.map((ticket) =>
+        ticket.id === ticketId
+          ? {
+              ...ticket,
+              attachments: [
+                ...ticket.attachments,
+                ...files.map((file) => ({
+                  id: makeId('attachment'),
+                  name: file.name,
+                  subtitle: `${Math.max(1, Math.round(file.size / 1024))} KB`,
+                })),
+              ],
+            }
+          : ticket,
+      ),
+    );
+  }
+
+  function handleChangeTechnicalAssignee(ticketId: string, technicalAssigneeId: string) {
+    setTickets((current) =>
+      current.map((ticket) =>
+        ticket.id === ticketId
+          ? {
+              ...ticket,
+              technicalAssigneeId: technicalAssigneeId || undefined,
+              updatedAt: todayIsoDate(),
+              logs: [
+                ...ticket.logs,
+                {
+                  id: makeId('log'),
+                  actor: resolveCommercialActor(ticket),
+                  message: `Resp. tecnico atribuido: ${
+                    resolveUserName(technicalAssigneeId) ?? 'Sem responsavel'
+                  }`,
+                  createdAt: todayIsoDate(),
+                },
+              ],
+            }
+          : ticket,
+      ),
+    );
+  }
+
+  function handleChangeLabel(ticketId: string, label: string) {
+    setTickets((current) =>
+      current.map((ticket) =>
+        ticket.id === ticketId && ticket.csStatus !== label
+          ? {
+              ...ticket,
+              csStatus: label,
+              updatedAt: todayIsoDate(),
+              logs: [
+                ...ticket.logs,
+                {
+                  id: makeId('log'),
+                  actor: resolveCommercialActor(ticket),
+                  message: `Etiqueta alterada para ${label}`,
+                  createdAt: todayIsoDate(),
+                },
+              ],
+            }
+          : ticket,
+      ),
     );
   }
 
@@ -1679,6 +2138,22 @@ export function CommercialClosedClients() {
         onToggleTask={(taskId) => {
           if (!viewingTicket) return;
           handleToggleTask(viewingTicket.id, taskId);
+        }}
+        onAddComment={(message) => {
+          if (!viewingTicket) return;
+          handleAddComment(viewingTicket.id, message);
+        }}
+        onAddAttachments={(files) => {
+          if (!viewingTicket) return;
+          handleAddAttachments(viewingTicket.id, files);
+        }}
+        onChangeTechnicalAssignee={(technicalAssigneeId) => {
+          if (!viewingTicket) return;
+          handleChangeTechnicalAssignee(viewingTicket.id, technicalAssigneeId);
+        }}
+        onChangeLabel={(label) => {
+          if (!viewingTicket) return;
+          handleChangeLabel(viewingTicket.id, label);
         }}
       />
     </div>
