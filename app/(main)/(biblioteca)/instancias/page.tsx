@@ -1,11 +1,5 @@
-import { ModulePageShell } from "@/components/module-page-shell";
+import { InstancesLibraryPage } from '@/components/instances-library-page';
 
 export default function InstanciasPage() {
-  return (
-    <ModulePageShell
-      section="Biblioteca"
-      title="Instancias"
-      description="Espaco reservado para a gestao e consulta das instancias disponiveis no sistema."
-    />
-  );
+  return <InstancesLibraryPage />;
 }

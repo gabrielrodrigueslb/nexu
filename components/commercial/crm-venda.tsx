@@ -4,7 +4,12 @@ import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { CalendarDays, Search, WalletCards, X } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
-import { leads as initialLeads, origins, sdrs, users } from '@/components/data';
+import { leads as initialLeads, users } from '@/components/data';
+import {
+  useAdminIndicators,
+  useAdminOrigins,
+  useAdminSdrs,
+} from '@/components/admin-settings-storage';
 import { KanbanBoard } from '@/components/kanban-board';
 import { CRM_COLS, type LeadStatus } from '@/components/types';
 import { formatMoney } from '@/components/utils';
@@ -30,6 +35,9 @@ export function CommercialCrmVenda() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const [originItems] = useAdminOrigins();
+  const [sdrItems] = useAdminSdrs();
+  const [indicatorItems] = useAdminIndicators();
   const [crmLeads, setCrmLeads] = useState<CommercialLeadRecord[]>(() =>
     initialLeads.map(toCommercialLeadRecord),
   );
@@ -44,26 +52,52 @@ export function CommercialCrmVenda() {
 
   const deferredQuery = useDeferredValue(query);
   const normalizedQuery = deferredQuery.trim().toLowerCase();
+  const requestedLeadId = searchParams.get('lead');
 
   const getSellerName = (sellerId?: string) =>
     users.find((user) => user.id === sellerId)?.name;
 
+  const originOptions = useMemo(
+    () => originItems.filter((item) => item.active).map(({ id, name }) => ({ id, name })),
+    [originItems],
+  );
+
+  const sdrOptions = useMemo(
+    () => sdrItems.filter((item) => item.active).map(({ id, name }) => ({ id, name })),
+    [sdrItems],
+  );
+
+  const indicatorOptions = useMemo(
+    () => indicatorItems.map(({ id, name }) => ({ id, name })),
+    [indicatorItems],
+  );
+
+  const representativeOptions = useMemo(
+    () =>
+      indicatorItems.map(({ id, name, percentSetup }) => ({
+        id,
+        name,
+        percent: percentSetup,
+      })),
+    [indicatorItems],
+  );
+
   const editingLead = useMemo(
-    () => crmLeads.find((lead) => lead.id === editingLeadId) ?? null,
-    [crmLeads, editingLeadId],
+    () =>
+      crmLeads.find(
+        (lead) => lead.id === (editingLeadId ?? requestedLeadId ?? '__missing__'),
+      ) ?? null,
+    [crmLeads, editingLeadId, requestedLeadId],
   );
 
   useEffect(() => {
-    const leadId = searchParams.get('lead');
-    if (!leadId) return;
+    if (!requestedLeadId) return;
 
-    const leadExists = crmLeads.some((lead) => lead.id === leadId);
+    const leadExists = crmLeads.some((lead) => lead.id === requestedLeadId);
     if (!leadExists) return;
 
-    setCreatingStatus(undefined);
-    setEditingLeadId(leadId);
     router.replace(pathname, { scroll: false });
-  }, [crmLeads, pathname, router, searchParams]);
+  }, [crmLeads, pathname, requestedLeadId, router]);
 
   const filteredLeads = useMemo(() => {
     return crmLeads.filter((lead) => {
@@ -320,8 +354,8 @@ export function CommercialCrmVenda() {
           <CrmLeadCard
             lead={lead}
             sellerName={getSellerName(lead.sellerId)}
-            originName={origins.find((origin) => origin.id === lead.originId)?.name}
-            sdrName={sdrs.find((sdr) => sdr.id === lead.sdrId)?.name}
+            originName={originOptions.find((origin) => origin.id === lead.originId)?.name}
+            sdrName={sdrOptions.find((sdr) => sdr.id === lead.sdrId)?.name}
             pendingTasks={lead.tasks.filter((task) => !task.done).length}
             onClick={() => handleOpenEdit(lead.id)}
           />
@@ -334,10 +368,10 @@ export function CommercialCrmVenda() {
         lead={editingLead}
         initialStatus={creatingStatus}
         sellerOptions={users}
-        originOptions={origins}
-        sdrOptions={sdrs}
-        indicatorOptions={[]}
-        representativeOptions={[]}
+        originOptions={originOptions}
+        sdrOptions={sdrOptions}
+        indicatorOptions={indicatorOptions}
+        representativeOptions={representativeOptions}
         onClose={closeLeadModal}
         onSave={handleSaveLead}
         onMarkWon={handleMarkWon}

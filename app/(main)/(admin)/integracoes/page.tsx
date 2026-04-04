@@ -1,11 +1,5 @@
-import { ModulePageShell } from "@/components/module-page-shell";
+import { AdminCatalogManagementPage } from '@/components/admin-catalog-management-page';
 
 export default function IntegracoesPage() {
-  return (
-    <ModulePageShell
-      section="Admin"
-      title="Integracoes"
-      description="Espaco reservado para configuracao e monitoramento das integracoes do sistema."
-    />
-  );
+  return <AdminCatalogManagementPage type="integrations" />;
 }

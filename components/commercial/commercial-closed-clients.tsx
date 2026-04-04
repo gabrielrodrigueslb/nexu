@@ -1,6 +1,6 @@
 'use client';
 
-import { useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { useDeferredValue, useMemo, useState } from 'react';
 import {
   CalendarDays,
   CheckCircle2,
@@ -24,6 +24,12 @@ import {
 } from 'lucide-react';
 
 import { leads as initialLeads, tickets as initialTickets, users } from '@/components/data';
+import {
+  getActiveCatalogNames,
+  syncCatalogRows,
+  useAdminIntegrations,
+  useAdminProducts,
+} from '@/components/admin-catalogs';
 import { ModalShell } from '@/components/modal-shell';
 import { TicketDetailsView } from '@/components/shared/ticket-details-view';
 import type { TicketStatus } from '@/components/types';
@@ -31,8 +37,6 @@ import { formatMoney } from '@/components/utils';
 
 import {
   createEmptyPriceRows,
-  INTEGRATION_CATALOG,
-  PRODUCT_CATALOG,
   type CommercialPriceRow,
 } from './types';
 
@@ -169,6 +173,16 @@ const TYPE_META: Record<ClosedClientTicketType, { label: string; badge: string }
 };
 
 const JOURNEY_STEPS = ['Cadastro', 'Pagamento', 'Implantacao', 'Concluido'];
+
+function syncPriceRowsWithCatalog(rows: CommercialPriceRow[], catalogNames: string[]) {
+  return syncCatalogRows(rows, catalogNames, (name) => ({
+    id: name.toLowerCase().replace(/\s+/g, '-'),
+    name,
+    enabled: false,
+    setup: 0,
+    recurring: 0,
+  }));
+}
 
 function makeId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -356,13 +370,13 @@ function TicketValueTable({
   );
 }
 
-function buildSeedTickets(): ClosedClientTicketRecord[] {
+function buildSeedTickets(productCatalog: string[], integrationCatalog: string[]): ClosedClientTicketRecord[] {
   return initialTickets.map((ticket, index) => {
     const linkedLead =
       initialLeads.find((lead) => lead.generatedTicketId === ticket.id) ??
       initialLeads.find((lead) => lead.status === 'Ganho' && index % 2 === 0);
     const plan = linkedLead?.isLite ? 'Lite' : 'Profissional';
-    const defaultProducts = createEmptyPriceRows(PRODUCT_CATALOG).map((item, itemIndex) =>
+    const defaultProducts = createEmptyPriceRows(productCatalog).map((item, itemIndex) =>
       itemIndex === 0
         ? {
             ...item,
@@ -373,7 +387,7 @@ function buildSeedTickets(): ClosedClientTicketRecord[] {
           }
         : item,
     );
-    const defaultIntegrations = createEmptyPriceRows(INTEGRATION_CATALOG).map((item, itemIndex) =>
+    const defaultIntegrations = createEmptyPriceRows(integrationCatalog).map((item, itemIndex) =>
       itemIndex === 0 && linkedLead?.paymentMethod === 'Cartao'
         ? { ...item, enabled: true, setup: 0, recurring: 0 }
         : item,
@@ -467,7 +481,7 @@ function buildSeedTickets(): ClosedClientTicketRecord[] {
   });
 }
 
-function emptyDraft(): ClosedClientTicketRecord {
+function emptyDraft(productCatalog: string[], integrationCatalog: string[]): ClosedClientTicketRecord {
   return {
     id: makeId('ticket'),
     proto: `COM-${Date.now().toString().slice(-6)}`,
@@ -489,8 +503,8 @@ function emptyDraft(): ClosedClientTicketRecord {
     createdAt: todayIsoDate(),
     updatedAt: todayIsoDate(),
     notes: '',
-    products: createEmptyPriceRows(PRODUCT_CATALOG),
-    integrations: createEmptyPriceRows(INTEGRATION_CATALOG),
+    products: createEmptyPriceRows(productCatalog),
+    integrations: createEmptyPriceRows(integrationCatalog),
     tasks: [],
     attachments: [],
     comments: [],
@@ -688,19 +702,27 @@ function PriceRowsEditor({
 function TicketFormModal({
   open,
   ticket,
+  productCatalog,
+  integrationCatalog,
   onClose,
   onSave,
 }: {
   open: boolean;
   ticket: ClosedClientTicketRecord | null;
+  productCatalog: string[];
+  integrationCatalog: string[];
   onClose: () => void;
   onSave: (ticket: ClosedClientTicketRecord) => void;
 }) {
-  const [draft, setDraft] = useState<ClosedClientTicketRecord>(ticket ?? emptyDraft());
-
-  useEffect(() => {
-    setDraft(ticket ? cloneTicket(ticket) : emptyDraft());
-  }, [ticket]);
+  const [draft, setDraft] = useState<ClosedClientTicketRecord>(
+    ticket
+      ? {
+          ...cloneTicket(ticket),
+          products: syncPriceRowsWithCatalog(ticket.products, productCatalog),
+          integrations: syncPriceRowsWithCatalog(ticket.integrations, integrationCatalog),
+        }
+      : emptyDraft(productCatalog, integrationCatalog),
+  );
 
   function update<K extends keyof ClosedClientTicketRecord>(
     key: K,
@@ -1636,7 +1658,13 @@ function TicketDetailsModal({
 }
 
 export function CommercialClosedClients() {
-  const [tickets, setTickets] = useState<ClosedClientTicketRecord[]>(() => buildSeedTickets());
+  const [productItems] = useAdminProducts();
+  const [integrationItems] = useAdminIntegrations();
+  const productCatalog = getActiveCatalogNames(productItems);
+  const integrationCatalog = getActiveCatalogNames(integrationItems);
+  const [tickets, setTickets] = useState<ClosedClientTicketRecord[]>(() =>
+    buildSeedTickets(productCatalog, integrationCatalog),
+  );
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<TicketFilterValue>('all');
   const [responsibleFilter, setResponsibleFilter] = useState('');
@@ -2113,8 +2141,11 @@ export function CommercialClosedClients() {
       ) : null}
 
       <TicketFormModal
+        key={`${editingTicket?.id ?? 'create'}-${productCatalog.join('|')}-${integrationCatalog.join('|')}`}
         open={creating || Boolean(editingTicket)}
         ticket={editingTicket}
+        productCatalog={productCatalog}
+        integrationCatalog={integrationCatalog}
         onClose={() => {
           setCreating(false);
           setEditingTicketId(null);

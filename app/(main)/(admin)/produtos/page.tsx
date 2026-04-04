@@ -1,11 +1,5 @@
-import { ModulePageShell } from "@/components/module-page-shell";
+import { AdminCatalogManagementPage } from '@/components/admin-catalog-management-page';
 
 export default function ProdutosPage() {
-  return (
-    <ModulePageShell
-      section="Admin"
-      title="Produtos"
-      description="Espaco reservado para o cadastro e a administracao dos produtos disponiveis."
-    />
-  );
+  return <AdminCatalogManagementPage type="products" />;
 }

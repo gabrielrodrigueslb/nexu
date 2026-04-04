@@ -296,14 +296,14 @@ export function AppSidebar({ userEmail, userLabel }: AppSidebarProps) {
             {userEmail || '-'}
           </div>
         </div>
-        <button
-          type="button"
+        <Link
+          href="/perfil"
           title="Meu Perfil"
           aria-label="Meu Perfil"
           className="flex size-7 shrink-0 items-center justify-center rounded-[6px] border border-white/10 text-[#64748b] transition-all duration-150 hover:bg-white/[0.08] hover:text-[#94a3b8]"
         >
           <CircleDot className="size-[14px]" />
-        </button>
+        </Link>
         <form action={logoutAction}>
           <button
             type="submit"

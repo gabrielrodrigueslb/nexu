@@ -1,11 +1,5 @@
-import { ModulePageShell } from "@/components/module-page-shell";
+import { AdminSdrsPage } from '@/components/admin-sdrs-page';
 
 export default function SdrsPage() {
-  return (
-    <ModulePageShell
-      section="Admin"
-      title="SDRs"
-      description="Espaco reservado para cadastro e acompanhamento dos SDRs."
-    />
-  );
+  return <AdminSdrsPage />;
 }

@@ -5,6 +5,12 @@ import { useMemo, useState } from 'react';
 import { ModalShell } from '@/components/modal-shell';
 import { CRM_COLS } from '@/components/types';
 import { formatMoney } from '@/components/utils';
+import {
+  getActiveCatalogNames,
+  syncCatalogRows,
+  useAdminIntegrations,
+  useAdminProducts,
+} from '@/components/admin-catalogs';
 
 import { openProposalPdfWindow } from './proposal-generator';
 import {
@@ -12,8 +18,6 @@ import {
   COMMERCIAL_TASK_TYPES,
   computeLeadTotals,
   createEmptyPriceRows,
-  INTEGRATION_CATALOG,
-  PRODUCT_CATALOG,
   todayIsoDate,
   type CommercialComment,
   type CommercialLeadRecord,
@@ -68,6 +72,16 @@ function currencyInputValue(value?: number | null) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
+}
+
+function syncPriceRowsWithCatalog(rows: CommercialPriceRow[], catalogNames: string[]) {
+  return syncCatalogRows(rows, catalogNames, (name) => ({
+    id: name.toLowerCase().replace(/\s+/g, '-'),
+    name,
+    enabled: false,
+    setup: 0,
+    recurring: 0,
+  }));
 }
 
 function sectionTitle(title: string) {
@@ -415,9 +429,20 @@ export function LeadModal({
   onMarkWon: (lead: CommercialLeadRecord) => void;
   onRequestLoss: (lead: CommercialLeadRecord) => void;
 }) {
+  const [productItems] = useAdminProducts();
+  const [integrationItems] = useAdminIntegrations();
+  const productCatalog = getActiveCatalogNames(productItems);
+  const integrationCatalog = getActiveCatalogNames(integrationItems);
   const [draft, setDraft] = useState<CommercialLeadRecord | null>(() =>
     lead
-      ? cloneLeadRecord(lead)
+      ? {
+          ...cloneLeadRecord(lead),
+          products: syncPriceRowsWithCatalog(cloneLeadRecord(lead).products, productCatalog),
+          integrations: syncPriceRowsWithCatalog(
+            cloneLeadRecord(lead).integrations,
+            integrationCatalog,
+          ),
+        }
       : {
           id: '',
           company: '',
@@ -443,8 +468,8 @@ export function LeadModal({
           representativeCommission: 0,
           indicatorId: '',
           passThroughAmount: 0,
-          products: createEmptyPriceRows(PRODUCT_CATALOG),
-          integrations: createEmptyPriceRows(INTEGRATION_CATALOG),
+          products: createEmptyPriceRows(productCatalog),
+          integrations: createEmptyPriceRows(integrationCatalog),
           comments: [],
           tasks: [],
         },

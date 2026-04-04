@@ -1,11 +1,5 @@
-import { ModulePageShell } from "@/components/module-page-shell";
+import { AdminTrashPage } from '@/components/admin-trash-page';
 
 export default function LixeiraPage() {
-  return (
-    <ModulePageShell
-      section="Admin"
-      title="Lixeira"
-      description="Espaco reservado para visualizacao e restauracao de itens removidos."
-    />
-  );
+  return <AdminTrashPage />;
 }

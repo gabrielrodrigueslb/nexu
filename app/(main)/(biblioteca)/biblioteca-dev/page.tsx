@@ -1,11 +1,5 @@
-import { ModulePageShell } from "@/components/module-page-shell";
+import { DevLibraryPage } from '@/components/dev-library-page';
 
 export default function BibliotecaDevPage() {
-  return (
-    <ModulePageShell
-      section="Biblioteca"
-      title="Biblioteca Dev"
-      description="Espaco reservado para a biblioteca tecnica e materiais de apoio do time de desenvolvimento."
-    />
-  );
+  return <DevLibraryPage />;
 }

@@ -1,11 +1,5 @@
-import { ModulePageShell } from "@/components/module-page-shell";
+import { AdminIndicatorsPage } from '@/components/admin-indicators-page';
 
 export default function IndicadoresPage() {
-  return (
-    <ModulePageShell
-      section="Admin"
-      title="Indicadores"
-      description="Espaco reservado para configuracao e manutencao dos indicadores operacionais."
-    />
-  );
+  return <AdminIndicatorsPage />;
 }

@@ -1,11 +1,5 @@
-import { ModulePageShell } from "@/components/module-page-shell";
+import { AdminUsersPage } from '@/components/admin-users-page';
 
 export default function UsuariosPage() {
-  return (
-    <ModulePageShell
-      section="Admin"
-      title="Usuarios"
-      description="Espaco reservado para administracao de usuarios, acessos e permissoes."
-    />
-  );
+  return <AdminUsersPage />;
 }
