@@ -3,6 +3,10 @@
 import { useState } from 'react';
 import { Copy, MessageSquareText } from 'lucide-react';
 
+import {
+  AppFormLabel as FormLabel,
+  AppToolbarButton as ToolbarButton,
+} from '@/components/app-ui-kit';
 import { ModalShell } from '@/components/modal-shell';
 import {
   ALL_DEV_STATUSES,
@@ -319,33 +323,6 @@ function Badge({
     >
       {children}
     </span>
-  );
-}
-
-function ToolbarButton({
-  children,
-  className,
-  ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement>) {
-  return (
-    <button
-      type="button"
-      className={cn(
-        'inline-flex items-center gap-[6px] rounded-[6px] border border-[#e2e8f0] bg-white px-3 py-[6px] text-[12px] font-semibold text-[#64748b] transition-colors hover:border-[#2563eb] hover:text-[#2563eb]',
-        className,
-      )}
-      {...props}
-    >
-      {children}
-    </button>
-  );
-}
-
-function FormLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <label className="text-[11px] font-bold tracking-[.06em] text-[#64748b] uppercase">
-      {children}
-    </label>
   );
 }
 

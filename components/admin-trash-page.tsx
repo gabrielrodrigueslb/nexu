@@ -3,28 +3,18 @@
 import { useState } from 'react';
 import { RotateCcw, Trash2 } from 'lucide-react';
 
+import {
+  AppAlert,
+  AppEmptyState,
+  AppPageContent,
+  AppPageIntro,
+  AppPageShell,
+  AppPageToolbar,
+  AppPill,
+  AppToolbarButton,
+} from '@/components/app-ui-kit';
 import { type TrashRecord, useAdminTrash } from '@/components/admin-settings-storage';
 import { useCurrentAdminUser } from '@/components/admin-users-storage';
-import { cn } from '@/lib/utils';
-
-function ToolbarButton({
-  children,
-  className,
-  ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement>) {
-  return (
-    <button
-      type="button"
-      className={cn(
-        'inline-flex items-center gap-[6px] rounded-[6px] border border-[#e2e8f0] bg-white px-3 py-[6px] text-[12px] font-semibold text-[#64748b] transition-colors hover:border-[#2563eb] hover:text-[#2563eb]',
-        className,
-      )}
-      {...props}
-    >
-      {children}
-    </button>
-  );
-}
 
 function formatDateTime(value: string) {
   const date = new Date(value);
@@ -52,11 +42,7 @@ export function AdminTrashPage() {
     setItems((current) => {
       const targetItem = current.find((item) => item.id === itemId);
 
-      if (
-        targetItem?.restoreTarget &&
-        targetItem.payload &&
-        typeof window !== 'undefined'
-      ) {
+      if (targetItem?.restoreTarget && targetItem.payload && typeof window !== 'undefined') {
         try {
           const raw = window.localStorage.getItem(targetItem.restoreTarget);
           const parsed = raw ? JSON.parse(raw) : [];
@@ -81,35 +67,20 @@ export function AdminTrashPage() {
   }
 
   if (!canAccess) {
-    return (
-      <div className="rounded-[12px] border border-dashed border-[#cbd5e1] bg-white px-6 py-12 text-center">
-        <div className="text-[28px] leading-none">🔒</div>
-        <div className="mt-3 text-[18px] font-bold text-[#0f172a]">Acesso Negado</div>
-      </div>
-    );
+    return <AppEmptyState icon="🔒" title="Acesso Negado" />;
   }
 
   return (
-    <div className="-mx-4 -my-6 md:-mx-6 lg:-mx-8 lg:-my-8">
-      <div className="sticky top-0 z-20 flex min-h-14 items-center gap-4 border-b border-[#e2e8f0] bg-white px-6">
-        <strong className="text-[15px] font-bold text-[#0f172a]">Lixeira</strong>
-      </div>
+    <AppPageShell>
+      <AppPageToolbar title="Lixeira" />
 
-      <div className="bg-[#f1f5f9] px-6 py-6">
-        <div className="mb-4">
-          <div className="text-[26px] font-extrabold tracking-[-0.03em] text-[#0f172a]">
-            Lixeira de Auditoria
-          </div>
-          <div className="mt-2 text-[12px] text-[#64748b]">
-            {items.length} ticket(s) cancelados
-          </div>
-        </div>
+      <AppPageContent>
+        <AppPageIntro
+          title="Lixeira de Auditoria"
+          subtitle={`${items.length} ticket(s) cancelados`}
+        />
 
-        {message ? (
-          <div className="mb-4 rounded-[8px] border border-[#bfdbfe] bg-[#eff6ff] px-3 py-2 text-[12px] font-medium text-[#1d4ed8]">
-            {message}
-          </div>
-        ) : null}
+        {message ? <AppAlert tone="info" className="mb-4">{message}</AppAlert> : null}
 
         {items.length ? (
           <div className="flex flex-col gap-3">
@@ -127,9 +98,9 @@ export function AdminTrashPage() {
                       {item.proto || '—'} · {sourceLabel(item.source)}
                     </div>
                   </div>
-                  <span className="inline-flex rounded-full border border-[#fecaca] bg-[#fef2f2] px-[10px] py-[4px] text-[11px] font-bold text-[#dc2626]">
+                  <AppPill className="border-[#fecaca] bg-[#fef2f2] text-[#dc2626]">
                     Cancelado
-                  </span>
+                  </AppPill>
                 </div>
 
                 <div className="mb-2 rounded-[6px] border border-[#fecaca] bg-[#fef2f2] px-3 py-2 text-[12px] text-[#0f172a]">
@@ -142,35 +113,31 @@ export function AdminTrashPage() {
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                  <ToolbarButton onClick={() => handleRestore(item.id)}>
+                  <AppToolbarButton onClick={() => handleRestore(item.id)}>
                     <RotateCcw className="size-3.5" />
                     Restaurar
-                  </ToolbarButton>
+                  </AppToolbarButton>
                   {canHardDelete ? (
-                    <ToolbarButton
+                    <AppToolbarButton
                       onClick={() => handleHardDelete(item.id)}
                       className="text-[#dc2626] hover:border-[#dc2626] hover:text-[#dc2626]"
                     >
                       <Trash2 className="size-3.5" />
                       Excluir Permanente
-                    </ToolbarButton>
+                    </AppToolbarButton>
                   ) : null}
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <div className="rounded-[12px] border border-dashed border-[#cbd5e1] bg-white px-6 py-12 text-center">
-            <div className="text-[28px] leading-none">🗑️</div>
-            <div className="mt-3 text-[18px] font-bold text-[#0f172a]">
-              Lixeira vazia
-            </div>
-            <div className="mt-1 text-[13px] text-[#64748b]">
-              Tickets cancelados aparecem aqui.
-            </div>
-          </div>
+          <AppEmptyState
+            icon="🗑️"
+            title="Lixeira vazia"
+            description="Tickets cancelados aparecem aqui."
+          />
         )}
-      </div>
-    </div>
+      </AppPageContent>
+    </AppPageShell>
   );
 }

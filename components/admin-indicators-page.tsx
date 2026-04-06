@@ -4,12 +4,26 @@ import { useMemo, useState } from 'react';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 
 import {
+  AppAlert,
+  AppEmptyState,
+  AppFormLabel,
+  AppInput,
+  AppPageContent,
+  AppPageIntro,
+  AppPageShell,
+  AppPageToolbar,
+  AppPill,
+  AppPrimaryButton,
+  AppSelect,
+  AppSurface,
+  AppToolbarButton,
+} from '@/components/app-ui-kit';
+import {
   type IndicatorRecord,
   useAdminIndicators,
 } from '@/components/admin-settings-storage';
 import { useCurrentAdminUser } from '@/components/admin-users-storage';
 import { ModalShell } from '@/components/modal-shell';
-import { cn } from '@/lib/utils';
 
 type IndicatorDraft = {
   name: string;
@@ -36,37 +50,6 @@ const EMPTY_DRAFT: IndicatorDraft = {
   account: '',
   pixKey: '',
 };
-
-function ToolbarButton({
-  children,
-  className,
-  ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement>) {
-  return (
-    <button
-      type="button"
-      className={cn(
-        'inline-flex items-center gap-[6px] rounded-[6px] border border-[#e2e8f0] bg-white px-3 py-[6px] text-[12px] font-semibold text-[#64748b] transition-colors hover:border-[#2563eb] hover:text-[#2563eb]',
-        className,
-      )}
-      {...props}
-    >
-      {children}
-    </button>
-  );
-}
-
-function FormLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <label className="text-[11px] font-bold tracking-[.06em] text-[#64748b] uppercase">
-      {children}
-    </label>
-  );
-}
-
-function inputClassName() {
-  return 'w-full rounded-[7px] border-[1.5px] border-[#e2e8f0] bg-[#f8fafc] px-3 py-[9px] text-[13px] text-[#0f172a] outline-none transition-colors focus:border-[#2563eb]';
-}
 
 function toDraft(indicator: IndicatorRecord | null): IndicatorDraft {
   if (!indicator) return EMPTY_DRAFT;
@@ -151,9 +134,7 @@ export function AdminIndicatorsPage() {
     };
 
     if (editingId) {
-      setItems((current) =>
-        current.map((item) => (item.id === editingId ? payload : item)),
-      );
+      setItems((current) => current.map((item) => (item.id === editingId ? payload : item)));
     } else {
       setItems((current) => [...current, payload]);
     }
@@ -167,45 +148,30 @@ export function AdminIndicatorsPage() {
   }
 
   if (!canManage) {
-    return (
-      <div className="rounded-[12px] border border-dashed border-[#cbd5e1] bg-white px-6 py-12 text-center">
-        <div className="text-[28px] leading-none">🔒</div>
-        <div className="mt-3 text-[18px] font-bold text-[#0f172a]">
-          Apenas Administradores
-        </div>
-      </div>
-    );
+    return <AppEmptyState icon="🔒" title="Apenas Administradores" />;
   }
 
   return (
     <>
-      <div className="-mx-4 -my-6 md:-mx-6 lg:-mx-8 lg:-my-8">
-        <div className="sticky top-0 z-20 flex min-h-14 items-center gap-4 border-b border-[#e2e8f0] bg-white px-6">
-          <strong className="text-[15px] font-bold text-[#0f172a]">Indicadores</strong>
-          <div className="ml-auto flex flex-wrap items-center gap-2 py-3">
-            <button
-              type="button"
-              onClick={openCreateModal}
-              className="inline-flex items-center gap-[6px] rounded-[6px] bg-[#2563eb] px-3 py-[6px] text-[12px] font-semibold text-white transition-colors hover:bg-[#1d4ed8]"
-            >
+      <AppPageShell>
+        <AppPageToolbar
+          title="Indicadores"
+          actions={
+            <AppPrimaryButton onClick={openCreateModal}>
               <Plus className="size-4" />
               Novo Indicador
-            </button>
-          </div>
-        </div>
+            </AppPrimaryButton>
+          }
+        />
 
-        <div className="bg-[#f1f5f9] px-6 py-6">
-          <div className="mb-4">
-            <div className="text-[26px] font-extrabold tracking-[-0.03em] text-[#0f172a]">
-              Indicadores
-            </div>
-            <div className="mt-2 text-[12px] text-[#64748b]">
-              Comissao calculada sobre o valor de setup fechado
-            </div>
-          </div>
+        <AppPageContent>
+          <AppPageIntro
+            title="Indicadores"
+            subtitle="Comissao calculada sobre o valor de setup fechado"
+          />
 
           {items.length ? (
-            <div className="overflow-hidden rounded-[12px] border border-[#e2e8f0] bg-white">
+            <AppSurface className="overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="min-w-full border-collapse">
                   <thead>
@@ -229,14 +195,9 @@ export function AdminIndicatorsPage() {
                   </thead>
                   <tbody>
                     {items.map((item) => (
-                      <tr
-                        key={item.id}
-                        className="border-b border-[#e2e8f0] last:border-b-0"
-                      >
+                      <tr key={item.id} className="border-b border-[#e2e8f0] last:border-b-0">
                         <td className="px-4 py-3">
-                          <div className="text-[13px] font-bold text-[#0f172a]">
-                            {item.name}
-                          </div>
+                          <div className="text-[13px] font-bold text-[#0f172a]">{item.name}</div>
                           {item.docNumber ? (
                             <div className="text-[11px] text-[#64748b]">
                               {item.docType}: {item.docNumber}
@@ -262,21 +223,21 @@ export function AdminIndicatorsPage() {
                           ) : null}
                         </td>
                         <td className="px-4 py-3">
-                          <span className="inline-flex rounded-full border border-[#bfdbfe] bg-[#eff6ff] px-[10px] py-[4px] text-[13px] font-bold text-[#2563eb]">
+                          <AppPill className="border-[#bfdbfe] bg-[#eff6ff] text-[#2563eb]">
                             {item.percentSetup}%
-                          </span>
+                          </AppPill>
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-[5px]">
-                            <ToolbarButton onClick={() => openEditModal(item)}>
+                            <AppToolbarButton onClick={() => openEditModal(item)}>
                               <Pencil className="size-3.5" />
-                            </ToolbarButton>
-                            <ToolbarButton
+                            </AppToolbarButton>
+                            <AppToolbarButton
                               onClick={() => handleDelete(item.id)}
                               className="text-[#dc2626] hover:border-[#dc2626] hover:text-[#dc2626]"
                             >
                               <Trash2 className="size-3.5" />
-                            </ToolbarButton>
+                            </AppToolbarButton>
                           </div>
                         </td>
                       </tr>
@@ -284,20 +245,16 @@ export function AdminIndicatorsPage() {
                   </tbody>
                 </table>
               </div>
-            </div>
+            </AppSurface>
           ) : (
-            <div className="rounded-[12px] border border-dashed border-[#cbd5e1] bg-white px-6 py-12 text-center">
-              <div className="text-[28px] leading-none">🤝</div>
-              <div className="mt-3 text-[18px] font-bold text-[#0f172a]">
-                Nenhum indicador cadastrado
-              </div>
-              <div className="mt-1 text-[13px] text-[#64748b]">
-                Clique em &quot;+ Novo Indicador&quot; para comecar.
-              </div>
-            </div>
+            <AppEmptyState
+              icon="🤝"
+              title="Nenhum indicador cadastrado"
+              description='Clique em "+ Novo Indicador" para comecar.'
+            />
           )}
-        </div>
-      </div>
+        </AppPageContent>
+      </AppPageShell>
 
       <ModalShell
         open={open}
@@ -307,33 +264,28 @@ export function AdminIndicatorsPage() {
         onClose={closeModal}
         footer={
           <>
-            <ToolbarButton onClick={closeModal}>Cancelar</ToolbarButton>
-            <button
-              type="button"
-              onClick={handleSave}
-              className="rounded-[8px] bg-[#2563eb] px-4 py-[10px] text-[13px] font-semibold text-white transition-colors hover:bg-[#1d4ed8]"
-            >
+            <AppToolbarButton onClick={closeModal}>Cancelar</AppToolbarButton>
+            <AppPrimaryButton onClick={handleSave} className="rounded-[8px] px-4 py-[10px] text-[13px]">
               Salvar
-            </button>
+            </AppPrimaryButton>
           </>
         }
       >
         <div className="grid gap-4">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="flex flex-col gap-[5px]">
-              <FormLabel>Nome</FormLabel>
-              <input
+              <AppFormLabel>Nome</AppFormLabel>
+              <AppInput
                 value={draft.name}
                 onChange={(event) =>
                   setDraft((current) => ({ ...current, name: event.target.value }))
                 }
-                className={inputClassName()}
               />
             </div>
             <div className="grid gap-4 md:grid-cols-[120px_1fr]">
               <div className="flex flex-col gap-[5px]">
-                <FormLabel>Documento</FormLabel>
-                <select
+                <AppFormLabel>Documento</AppFormLabel>
+                <AppSelect
                   value={draft.docType}
                   onChange={(event) =>
                     setDraft((current) => ({
@@ -341,15 +293,14 @@ export function AdminIndicatorsPage() {
                       docType: event.target.value as IndicatorDraft['docType'],
                     }))
                   }
-                  className={inputClassName()}
                 >
                   <option value="CPF">CPF</option>
                   <option value="CNPJ">CNPJ</option>
-                </select>
+                </AppSelect>
               </div>
               <div className="flex flex-col gap-[5px]">
-                <FormLabel>Numero</FormLabel>
-                <input
+                <AppFormLabel>Numero</AppFormLabel>
+                <AppInput
                   value={draft.docNumber}
                   onChange={(event) =>
                     setDraft((current) => ({
@@ -357,7 +308,6 @@ export function AdminIndicatorsPage() {
                       docNumber: event.target.value,
                     }))
                   }
-                  className={inputClassName()}
                 />
               </div>
             </div>
@@ -365,28 +315,26 @@ export function AdminIndicatorsPage() {
 
           <div className="grid gap-4 md:grid-cols-3">
             <div className="flex flex-col gap-[5px]">
-              <FormLabel>Contato</FormLabel>
-              <input
+              <AppFormLabel>Contato</AppFormLabel>
+              <AppInput
                 value={draft.contact}
                 onChange={(event) =>
                   setDraft((current) => ({ ...current, contact: event.target.value }))
                 }
-                className={inputClassName()}
               />
             </div>
             <div className="flex flex-col gap-[5px]">
-              <FormLabel>Email</FormLabel>
-              <input
+              <AppFormLabel>Email</AppFormLabel>
+              <AppInput
                 value={draft.email}
                 onChange={(event) =>
                   setDraft((current) => ({ ...current, email: event.target.value }))
                 }
-                className={inputClassName()}
               />
             </div>
             <div className="flex flex-col gap-[5px]">
-              <FormLabel>% Setup</FormLabel>
-              <input
+              <AppFormLabel>% Setup</AppFormLabel>
+              <AppInput
                 type="number"
                 min="0"
                 max="100"
@@ -398,60 +346,51 @@ export function AdminIndicatorsPage() {
                     percentSetup: event.target.value,
                   }))
                 }
-                className={inputClassName()}
               />
             </div>
           </div>
 
           <div className="grid gap-4 md:grid-cols-3">
             <div className="flex flex-col gap-[5px]">
-              <FormLabel>Banco</FormLabel>
-              <input
+              <AppFormLabel>Banco</AppFormLabel>
+              <AppInput
                 value={draft.bank}
                 onChange={(event) =>
                   setDraft((current) => ({ ...current, bank: event.target.value }))
                 }
-                className={inputClassName()}
               />
             </div>
             <div className="flex flex-col gap-[5px]">
-              <FormLabel>Agencia</FormLabel>
-              <input
+              <AppFormLabel>Agencia</AppFormLabel>
+              <AppInput
                 value={draft.agency}
                 onChange={(event) =>
                   setDraft((current) => ({ ...current, agency: event.target.value }))
                 }
-                className={inputClassName()}
               />
             </div>
             <div className="flex flex-col gap-[5px]">
-              <FormLabel>Conta</FormLabel>
-              <input
+              <AppFormLabel>Conta</AppFormLabel>
+              <AppInput
                 value={draft.account}
                 onChange={(event) =>
                   setDraft((current) => ({ ...current, account: event.target.value }))
                 }
-                className={inputClassName()}
               />
             </div>
           </div>
 
           <div className="flex flex-col gap-[5px]">
-            <FormLabel>PIX</FormLabel>
-            <input
+            <AppFormLabel>PIX</AppFormLabel>
+            <AppInput
               value={draft.pixKey}
               onChange={(event) =>
                 setDraft((current) => ({ ...current, pixKey: event.target.value }))
               }
-              className={inputClassName()}
             />
           </div>
 
-          {errorMessage ? (
-            <div className="rounded-[8px] border border-[#fecaca] bg-[#fef2f2] px-3 py-2 text-[12px] font-medium text-[#dc2626]">
-              {errorMessage}
-            </div>
-          ) : null}
+          {errorMessage ? <AppAlert tone="danger">{errorMessage}</AppAlert> : null}
         </div>
       </ModalShell>
     </>

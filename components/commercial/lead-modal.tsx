@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 
+import { appFieldClassName } from '@/components/app-ui-kit';
 import { ModalShell } from '@/components/modal-shell';
 import { CRM_COLS } from '@/components/types';
 import { formatMoney } from '@/components/utils';
@@ -99,10 +100,6 @@ function label(text: string, required = false) {
       {required ? <span className="ml-0.5 text-[#dc2626]">*</span> : null}
     </label>
   );
-}
-
-function fieldClassName() {
-  return 'w-full rounded-[7px] border-[1.5px] border-[#e2e8f0] bg-[#f8fafc] px-3 py-[9px] text-[13px] text-[#0f172a] outline-none transition-colors focus:border-[#2563eb]';
 }
 
 function PriceRowsEditor({
@@ -282,7 +279,7 @@ function TaskEditor({
                     ),
                   )
                 }
-                className={fieldClassName()}
+                className={appFieldClassName}
               >
                 {COMMERCIAL_TASK_TYPES.map((type) => (
                   <option key={type.id} value={type.id}>
@@ -300,7 +297,7 @@ function TaskEditor({
                     ),
                   )
                 }
-                className={fieldClassName()}
+                className={appFieldClassName}
               />
               <button
                 type="button"
@@ -619,7 +616,7 @@ export function LeadModal({
             <input
               value={draft.company}
               onChange={(event) => updateDraft({ company: event.target.value })}
-              className={fieldClassName()}
+              className={appFieldClassName}
             />
           </div>
           <div>
@@ -630,7 +627,7 @@ export function LeadModal({
                 updateDraft({ cnpj: formatCnpjInput(event.target.value) })
               }
               inputMode="numeric"
-              className={fieldClassName()}
+              className={appFieldClassName}
               placeholder="00.000.000/0000-00"
             />
           </div>
@@ -642,7 +639,7 @@ export function LeadModal({
             <input
               value={draft.contact ?? ''}
               onChange={(event) => updateDraft({ contact: event.target.value })}
-              className={fieldClassName()}
+              className={appFieldClassName}
             />
           </div>
           <div>
@@ -654,7 +651,7 @@ export function LeadModal({
               }
               inputMode="numeric"
               type="tel"
-              className={fieldClassName()}
+              className={appFieldClassName}
               placeholder="(00) 00000-0000"
             />
           </div>
@@ -663,7 +660,7 @@ export function LeadModal({
             <select
               value={draft.paymentMethod ?? ''}
               onChange={(event) => updateDraft({ paymentMethod: event.target.value })}
-              className={fieldClassName()}
+              className={appFieldClassName}
             >
               <option value="">Selecione...</option>
               <option value="Boleto Bancario">Boleto Bancario</option>
@@ -677,7 +674,7 @@ export function LeadModal({
             <select
               value={draft.installment ?? ''}
               onChange={(event) => updateDraft({ installment: event.target.value })}
-              className={fieldClassName()}
+              className={appFieldClassName}
             >
               <option value="">Selecione...</option>
               <option value="A vista">A vista</option>
@@ -695,7 +692,7 @@ export function LeadModal({
             <select
               value={draft.originId ?? ''}
               onChange={(event) => updateDraft({ originId: event.target.value })}
-              className={fieldClassName()}
+              className={appFieldClassName}
             >
               <option value="">Selecione...</option>
               {originOptions.map((origin) => (
@@ -714,7 +711,7 @@ export function LeadModal({
                   status: event.target.value as CommercialLeadRecord['status'],
                 })
               }
-              className={fieldClassName()}
+              className={appFieldClassName}
             >
               {CRM_COLS.map((status) => (
                 <option key={status} value={status}>
@@ -734,7 +731,7 @@ export function LeadModal({
             <select
               value={draft.sdrId ?? ''}
               onChange={(event) => updateDraft({ sdrId: event.target.value })}
-              className={fieldClassName()}
+              className={appFieldClassName}
             >
               <option value="">Selecione...</option>
               {sdrOptions.map((sdr) => (
@@ -749,7 +746,7 @@ export function LeadModal({
             <select
               value={draft.sellerId ?? ''}
               onChange={(event) => updateDraft({ sellerId: event.target.value })}
-              className={fieldClassName()}
+              className={appFieldClassName}
             >
               <option value="">Selecione...</option>
               {sellerOptions.map((seller) => (
@@ -767,7 +764,7 @@ export function LeadModal({
             <select
               value={draft.representativeId ?? ''}
               onChange={(event) => updateDraft({ representativeId: event.target.value })}
-              className={fieldClassName()}
+              className={appFieldClassName}
             >
               <option value="">Nenhum</option>
               {representativeOptions.map((option) => (
@@ -794,7 +791,7 @@ export function LeadModal({
             <select
               value={draft.indicatorId ?? ''}
               onChange={(event) => updateDraft({ indicatorId: event.target.value })}
-              className={fieldClassName()}
+              className={appFieldClassName}
             >
               <option value="">Nenhum</option>
               {indicatorOptions.map((option) => (
@@ -813,7 +810,7 @@ export function LeadModal({
               onChange={(event) =>
                 updateDraft({ passThroughAmount: parseCurrencyInput(event.target.value) })
               }
-              className={fieldClassName()}
+              className={appFieldClassName}
               placeholder="0,00"
             />
           </div>
@@ -834,7 +831,7 @@ export function LeadModal({
             <input
               value={draft.consultant ?? ''}
               onChange={(event) => updateDraft({ consultant: event.target.value })}
-              className={fieldClassName()}
+              className={appFieldClassName}
               placeholder="Nome da consultora"
             />
           </div>
@@ -844,7 +841,7 @@ export function LeadModal({
               type="date"
               value={draft.validUntil ?? ''}
               onChange={(event) => updateDraft({ validUntil: event.target.value })}
-              className={fieldClassName()}
+              className={appFieldClassName}
             />
           </div>
         </div>
@@ -872,7 +869,7 @@ export function LeadModal({
               min="0"
               value={numericInputValue(draft.agents)}
               onChange={(event) => updateDraft({ agents: Number(event.target.value) || 0 })}
-              className={fieldClassName()}
+              className={appFieldClassName}
               placeholder="Ex: 5"
             />
           </div>
@@ -885,7 +882,7 @@ export function LeadModal({
               onChange={(event) =>
                 updateDraft({ supervisors: Number(event.target.value) || 0 })
               }
-              className={fieldClassName()}
+              className={appFieldClassName}
               placeholder="Ex: 2"
             />
           </div>
@@ -951,7 +948,7 @@ export function LeadModal({
             value={draft.observations ?? ''}
             onChange={(event) => updateDraft({ observations: event.target.value })}
             rows={2}
-            className={fieldClassName()}
+            className={appFieldClassName}
             placeholder="Notas sobre a negociacao..."
           />
         </div>

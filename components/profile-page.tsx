@@ -3,6 +3,14 @@
 import { useMemo, useState } from 'react';
 import { Save } from 'lucide-react';
 
+import {
+  AppAlert,
+  AppFormLabel,
+  AppInput,
+  AppPageIntro,
+  AppPrimaryButton,
+  AppSurface,
+} from '@/components/app-ui-kit';
 import { useCurrentAdminUser } from '@/components/admin-users-storage';
 
 function getInitials(label: string) {
@@ -20,10 +28,6 @@ function roleLabel(role: string) {
   if (role === 'admin') return 'Administrador';
   if (role === 'supervisor') return 'Supervisor';
   return 'Agente';
-}
-
-function fieldClassName() {
-  return 'w-full rounded-[7px] border-[1.5px] border-[#e2e8f0] bg-[#f8fafc] px-3 py-[9px] text-[13px] text-[#0f172a] outline-none transition-colors focus:border-[#2563eb]';
 }
 
 export function ProfilePage() {
@@ -85,11 +89,9 @@ export function ProfilePage() {
 
   return (
     <div className="mx-auto max-w-[480px]">
-      <div className="text-[26px] font-extrabold tracking-[-0.03em] text-[#0f172a]">
-        Meu Perfil
-      </div>
+      <AppPageIntro title="Meu Perfil" subtitle="Gerencie seus dados de acesso." />
 
-      <div className="mt-4 rounded-[12px] border border-[#e2e8f0] bg-white p-6">
+      <AppSurface className="mt-4 p-6">
         <div className="mb-5 flex items-center gap-[14px]">
           <div className="flex size-[52px] items-center justify-center rounded-full bg-[#2563eb] text-[20px] font-bold text-white">
             {getInitials(currentUser.name)}
@@ -105,66 +107,53 @@ export function ProfilePage() {
 
         <div className="space-y-4">
           <div>
-            <label className="mb-[5px] block text-[11px] font-bold tracking-[.06em] text-[#64748b] uppercase">
-              Senha Atual <span className="text-[#dc2626]">*</span>
-            </label>
-            <input
+            <div className="mb-[5px]">
+              <AppFormLabel required>Senha Atual</AppFormLabel>
+            </div>
+            <AppInput
               type="password"
               value={currentPassword}
               onChange={(event) => setCurrentPassword(event.target.value)}
               placeholder="Senha atual"
-              className={fieldClassName()}
             />
           </div>
 
           <div>
-            <label className="mb-[5px] block text-[11px] font-bold tracking-[.06em] text-[#64748b] uppercase">
-              Nova Senha <span className="text-[#dc2626]">*</span>
-            </label>
-            <input
+            <div className="mb-[5px]">
+              <AppFormLabel required>Nova Senha</AppFormLabel>
+            </div>
+            <AppInput
               type="password"
               value={newPassword}
               onChange={(event) => setNewPassword(event.target.value)}
               placeholder="Min. 6 caracteres"
-              className={fieldClassName()}
             />
           </div>
 
           <div>
-            <label className="mb-[5px] block text-[11px] font-bold tracking-[.06em] text-[#64748b] uppercase">
-              Confirmar Nova Senha <span className="text-[#dc2626]">*</span>
-            </label>
-            <input
+            <div className="mb-[5px]">
+              <AppFormLabel required>Confirmar Nova Senha</AppFormLabel>
+            </div>
+            <AppInput
               type="password"
               value={confirmPassword}
               onChange={(event) => setConfirmPassword(event.target.value)}
               placeholder="Repetir nova senha"
-              className={fieldClassName()}
             />
           </div>
 
-          {errorMessage ? (
-            <div className="rounded-[8px] border border-[#fecaca] bg-[#fef2f2] px-3 py-2 text-[12px] font-medium text-[#dc2626]">
-              {errorMessage}
-            </div>
-          ) : null}
+          {errorMessage ? <AppAlert tone="danger">{errorMessage}</AppAlert> : null}
+          {message ? <AppAlert tone="success">{message}</AppAlert> : null}
 
-          {message ? (
-            <div className="rounded-[8px] border border-[#bbf7d0] bg-[#f0fdf4] px-3 py-2 text-[12px] font-medium text-[#166534]">
-              {message}
-            </div>
-          ) : null}
-
-          <button
-            type="button"
+          <AppPrimaryButton
             onClick={handleSave}
-            className="inline-flex items-center gap-[8px] rounded-[8px] bg-[#2563eb] px-[16px] py-[10px] text-[13px] font-semibold text-white transition-colors hover:bg-[#1d4ed8]"
+            className="rounded-[8px] px-[16px] py-[10px] text-[13px]"
           >
             <Save className="size-4" />
             Salvar Nova Senha
-          </button>
+          </AppPrimaryButton>
         </div>
-      </div>
+      </AppSurface>
     </div>
   );
 }

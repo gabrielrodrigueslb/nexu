@@ -3,6 +3,21 @@
 import { useState } from 'react';
 import { Pencil, Plus, Trash2, Users as UsersIcon } from 'lucide-react';
 
+import {
+  AppAlert,
+  AppEmptyState,
+  AppFormLabel,
+  AppInput,
+  AppPageContent,
+  AppPageIntro,
+  AppPageShell,
+  AppPageToolbar,
+  AppPill,
+  AppPrimaryButton,
+  AppSelect,
+  AppSurface,
+  AppToolbarButton,
+} from '@/components/app-ui-kit';
 import { ModalShell } from '@/components/modal-shell';
 import {
   CURRENT_USER_ID,
@@ -14,7 +29,6 @@ import {
   type UserSector,
   useAdminUsers,
 } from '@/components/admin-users-storage';
-import { cn } from '@/lib/utils';
 
 type UserDraft = {
   name: string;
@@ -70,33 +84,6 @@ function getRoleMeta(role: UserRole) {
   };
 }
 
-function ToolbarButton({
-  children,
-  className,
-  ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement>) {
-  return (
-    <button
-      type="button"
-      className={cn(
-        'inline-flex items-center gap-[6px] rounded-[6px] border border-[#e2e8f0] bg-white px-3 py-[6px] text-[12px] font-semibold text-[#64748b] transition-colors hover:border-[#2563eb] hover:text-[#2563eb]',
-        className,
-      )}
-      {...props}
-    >
-      {children}
-    </button>
-  );
-}
-
-function FormLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <label className="text-[11px] font-bold tracking-[.06em] text-[#64748b] uppercase">
-      {children}
-    </label>
-  );
-}
-
 export function AdminUsersPage() {
   const [users, setUsers] = useAdminUsers();
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
@@ -141,7 +128,7 @@ export function AdminUsersPage() {
     const normalizedEmail = draft.email.trim().toLowerCase();
 
     if (!draft.name.trim() || !normalizedEmail) {
-      setErrorMessage('Nome e e-mail são obrigatórios.');
+      setErrorMessage('Nome e e-mail sao obrigatorios.');
       return;
     }
 
@@ -150,17 +137,17 @@ export function AdminUsersPage() {
     );
 
     if (emailInUse) {
-      setErrorMessage('E-mail já cadastrado.');
+      setErrorMessage('E-mail ja cadastrado.');
       return;
     }
 
     if (!editingUserId && draft.password.trim().length < 6) {
-      setErrorMessage('Senha mín. 6 chars.');
+      setErrorMessage('Senha min. 6 chars.');
       return;
     }
 
     if (editingUserId && draft.password && draft.password.trim().length < 6) {
-      setErrorMessage('Senha mín. 6 chars.');
+      setErrorMessage('Senha min. 6 chars.');
       return;
     }
 
@@ -204,42 +191,26 @@ export function AdminUsersPage() {
   }
 
   if (currentUser.role !== 'admin') {
-    return (
-      <div className="rounded-[12px] border border-dashed border-[#cbd5e1] bg-white px-6 py-12 text-center">
-        <div className="text-[28px] leading-none">🔒</div>
-        <div className="mt-3 text-[18px] font-bold text-[#0f172a]">
-          Apenas Administradores
-        </div>
-      </div>
-    );
+    return <AppEmptyState icon="🔒" title="Apenas Administradores" />;
   }
 
   return (
     <>
-      <div className="-mx-4 -my-6 md:-mx-6 lg:-mx-8 lg:-my-8">
-        <div className="sticky top-0 z-20 flex min-h-14 items-center gap-4 border-b border-[#e2e8f0] bg-white px-6">
-          <strong className="text-[15px] font-bold text-[#0f172a]">Usuários</strong>
-          <div className="ml-auto flex flex-wrap items-center gap-2 py-3">
-            <button
-              type="button"
-              onClick={openCreateModal}
-              className="inline-flex items-center gap-[6px] rounded-[6px] bg-[#2563eb] px-3 py-[6px] text-[12px] font-semibold text-white transition-colors hover:bg-[#1d4ed8]"
-            >
+      <AppPageShell>
+        <AppPageToolbar
+          title="Usuarios"
+          actions={
+            <AppPrimaryButton onClick={openCreateModal}>
               <Plus className="size-4" />
-              Novo Usuário
-            </button>
-          </div>
-        </div>
+              Novo Usuario
+            </AppPrimaryButton>
+          }
+        />
 
-        <div className="bg-[#f1f5f9] px-6 py-6">
-          <div className="mb-4">
-            <div className="text-[26px] font-extrabold tracking-[-0.03em] text-[#0f172a]">
-              Usuários
-            </div>
-            <div className="mt-2 text-[12px] text-[#64748b]">{users.length} usuário(s)</div>
-          </div>
+        <AppPageContent>
+          <AppPageIntro title="Usuarios" subtitle={`${users.length} usuario(s)`} />
 
-          <div className="overflow-hidden rounded-[12px] border border-[#e2e8f0] bg-white shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+          <AppSurface className="overflow-hidden shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
             <div className="overflow-x-auto">
               <table className="min-w-full border-collapse">
                 <thead>
@@ -270,14 +241,7 @@ export function AdminUsersPage() {
                         </td>
                         <td className="px-4 py-3 text-[13px] text-[#475569]">{user.email}</td>
                         <td className="px-4 py-3">
-                          <span
-                            className={cn(
-                              'inline-flex rounded-full border px-[10px] py-[4px] text-[11px] font-bold',
-                              roleMeta.className,
-                            )}
-                          >
-                            {roleMeta.label}
-                          </span>
+                          <AppPill className={roleMeta.className}>{roleMeta.label}</AppPill>
                         </td>
                         <td className="px-4 py-3 text-[13px] text-[#475569]">{user.sector}</td>
                         <td className="px-4 py-3 text-[13px] text-[#475569]">
@@ -285,16 +249,16 @@ export function AdminUsersPage() {
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-[5px]">
-                            <ToolbarButton onClick={() => openEditModal(user)}>
+                            <AppToolbarButton onClick={() => openEditModal(user)}>
                               <Pencil className="size-3.5" />
-                            </ToolbarButton>
+                            </AppToolbarButton>
                             {user.id !== currentUser.id ? (
-                              <ToolbarButton
+                              <AppToolbarButton
                                 onClick={() => handleDelete(user.id)}
                                 className="text-[#dc2626] hover:border-[#dc2626] hover:text-[#dc2626]"
                               >
                                 <Trash2 className="size-3.5" />
-                              </ToolbarButton>
+                              </AppToolbarButton>
                             ) : null}
                           </div>
                         </td>
@@ -304,107 +268,91 @@ export function AdminUsersPage() {
                 </tbody>
               </table>
             </div>
-          </div>
-        </div>
-      </div>
+          </AppSurface>
+        </AppPageContent>
+      </AppPageShell>
 
       <ModalShell
         open={isModalOpen}
-        title={editingUser ? 'Editar Usuário' : 'Novo Usuário'}
-        description="Gerencie os dados de acesso e permissão do usuário."
+        title={editingUser ? 'Editar Usuario' : 'Novo Usuario'}
+        description="Gerencie os dados de acesso e permissao do usuario."
         maxWidthClassName="max-w-[560px]"
         onClose={closeModal}
         footer={
           <>
-            <ToolbarButton onClick={closeModal}>Cancelar</ToolbarButton>
-            <button
-              type="button"
-              onClick={handleSave}
-              className="rounded-[8px] bg-[#2563eb] px-4 py-[10px] text-[13px] font-semibold text-white transition-colors hover:bg-[#1d4ed8]"
-            >
-              {editingUser ? 'Salvar alterações' : 'Criar usuário'}
-            </button>
+            <AppToolbarButton onClick={closeModal}>Cancelar</AppToolbarButton>
+            <AppPrimaryButton onClick={handleSave} className="rounded-[8px] px-4 py-[10px] text-[13px]">
+              {editingUser ? 'Salvar alteracoes' : 'Criar usuario'}
+            </AppPrimaryButton>
           </>
         }
       >
         <div className="grid gap-4">
           <div className="flex flex-col gap-[5px]">
-            <FormLabel>Nome</FormLabel>
-            <input
-              value={draft.name}
-              onChange={(event) => updateDraft('name', event.target.value)}
-              className="w-full rounded-[7px] border-[1.5px] border-[#e2e8f0] bg-[#f8fafc] px-3 py-[9px] text-[13px] text-[#0f172a] outline-none transition-colors focus:border-[#2563eb]"
-            />
+            <AppFormLabel>Nome</AppFormLabel>
+            <AppInput value={draft.name} onChange={(event) => updateDraft('name', event.target.value)} />
           </div>
 
           <div className="flex flex-col gap-[5px]">
-            <FormLabel>E-mail</FormLabel>
-            <input
+            <AppFormLabel>E-mail</AppFormLabel>
+            <AppInput
               type="email"
               value={draft.email}
               onChange={(event) => updateDraft('email', event.target.value)}
-              className="w-full rounded-[7px] border-[1.5px] border-[#e2e8f0] bg-[#f8fafc] px-3 py-[9px] text-[13px] text-[#0f172a] outline-none transition-colors focus:border-[#2563eb]"
             />
           </div>
 
           <div className="flex flex-col gap-[5px]">
-            <FormLabel>{editingUser ? 'Nova Senha' : 'Senha'}</FormLabel>
-            <input
+            <AppFormLabel>{editingUser ? 'Nova Senha' : 'Senha'}</AppFormLabel>
+            <AppInput
               type="password"
               value={draft.password}
               onChange={(event) => updateDraft('password', event.target.value)}
-              placeholder={editingUser ? 'Opcional' : 'Mín. 6 caracteres'}
-              className="w-full rounded-[7px] border-[1.5px] border-[#e2e8f0] bg-[#f8fafc] px-3 py-[9px] text-[13px] text-[#0f172a] outline-none transition-colors focus:border-[#2563eb]"
+              placeholder={editingUser ? 'Opcional' : 'Min. 6 caracteres'}
             />
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="flex flex-col gap-[5px]">
-              <FormLabel>Papel</FormLabel>
-              <select
+              <AppFormLabel>Papel</AppFormLabel>
+              <AppSelect
                 value={draft.role}
                 onChange={(event) => updateDraft('role', event.target.value as UserRole)}
-                className="w-full rounded-[7px] border-[1.5px] border-[#e2e8f0] bg-[#f8fafc] px-3 py-[9px] text-[13px] text-[#0f172a] outline-none transition-colors focus:border-[#2563eb]"
               >
                 {ROLE_OPTIONS.map((role) => (
                   <option key={role} value={role}>
                     {getRoleMeta(role).label}
                   </option>
                 ))}
-              </select>
+              </AppSelect>
             </div>
 
             <div className="flex flex-col gap-[5px]">
-              <FormLabel>Setor</FormLabel>
-              <select
+              <AppFormLabel>Setor</AppFormLabel>
+              <AppSelect
                 value={draft.sector}
                 onChange={(event) => updateDraft('sector', event.target.value as UserSector)}
-                className="w-full rounded-[7px] border-[1.5px] border-[#e2e8f0] bg-[#f8fafc] px-3 py-[9px] text-[13px] text-[#0f172a] outline-none transition-colors focus:border-[#2563eb]"
               >
                 {SECTOR_OPTIONS.map((sector) => (
                   <option key={sector} value={sector}>
                     {sector}
                   </option>
                 ))}
-              </select>
+              </AppSelect>
             </div>
           </div>
 
-          {errorMessage ? (
-            <div className="rounded-[8px] border border-[#fecaca] bg-[#fef2f2] px-3 py-2 text-[12px] font-medium text-[#dc2626]">
-              {errorMessage}
-            </div>
-          ) : null}
+          {errorMessage ? <AppAlert tone="danger">{errorMessage}</AppAlert> : null}
 
-          <div className="rounded-[10px] border border-[#e2e8f0] bg-[#f8fafc] px-4 py-3 text-[12px] text-[#64748b]">
+          <AppSurface className="rounded-[10px] bg-[#f8fafc] px-4 py-3 text-[12px] text-[#64748b]">
             <div className="inline-flex items-center gap-2 font-semibold text-[#0f172a]">
               <UsersIcon className="size-4 text-[#2563eb]" />
               Regras
             </div>
-            <div className="mt-2">Nome e e-mail são obrigatórios.</div>
-            <div>E-mail não pode duplicar.</div>
+            <div className="mt-2">Nome e e-mail sao obrigatorios.</div>
+            <div>E-mail nao pode duplicar.</div>
             <div>Senha precisa ter pelo menos 6 caracteres.</div>
-          </div>
+          </AppSurface>
         </div>
       </ModalShell>
     </>
