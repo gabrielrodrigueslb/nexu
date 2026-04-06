@@ -298,11 +298,7 @@ export function saveImplantacaoTickets(tickets: ImplantacaoTicket[]) {
 }
 
 export function useImplantacaoTickets() {
-  const [tickets, setTickets] = useState<ImplantacaoTicket[]>(() => buildSeedTickets());
-
-  useEffect(() => {
-    setTickets(loadImplantacaoTickets());
-  }, []);
+  const [tickets, setTickets] = useState<ImplantacaoTicket[]>(() => loadImplantacaoTickets());
 
   useEffect(() => {
     saveImplantacaoTickets(tickets);

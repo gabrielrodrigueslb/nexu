@@ -172,6 +172,7 @@ const TYPE_META: Record<ClosedClientTicketType, { label: string; badge: string }
   },
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const JOURNEY_STEPS = ['Cadastro', 'Pagamento', 'Implantacao', 'Concluido'];
 
 function syncPriceRowsWithCatalog(rows: CommercialPriceRow[], catalogNames: string[]) {
@@ -289,6 +290,7 @@ function sumRecurringValue(ticket: Pick<ClosedClientTicketRecord, 'products' | '
     .reduce((sum, item) => sum + item.recurring, 0);
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function buildKanbanChipItems(ticket: Pick<ClosedClientTicketRecord, 'type' | 'csStatus' | 'products' | 'integrations'>) {
   const labels = [
     ticket.type === 'inclusao' ? 'Upsell' : 'Novo Ticket',
@@ -304,6 +306,7 @@ function buildKanbanChipItems(ticket: Pick<ClosedClientTicketRecord, 'type' | 'c
   }));
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function InfoField({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-[10px] border border-[#e2e8f0] bg-[#f8fafc] px-3 py-3">
@@ -315,6 +318,7 @@ function InfoField({ label, value }: { label: string; value: string }) {
   );
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function TicketValueTable({
   title,
   icon,
@@ -1044,6 +1048,7 @@ function TicketDetailsModal({
   const technicalName =
     users.find((user) => user.id === ticket.technicalAssigneeId)?.name ?? '-';
   const completedTasks = ticket.tasks.filter((task) => task.done).length;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const progressPercent = ticket.tasks.length
     ? Math.round((completedTasks / ticket.tasks.length) * 100)
     : 0;
@@ -2190,3 +2195,4 @@ export function CommercialClosedClients() {
     </div>
   );
 }
+

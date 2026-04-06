@@ -146,6 +146,7 @@ const GROUP_OPTIONS: Array<{ value: GroupBy; label: string }> = [
   { value: 'conta', label: 'Por Conta' },
 ];
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function createMockFlowData(): SavedFlowData {
   const despesas: LedgerExpenseRow[] = [
     {
@@ -2032,3 +2033,4 @@ function LedgerTable({
     </div>
   );
 }
+

@@ -88,6 +88,8 @@ const DEV_TAGS: DevTag[] = [
 ];
 
 const CURRENT_USER_ID = DEV_USERS[0]?.id ?? '';
+const ANALYSIS_STATUS = ALL_DEV_STATUSES[1];
+const COMPLETED_STATUS = ALL_DEV_STATUSES[ALL_DEV_STATUSES.length - 1];
 let nextGeneratedTicketId = Math.max(...INITIAL_DEV_TICKETS.map((ticket) => ticket.id), 0) + 1;
 let nextGeneratedHistoryId = 1;
 let nextGeneratedCommentId = 1;
@@ -178,7 +180,7 @@ function normalizeInitialTickets(tickets: BaseDevTicket[]): DevTicket[] {
       cnpj: index % 2 === 0 ? `00.000.000/000${(index % 9) + 1}-0${index % 9}` : undefined,
       clientPhone: index % 2 === 0 ? '(11) 99999-0000' : undefined,
       updatedAt: activityTimestamp,
-      concludedAt: ticket.devStatus === 'ConcluÃ­do' ? activityTimestamp : undefined,
+      concludedAt: ticket.devStatus === COMPLETED_STATUS ? activityTimestamp : undefined,
       totalPts: Math.max(0, Math.round(ticket.score / 2)),
       tags: [primaryTag],
       criteria,
@@ -283,17 +285,22 @@ function getPriority(score: number) {
 }
 
 function getStatusBadgeClass(status: DevStatus) {
-  const styles: Record<DevStatus, string> = {
-    Backlog: 'border-[#e2e8f0] bg-[#f1f5f9] text-[#475569]',
-    'AnÃ¡lise': 'border-[#fde68a] bg-[#fffbeb] text-[#d97706]',
-    'Pronto para Desenvolver': 'border-[#bfdbfe] bg-[#eff6ff] text-[#2563eb]',
-    'Em Desenvolvimento': 'border-[#ddd6fe] bg-[#f5f3ff] text-[#7c3aed]',
-    Testes: 'border-[#fde68a] bg-[#fefce8] text-[#854d0e]',
-    'Code Review': 'border-[#f9a8d4] bg-[#fdf2f8] text-[#9d174d]',
-    'ConcluÃ­do': 'border-[#a7f3d0] bg-[#ecfdf5] text-[#059669]',
-  };
-
-  return styles[status];
+  switch (status) {
+    case 'Backlog':
+      return 'border-[#e2e8f0] bg-[#f1f5f9] text-[#475569]';
+    case ANALYSIS_STATUS:
+      return 'border-[#fde68a] bg-[#fffbeb] text-[#d97706]';
+    case 'Pronto para Desenvolver':
+      return 'border-[#bfdbfe] bg-[#eff6ff] text-[#2563eb]';
+    case 'Em Desenvolvimento':
+      return 'border-[#ddd6fe] bg-[#f5f3ff] text-[#7c3aed]';
+    case 'Testes':
+      return 'border-[#fde68a] bg-[#fefce8] text-[#854d0e]';
+    case 'Code Review':
+      return 'border-[#f9a8d4] bg-[#fdf2f8] text-[#9d174d]';
+    case COMPLETED_STATUS:
+      return 'border-[#a7f3d0] bg-[#ecfdf5] text-[#059669]';
+  }
 }
 
 function getTypeBadgeClass(type: DevType) {
@@ -370,7 +377,7 @@ export function DevLibraryPage() {
     acc[tag.id] = tag;
     return acc;
   }, {});
-  const completedTickets = tickets.filter((ticket) => ticket.devStatus === 'ConcluÃ­do');
+  const completedTickets = tickets.filter((ticket) => ticket.devStatus === COMPLETED_STATUS);
   const visibleTickets = completedTickets
     .filter((ticket) => (typeFilter ? ticket.devType === typeFilter : true))
     .filter((ticket) => (categoryFilter ? ticket.category === categoryFilter : true))
@@ -465,7 +472,7 @@ export function DevLibraryPage() {
     updateTicket(ticketId, (ticket) => ({
       ...ticket,
       devStatus: nextStatus,
-      concludedAt: nextStatus === 'ConcluÃ­do' ? getNowTimestamp() : undefined,
+      concludedAt: nextStatus === COMPLETED_STATUS ? getNowTimestamp() : undefined,
       history:
         ticket.devStatus === nextStatus
           ? ticket.history
@@ -477,7 +484,7 @@ export function DevLibraryPage() {
     if (!selectedTicket) return;
     updateTicket(selectedTicket.id, (ticket) => ({
       ...ticket,
-      devStatus: 'ConcluÃ­do',
+      devStatus: COMPLETED_STATUS,
       concludedAt: getNowTimestamp(),
       history: appendHistory(ticket, 'Task concluida'),
     }));
@@ -602,7 +609,7 @@ export function DevLibraryPage() {
                 startDate: formState.startDate || undefined,
                 deadline: formState.deadline || undefined,
                 description: formState.description.trim(),
-                concludedAt: formState.devStatus === 'ConcluÃ­do' ? getNowTimestamp() : undefined,
+                concludedAt: formState.devStatus === COMPLETED_STATUS ? getNowTimestamp() : undefined,
                 criteria: formCriteria,
                 history: appendHistory(ticket, 'Ticket editado'),
               }
@@ -631,7 +638,7 @@ export function DevLibraryPage() {
         startDate: formState.startDate || undefined,
         deadline: formState.deadline || undefined,
         description: formState.description.trim(),
-        concludedAt: formState.devStatus === 'ConcluÃ­do' ? getNowTimestamp() : undefined,
+        concludedAt: formState.devStatus === COMPLETED_STATUS ? getNowTimestamp() : undefined,
         comments: [],
         createdBy: currentUser?.id ?? CURRENT_USER_ID,
         tags: [],
@@ -877,7 +884,7 @@ export function DevLibraryPage() {
                   </option>
                 ))}
               </select>
-              {selectedTicket.devStatus !== 'ConcluÃ­do' ? (
+              {selectedTicket.devStatus !== COMPLETED_STATUS ? (
                 <button
                   type="button"
                   onClick={handleConcludeSelectedTicket}

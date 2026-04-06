@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -95,8 +95,15 @@ export function CommercialCrmLeadTasks() {
   const [taskTypeFilter, setTaskTypeFilter] = useState<ActivityType | ''>('');
   const [sellerFilter, setSellerFilter] = useState('');
   const [view, setView] = useState<TaskView>('todas');
+  const [now, setNow] = useState(() => Date.now());
 
-  const now = Date.now();
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setNow(Date.now());
+    }, 60_000);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   const allTasks = useMemo<FlattenedLeadTask[]>(() => {
     return initialLeads.flatMap((lead) =>

@@ -23,6 +23,7 @@ import {
   AppToolbarButton,
 } from '@/components/app-ui-kit';
 import { ModalShell } from '@/components/modal-shell';
+import { cn } from '@/lib/utils';
 
 type CatalogType = 'products' | 'integrations';
 

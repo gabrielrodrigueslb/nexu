@@ -21,7 +21,7 @@ import { ModalShell } from '@/components/modal-shell';
 type SimpleItem = {
   id: string;
   name: string;
-  active?: boolean;
+  active: boolean;
 };
 
 type PageType = 'origins' | 'sdrs';
@@ -52,15 +52,17 @@ function getMeta(type: PageType) {
   };
 }
 
-export function AdminSimpleSettingsPage({
+type AdminSimpleSettingsPageProps<T extends SimpleItem> = {
+  type: PageType;
+  items: T[];
+  setItems: React.Dispatch<React.SetStateAction<T[]>>;
+};
+
+export function AdminSimpleSettingsPage<T extends SimpleItem>({
   type,
   items,
   setItems,
-}: {
-  type: PageType;
-  items: SimpleItem[];
-  setItems: React.Dispatch<React.SetStateAction<SimpleItem[]>>;
-}) {
+}: AdminSimpleSettingsPageProps<T>) {
   const meta = getMeta(type);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
@@ -79,7 +81,7 @@ export function AdminSimpleSettingsPage({
     setOpen(true);
   }
 
-  function openEditModal(item: SimpleItem) {
+  function openEditModal(item: T) {
     setEditingId(item.id);
     setDraft(item.name);
     setErrorMessage('');
@@ -118,7 +120,7 @@ export function AdminSimpleSettingsPage({
     } else {
       setItems((current) => [
         ...current,
-        { id: `${type}-${Date.now()}`, name: normalizedName, active: true },
+        { id: `${type}-${Date.now()}`, name: normalizedName, active: true } as T,
       ]);
     }
 

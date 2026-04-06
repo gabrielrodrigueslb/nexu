@@ -1,11 +1,10 @@
 'use client';
 
-import { useEffect, useId, useState } from 'react';
+import { useId, useState } from 'react';
 
 import {
   CalendarDays,
   Check,
-  CheckCircle2,
   ClipboardList,
   Copy,
   ListChecks,
@@ -78,6 +77,45 @@ type TicketDetailsJourneyStep = {
   label: string;
   state: 'done' | 'active' | 'pending';
 };
+
+function CommentComposer({
+  composerKey,
+  placeholder,
+  submitLabel,
+  onSubmit,
+}: {
+  composerKey: string;
+  placeholder: string;
+  submitLabel: string;
+  onSubmit: (value: string) => void;
+}) {
+  const [value, setValue] = useState('');
+
+  return (
+    <div className="mt-4 flex items-end gap-2">
+      <textarea
+        key={composerKey}
+        value={value}
+        onChange={(event) => setValue(event.target.value)}
+        placeholder={placeholder}
+        className="min-h-[44px] flex-1 resize-none rounded-[10px] border border-[#dbe4f0] bg-white px-3 py-3 text-[13px] text-[#0f172a] outline-none"
+      />
+      <button
+        type="button"
+        onClick={() => {
+          const trimmed = value.trim();
+          if (!trimmed) return;
+          onSubmit(trimmed);
+          setValue('');
+        }}
+        className="inline-flex items-center gap-2 rounded-[8px] bg-[#2563eb] px-4 py-[10px] text-[13px] font-semibold text-white"
+      >
+        <Send className="size-4" />
+        {submitLabel}
+      </button>
+    </div>
+  );
+}
 
 function InfoField({ label, value, icon, fullWidth }: TicketDetailsField) {
   return (
@@ -230,17 +268,12 @@ export function TicketDetailsView({
   const completedTasks = tasks.filter((task) => task.done).length;
   const progressPercent = tasks.length ? Math.round((completedTasks / tasks.length) * 100) : 0;
   const attachmentInputId = useId();
-  const [commentValue, setCommentValue] = useState('');
   const groupedTasks = tasks.reduce<Record<string, TicketDetailsTask[]>>((acc, task) => {
     const key = task.group || 'Tarefas';
     acc[key] = acc[key] || [];
     acc[key].push(task);
     return acc;
   }, {});
-
-  useEffect(() => {
-    setCommentValue('');
-  }, [open, protocol]);
 
   return (
     <ModalShell
@@ -574,27 +607,12 @@ export function TicketDetailsView({
             )}
 
             {comments.onSubmit ? (
-              <div className="mt-4 flex items-end gap-2">
-                <textarea
-                  value={commentValue}
-                  onChange={(event) => setCommentValue(event.target.value)}
-                  placeholder={comments.inputPlaceholder ?? 'Comentario...'}
-                  className="min-h-[44px] flex-1 resize-none rounded-[10px] border border-[#dbe4f0] bg-white px-3 py-3 text-[13px] text-[#0f172a] outline-none"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    const trimmed = commentValue.trim();
-                    if (!trimmed) return;
-                    comments.onSubmit?.(trimmed);
-                    setCommentValue('');
-                  }}
-                  className="inline-flex items-center gap-2 rounded-[8px] bg-[#2563eb] px-4 py-[10px] text-[13px] font-semibold text-white"
-                >
-                  <Send className="size-4" />
-                  {comments.submitLabel ?? 'Enviar'}
-                </button>
-              </div>
+              <CommentComposer
+                composerKey={`${protocol}-${open ? 'open' : 'closed'}`}
+                placeholder={comments.inputPlaceholder ?? 'Comentario...'}
+                submitLabel={comments.submitLabel ?? 'Enviar'}
+                onSubmit={comments.onSubmit}
+              />
             ) : null}
           </div>
         ) : null}

@@ -893,7 +893,7 @@ export function LeadModal({
               min="0"
               value={numericInputValue(draft.admins)}
               onChange={(event) => updateDraft({ admins: Number(event.target.value) || 0 })}
-              className={fieldClassName()}
+              className={appFieldClassName}
               placeholder="Ex: 1"
             />
           </div>

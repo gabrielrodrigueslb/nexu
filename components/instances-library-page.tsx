@@ -88,7 +88,7 @@ type TicketFormState = {
 type ImportedInstance = {
   id: string;
   name: string;
-  cnpj?: string;
+  cnpj: string | undefined;
 };
 
 type InstanceItem =
@@ -112,6 +112,8 @@ const DEV_TAGS: DevTag[] = [
 ];
 
 const CURRENT_USER_ID = DEV_USERS[0]?.id ?? '';
+const ANALYSIS_STATUS = ALL_DEV_STATUSES[1];
+const COMPLETED_STATUS = ALL_DEV_STATUSES[ALL_DEV_STATUSES.length - 1];
 const IMPORTED_INSTANCES_STORAGE_KEY = 'nx_inst_importadas';
 let nextGeneratedTicketId = Math.max(...INITIAL_DEV_TICKETS.map((ticket) => ticket.id), 0) + 1;
 let nextGeneratedHistoryId = 1;
@@ -203,7 +205,7 @@ function normalizeInitialTickets(tickets: BaseDevTicket[]): DevTicket[] {
       cnpj: index % 2 === 0 ? `00.000.000/000${(index % 9) + 1}-0${index % 9}` : undefined,
       clientPhone: index % 2 === 0 ? '(11) 99999-0000' : undefined,
       updatedAt: activityTimestamp,
-      concludedAt: ticket.devStatus === 'ConcluÃ­do' ? activityTimestamp : undefined,
+      concludedAt: ticket.devStatus === COMPLETED_STATUS ? activityTimestamp : undefined,
       totalPts: Math.max(0, Math.round(ticket.score / 2)),
       tags: [primaryTag],
       criteria,
@@ -262,6 +264,26 @@ function parseImportedTimestamp(value?: string | number) {
   if (!value) return 0;
   const timestamp = new Date(`${value}T00:00:00`).getTime();
   return Number.isNaN(timestamp) ? 0 : timestamp;
+}
+
+function normalizeImportedInstance(value: unknown): ImportedInstance | null {
+  if (!value || typeof value !== 'object') return null;
+
+  const record = value as {
+    id?: unknown;
+    name?: unknown;
+    cnpj?: unknown;
+  };
+
+  if (typeof record.id !== 'string' || typeof record.name !== 'string') {
+    return null;
+  }
+
+  return {
+    id: record.id,
+    name: record.name,
+    cnpj: typeof record.cnpj === 'string' ? record.cnpj : undefined,
+  };
 }
 
 async function parseImportedInstancesFile(file: File): Promise<ImportedInstance[]> {
@@ -372,17 +394,22 @@ function getPriority(score: number) {
 }
 
 function getStatusBadgeClass(status: DevStatus) {
-  const styles: Record<DevStatus, string> = {
-    Backlog: 'border-[#e2e8f0] bg-[#f1f5f9] text-[#475569]',
-    'AnÃ¡lise': 'border-[#fde68a] bg-[#fffbeb] text-[#d97706]',
-    'Pronto para Desenvolver': 'border-[#bfdbfe] bg-[#eff6ff] text-[#2563eb]',
-    'Em Desenvolvimento': 'border-[#ddd6fe] bg-[#f5f3ff] text-[#7c3aed]',
-    Testes: 'border-[#fde68a] bg-[#fefce8] text-[#854d0e]',
-    'Code Review': 'border-[#f9a8d4] bg-[#fdf2f8] text-[#9d174d]',
-    'ConcluÃ­do': 'border-[#a7f3d0] bg-[#ecfdf5] text-[#059669]',
-  };
-
-  return styles[status];
+  switch (status) {
+    case 'Backlog':
+      return 'border-[#e2e8f0] bg-[#f1f5f9] text-[#475569]';
+    case ANALYSIS_STATUS:
+      return 'border-[#fde68a] bg-[#fffbeb] text-[#d97706]';
+    case 'Pronto para Desenvolver':
+      return 'border-[#bfdbfe] bg-[#eff6ff] text-[#2563eb]';
+    case 'Em Desenvolvimento':
+      return 'border-[#ddd6fe] bg-[#f5f3ff] text-[#7c3aed]';
+    case 'Testes':
+      return 'border-[#fde68a] bg-[#fefce8] text-[#854d0e]';
+    case 'Code Review':
+      return 'border-[#f9a8d4] bg-[#fdf2f8] text-[#9d174d]';
+    case COMPLETED_STATUS:
+      return 'border-[#a7f3d0] bg-[#ecfdf5] text-[#059669]';
+  }
 }
 
 function getTypeBadgeClass(type: DevType) {
@@ -547,10 +574,9 @@ export function InstancesLibraryPage() {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
         setImportedInstances(
-          parsed.filter(
-            (item): item is ImportedInstance =>
-              Boolean(item && typeof item === 'object' && 'name' in item),
-          ),
+          parsed
+            .map(normalizeImportedInstance)
+            .filter((item): item is ImportedInstance => item !== null),
         );
       }
     } catch {
@@ -653,7 +679,7 @@ export function InstancesLibraryPage() {
     updateTicket(ticketId, (ticket) => ({
       ...ticket,
       devStatus: nextStatus,
-      concludedAt: nextStatus === 'ConcluÃ­do' ? getNowTimestamp() : undefined,
+      concludedAt: nextStatus === COMPLETED_STATUS ? getNowTimestamp() : undefined,
       history:
         ticket.devStatus === nextStatus
           ? ticket.history
@@ -665,7 +691,7 @@ export function InstancesLibraryPage() {
     if (!selectedTicket) return;
     updateTicket(selectedTicket.id, (ticket) => ({
       ...ticket,
-      devStatus: 'ConcluÃ­do',
+      devStatus: COMPLETED_STATUS,
       concludedAt: getNowTimestamp(),
       history: appendHistory(ticket, 'Task concluida'),
     }));
@@ -762,7 +788,7 @@ export function InstancesLibraryPage() {
                 startDate: formState.startDate || undefined,
                 deadline: formState.deadline || undefined,
                 description: formState.description.trim(),
-                concludedAt: formState.devStatus === 'ConcluÃ­do' ? getNowTimestamp() : undefined,
+                concludedAt: formState.devStatus === COMPLETED_STATUS ? getNowTimestamp() : undefined,
                 criteria: formCriteria,
                 history: appendHistory(ticket, 'Ticket editado'),
               }
@@ -791,7 +817,7 @@ export function InstancesLibraryPage() {
         startDate: formState.startDate || undefined,
         deadline: formState.deadline || undefined,
         description: formState.description.trim(),
-        concludedAt: formState.devStatus === 'ConcluÃ­do' ? getNowTimestamp() : undefined,
+        concludedAt: formState.devStatus === COMPLETED_STATUS ? getNowTimestamp() : undefined,
         comments: [],
         createdBy: currentUser?.id ?? CURRENT_USER_ID,
         tags: [],
@@ -1009,7 +1035,7 @@ export function InstancesLibraryPage() {
                   0,
                 );
                 const devOpen = devItems.filter(
-                  (item) => item.ticket.devStatus !== 'ConcluÃ­do',
+                  (item) => item.ticket.devStatus !== COMPLETED_STATUS,
                 ).length;
                 const devDone = devItems.length - devOpen;
                 const commercialActive = commercialItems.filter(
@@ -1088,7 +1114,7 @@ export function InstancesLibraryPage() {
                                   <div
                                     className={cn(
                                       'mt-1 min-h-10 w-[3px] shrink-0 rounded-full',
-                                      ticket.devStatus === 'ConcluÃ­do'
+                                      ticket.devStatus === COMPLETED_STATUS
                                         ? 'bg-[#16a34a]'
                                         : ticket.devType === 'Bug'
                                           ? 'bg-[#dc2626]'
@@ -1229,7 +1255,7 @@ export function InstancesLibraryPage() {
                   </option>
                 ))}
               </select>
-              {selectedTicket.devStatus !== 'ConcluÃ­do' ? (
+              {selectedTicket.devStatus !== COMPLETED_STATUS ? (
                 <button
                   type="button"
                   onClick={handleConcludeSelectedTicket}
@@ -1880,6 +1906,7 @@ export function InstancesLibraryPage() {
     </>
   );
 }
+
 
 
 
