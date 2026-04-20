@@ -4,7 +4,17 @@ import { AdminSimpleSettingsPage } from '@/components/admin-simple-settings-page
 import { useAdminSdrs } from '@/components/admin-settings-storage';
 
 export function AdminSdrsPage() {
-  const [items, setItems] = useAdminSdrs();
+  const { items, isLoading, error, createItem, updateItem, deleteItem } = useAdminSdrs();
 
-  return <AdminSimpleSettingsPage type="sdrs" items={items} setItems={setItems} />;
+  return (
+    <AdminSimpleSettingsPage
+      type="sdrs"
+      items={items}
+      isLoading={isLoading}
+      error={error}
+      createItem={createItem}
+      updateItem={updateItem}
+      deleteItem={deleteItem}
+    />
+  );
 }

@@ -1,18 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import {
-  useState,
-  type ComponentProps,
-  type CSSProperties,
-  type ReactNode,
-} from 'react';
+import { useState } from 'react';
 import { CalendarDays, Copy, MessageSquareText, Plus } from 'lucide-react';
 
 import { ModalShell } from '@/components/modal-shell';
-import { Button, buttonVariants } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   ALL_DEV_STATUSES,
   DEV_CATEGORIES,
@@ -119,32 +111,15 @@ const EMPTY_FORM: TicketFormState = {
 };
 
 function formatDateTime(value: Date = new Date()) {
-  return (
-    value.toLocaleDateString('pt-BR') +
-    ' ' +
-    value.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-  );
+  return value.toLocaleDateString('pt-BR') + ' ' + value.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
 function getInitials(name: string) {
-  return (
-    name
-      .split(' ')
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((word) => word[0]?.toUpperCase())
-      .join('') || '?'
-  );
+  return name.split(' ').filter(Boolean).slice(0, 2).map((word) => word[0]?.toUpperCase()).join('') || '?';
 }
 
 function calcScore(criteria: DevCriteria) {
-  return Math.round(
-    criteria.imp * 0.3 * 5 +
-      criteria.ris * 0.25 * 5 +
-      criteria.fre * 0.2 * 5 +
-      criteria.deb * 0.15 * 5 +
-      criteria.esf * 0.1 * 5,
-  );
+  return Math.round(criteria.imp * 0.3 * 5 + criteria.ris * 0.25 * 5 + criteria.fre * 0.2 * 5 + criteria.deb * 0.15 * 5 + criteria.esf * 0.1 * 5);
 }
 
 function defaultCriteriaForScore(score: number): DevCriteria {
@@ -157,24 +132,12 @@ function defaultCriteriaForScore(score: number): DevCriteria {
 function normalizeInitialTickets(tickets: BaseDevTicket[]): DevTicket[] {
   return tickets.map((ticket, index) => {
     const criteria = defaultCriteriaForScore(ticket.score);
-    const primaryTag =
-      ticket.category === 'Habilis'
-        ? 'tag-habilis'
-        : ticket.category === 'Meta'
-          ? 'tag-meta'
-          : ticket.devType === 'Bug'
-            ? 'tag-hotfix'
-            : ticket.category === 'UX / Interface'
-              ? 'tag-ux'
-              : 'tag-prioridade';
+    const primaryTag = ticket.category === 'Habilis' ? 'tag-habilis' : ticket.category === 'Meta' ? 'tag-meta' : ticket.devType === 'Bug' ? 'tag-hotfix' : ticket.category === 'UX / Interface' ? 'tag-ux' : 'tag-prioridade';
 
     return {
       ...ticket,
       createdBy: DEV_USERS[index % DEV_USERS.length]?.id ?? CURRENT_USER_ID,
-      protoExt:
-        ticket.category === 'Habilis' || ticket.category === 'Meta'
-          ? `EXT-${String(240 + index).padStart(3, '0')}`
-          : undefined,
+      protoExt: ticket.category === 'Habilis' || ticket.category === 'Meta' ? `EXT-${String(240 + index).padStart(3, '0')}` : undefined,
       instance: ticket.clientName ? ticket.clientName.toUpperCase() : undefined,
       cnpj: index % 2 === 0 ? `00.000.000/000${(index % 9) + 1}-0${index % 9}` : undefined,
       clientPhone: index % 2 === 0 ? '(11) 99999-0000' : undefined,
@@ -206,119 +169,46 @@ function buildProtocol() {
   return `DEV-${year}${month}-${suffix}`;
 }
 
-function buildTicketId() {
-  const id = nextGeneratedTicketId;
-  nextGeneratedTicketId += 1;
-  return id;
-}
+function buildTicketId() { const id = nextGeneratedTicketId; nextGeneratedTicketId += 1; return id; }
+function buildHistoryId(ticketId: number) { const id = `history-${ticketId}-${nextGeneratedHistoryId}`; nextGeneratedHistoryId += 1; return id; }
+function buildCommentId(ticketId: number) { const id = `comment-${ticketId}-${nextGeneratedCommentId}`; nextGeneratedCommentId += 1; return id; }
 
-function buildHistoryId(ticketId: number) {
-  const id = `history-${ticketId}-${nextGeneratedHistoryId}`;
-  nextGeneratedHistoryId += 1;
-  return id;
-}
-
-function buildCommentId(ticketId: number) {
-  const id = `comment-${ticketId}-${nextGeneratedCommentId}`;
-  nextGeneratedCommentId += 1;
-  return id;
-}
-
-// Utiliza transparência e cores semânticas nativas do Tailwind para suportar Dark Mode
 function getPriority(score: number) {
-  if (score >= 12) {
-    return {
-      label: 'CRÍTICO',
-      badgeClassName: 'border-destructive/20 bg-destructive/10 text-destructive',
-      borderClassName: 'border-l-destructive',
-      scoreClassName: 'text-destructive',
-    };
-  }
-
-  if (score >= 9) {
-    return {
-      label: 'ALTO',
-      badgeClassName: 'border-orange-500/20 bg-orange-500/10 text-orange-600 dark:text-orange-400',
-      borderClassName: 'border-l-orange-500',
-      scoreClassName: 'text-orange-600 dark:text-orange-400',
-    };
-  }
-
-  if (score >= 6) {
-    return {
-      label: 'MÉDIO',
-      badgeClassName: 'border-yellow-500/20 bg-yellow-500/10 text-yellow-600 dark:text-yellow-400',
-      borderClassName: 'border-l-yellow-500',
-      scoreClassName: 'text-yellow-600 dark:text-yellow-400',
-    };
-  }
-
-  return {
-    label: 'BAIXO',
-    badgeClassName: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-    borderClassName: 'border-l-emerald-500',
-    scoreClassName: 'text-emerald-600 dark:text-emerald-400',
-  };
+  if (score >= 12) return { label: 'CRÍTICO', badgeClassName: 'border-[#fecaca] bg-[#fef2f2] text-[#dc2626]', borderClassName: 'border-l-[#dc2626]', scoreClassName: 'text-[#dc2626]' };
+  if (score >= 9) return { label: 'ALTO', badgeClassName: 'border-[#fde68a] bg-[#fffbeb] text-[#d97706]', borderClassName: 'border-l-[#d97706]', scoreClassName: 'text-[#d97706]' };
+  if (score >= 6) return { label: 'MÉDIO', badgeClassName: 'border-[#fde68a] bg-[#fefce8] text-[#854d0e]', borderClassName: 'border-l-[#ca8a04]', scoreClassName: 'text-[#ca8a04]' };
+  return { label: 'BAIXO', badgeClassName: 'border-[#a7f3d0] bg-[#ecfdf5] text-[#059669]', borderClassName: 'border-l-[#059669]', scoreClassName: 'text-[#059669]' };
 }
 
 function getStatusBadgeClass(status: DevStatus) {
   const styles: Record<DevStatus, string> = {
-    Backlog: 'border-border bg-muted/50 text-muted-foreground',
-    Análise: 'border-orange-500/20 bg-orange-500/10 text-orange-600 dark:text-orange-400',
-    'Pronto para Desenvolver': 'border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-400',
-    'Em Desenvolvimento': 'border-purple-500/20 bg-purple-500/10 text-purple-600 dark:text-purple-400',
-    Testes: 'border-yellow-500/20 bg-yellow-500/10 text-yellow-600 dark:text-yellow-400',
-    'Code Review': 'border-pink-500/20 bg-pink-500/10 text-pink-600 dark:text-pink-400',
-    Concluído: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+    Backlog: 'border-[#e2e8f0] bg-[#f1f5f9] text-[#475569]',
+    Análise: 'border-[#fde68a] bg-[#fffbeb] text-[#d97706]',
+    'Pronto para Desenvolver': 'border-[#bfdbfe] bg-[#eff6ff] text-[#2563eb]',
+    'Em Desenvolvimento': 'border-[#ddd6fe] bg-[#f5f3ff] text-[#7c3aed]',
+    Testes: 'border-[#fde68a] bg-[#fefce8] text-[#854d0e]',
+    'Code Review': 'border-[#f9a8d4] bg-[#fdf2f8] text-[#9d174d]',
+    Concluído: 'border-[#a7f3d0] bg-[#ecfdf5] text-[#059669]',
   };
-
   return styles[status];
 }
 
 function getTypeBadgeClass(type: DevType) {
   const styles: Record<DevType, string> = {
-    Epic: 'border-purple-500/20 bg-purple-500/10 text-purple-600 dark:text-purple-400',
-    Feature: 'border-primary/20 bg-primary/10 text-primary',
-    Task: 'border-border bg-muted/50 text-muted-foreground',
-    Bug: 'border-destructive/20 bg-destructive/10 text-destructive',
+    Epic: 'border-[#ddd6fe] bg-[#f5f3ff] text-[#7c3aed]',
+    Feature: 'border-[#bfdbfe] bg-[#eff6ff] text-[#2563eb]',
+    Task: 'border-[#e2e8f0] bg-[#f1f5f9] text-[#475569]',
+    Bug: 'border-[#fecaca] bg-[#fef2f2] text-[#dc2626]',
   };
-
   return styles[type];
 }
 
-function Badge({
-  children,
-  className,
-  style,
-}: {
-  children: ReactNode;
-  className?: string;
-  style?: CSSProperties;
-}) {
-  return (
-    <span
-      className={cn(
-        'inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap',
-        className,
-      )}
-      style={style}
-    >
-      {children}
-    </span>
-  );
+function Badge({ children, className }: { children: React.ReactNode; className?: string; }) {
+  return <span className={cn('inline-flex items-center rounded-[6px] border px-2 py-[2px] text-[10px] font-bold whitespace-nowrap', className)}>{children}</span>;
 }
 
-// Componente utilitário interno para estilizar selects nativos combinando com o Input
-function NativeSelect({ className, ...props }: ComponentProps<'select'>) {
-  return (
-    <select
-      className={cn(
-        "flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-input/30",
-        className
-      )}
-      {...props}
-    />
-  );
+function FormLabel({ children }: { children: React.ReactNode }) {
+  return <label className="text-[11px] font-bold tracking-[.06em] text-[#64748b] uppercase">{children}</label>;
 }
 
 export function DevKanbanPage() {
@@ -340,44 +230,23 @@ export function DevKanbanPage() {
   const [deadlineDraft, setDeadlineDraft] = useState('');
   const [deadlineReason, setDeadlineReason] = useState('');
 
-  const usersById = DEV_USERS.reduce<Record<string, (typeof DEV_USERS)[number]>>((acc, user) => {
-    acc[user.id] = user;
-    return acc;
-  }, {});
-
-  const sprintsById = DEV_SPRINTS.reduce<Record<string, (typeof DEV_SPRINTS)[number]>>(
-    (acc, sprint) => {
-      acc[sprint.id] = sprint;
-      return acc;
-    },
-    {},
-  );
-
-  const epicMap = tickets.reduce<Record<number, string>>((acc, ticket) => {
-    if (ticket.devType === 'Epic') {
-      acc[ticket.id] = ticket.title;
-    }
-    return acc;
-  }, {});
+  const usersById = DEV_USERS.reduce<Record<string, (typeof DEV_USERS)[number]>>((acc, user) => { acc[user.id] = user; return acc; }, {});
+  const sprintsById = DEV_SPRINTS.reduce<Record<string, (typeof DEV_SPRINTS)[number]>>((acc, sprint) => { acc[sprint.id] = sprint; return acc; }, {});
+  const epicMap = tickets.reduce<Record<number, string>>((acc, ticket) => { if (ticket.devType === 'Epic') { acc[ticket.id] = ticket.title; } return acc; }, {});
 
   const selectedTicket = tickets.find((ticket) => ticket.id === selectedTicketId) ?? null;
   const currentUser = DEV_USERS.find((user) => user.id === CURRENT_USER_ID) ?? DEV_USERS[0];
   const selectedDeadlineTicket = tickets.find((ticket) => ticket.id === deadlineTicketId) ?? null;
   const selectedTagTicket = tickets.find((ticket) => ticket.id === tagPickerTicketId) ?? null;
-  const tagsById = DEV_TAGS.reduce<Record<string, DevTag>>((acc, tag) => {
-    acc[tag.id] = tag;
-    return acc;
-  }, {});
+  const tagsById = DEV_TAGS.reduce<Record<string, DevTag>>((acc, tag) => { acc[tag.id] = tag; return acc; }, {});
 
   const filteredOpenTickets = tickets
     .filter((ticket) => ticket.devStatus !== 'Concluído')
     .filter((ticket) => {
       if (!dateFrom && !dateTo) return true;
       const createdAt = new Date(ticket.createdAt);
-
       if (dateFrom && createdAt < new Date(dateFrom)) return false;
       if (dateTo && createdAt > new Date(`${dateTo}T23:59:59`)) return false;
-
       return true;
     })
     .filter((ticket) => (typeFilter ? ticket.devType === typeFilter : true))
@@ -385,796 +254,364 @@ export function DevKanbanPage() {
     .filter((ticket) => (responsibleFilter ? ticket.resp === responsibleFilter : true))
     .filter((ticket) => (sprintFilter ? ticket.sprintId === sprintFilter : true));
 
-  const visibleTickets =
-    statusFilter === 'all'
-      ? filteredOpenTickets
-      : filteredOpenTickets.filter((ticket) => ticket.devStatus === statusFilter);
+  const visibleTickets = statusFilter === 'all' ? filteredOpenTickets : filteredOpenTickets.filter((ticket) => ticket.devStatus === statusFilter);
+  const responsibleUsers = DEV_USERS.filter((user) => tickets.some((ticket) => ticket.resp === user.id));
 
-  const responsibleUsers = DEV_USERS.filter((user) =>
-    tickets.some((ticket) => ticket.resp === user.id),
-  );
-
-  const formCriteria: DevCriteria = {
-    imp: Number(formState.imp) || 0,
-    ris: Number(formState.ris) || 0,
-    fre: Number(formState.fre) || 0,
-    esf: Number(formState.esf) || 0,
-    deb: Number(formState.deb) || 0,
-  };
+  const formCriteria: DevCriteria = { imp: Number(formState.imp) || 0, ris: Number(formState.ris) || 0, fre: Number(formState.fre) || 0, esf: Number(formState.esf) || 0, deb: Number(formState.deb) || 0 };
   const formScore = calcScore(formCriteria);
 
-  function updateFormField<Key extends keyof TicketFormState>(
-    key: Key,
-    value: TicketFormState[Key],
-  ) {
-    setFormState((current) => ({ ...current, [key]: value }));
-  }
-
-  function openCreateModal(type: DevType) {
-    setFormState({ ...EMPTY_FORM, devType: type });
-    setEditingTicketId(null);
-    setFormMode('create');
-  }
-
+  function updateFormField<Key extends keyof TicketFormState>(key: Key, value: TicketFormState[Key]) { setFormState((current) => ({ ...current, [key]: value })); }
+  function openCreateModal(type: DevType) { setFormState({ ...EMPTY_FORM, devType: type }); setEditingTicketId(null); setFormMode('create'); }
+  
   function openEditModal(ticket: DevTicket) {
-    setFormState({
-      title: ticket.title,
-      category: ticket.category,
-      devType: ticket.devType,
-      devStatus: ticket.devStatus,
-      resp: ticket.resp,
-      sprintId: ticket.sprintId ?? '',
-      parentId: ticket.parentId ? String(ticket.parentId) : '',
-      clientName: ticket.clientName ?? '',
-      protoExt: ticket.protoExt ?? '',
-      instance: ticket.instance ?? '',
-      cnpj: ticket.cnpj ?? '',
-      clientPhone: ticket.clientPhone ?? '',
-      startDate: ticket.startDate ?? '',
-      deadline: ticket.deadline ?? '',
-      imp: String(ticket.criteria.imp),
-      ris: String(ticket.criteria.ris),
-      fre: String(ticket.criteria.fre),
-      esf: String(ticket.criteria.esf),
-      deb: String(ticket.criteria.deb),
-      description: ticket.description,
-    });
-    setEditingTicketId(ticket.id);
-    setFormMode('edit');
+    setFormState({ title: ticket.title, category: ticket.category, devType: ticket.devType, devStatus: ticket.devStatus, resp: ticket.resp, sprintId: ticket.sprintId ?? '', parentId: ticket.parentId ? String(ticket.parentId) : '', clientName: ticket.clientName ?? '', protoExt: ticket.protoExt ?? '', instance: ticket.instance ?? '', cnpj: ticket.cnpj ?? '', clientPhone: ticket.clientPhone ?? '', startDate: ticket.startDate ?? '', deadline: ticket.deadline ?? '', imp: String(ticket.criteria.imp), ris: String(ticket.criteria.ris), fre: String(ticket.criteria.fre), esf: String(ticket.criteria.esf), deb: String(ticket.criteria.deb), description: ticket.description });
+    setEditingTicketId(ticket.id); setFormMode('edit');
   }
 
-  function closeFormModal() {
-    setFormMode(null);
-    setEditingTicketId(null);
-  }
-
-  function appendHistory(ticket: DevTicket, message: string) {
-    return [
-      ...ticket.history,
-      {
-        id: buildHistoryId(ticket.id),
-        user: currentUser?.name ?? 'Sistema',
-        message,
-        createdAt: formatDateTime(),
-      },
-    ];
-  }
-
-  function updateTicket(ticketId: number, updater: (ticket: DevTicket) => DevTicket) {
-    setTickets((current) =>
-      current.map((ticket) => (ticket.id === ticketId ? updater(ticket) : ticket)),
-    );
-  }
-
-  function moveTicket(ticketId: number, nextStatus: DevStatus) {
-    updateTicket(ticketId, (ticket) => ({
-      ...ticket,
-      devStatus: nextStatus,
-      history:
-        ticket.devStatus === nextStatus
-          ? ticket.history
-          : appendHistory(ticket, `Status: ${ticket.devStatus} -> ${nextStatus}`),
-    }));
-  }
-
-  function handleConcludeSelectedTicket() {
-    if (!selectedTicket) return;
-    updateTicket(selectedTicket.id, (ticket) => ({
-      ...ticket,
-      devStatus: 'Concluído',
-      history: appendHistory(ticket, 'Task concluida'),
-    }));
-    setSelectedTicketId(null);
-  }
-
-  function handleAddComment() {
-    if (!selectedTicket || !commentDraft.trim()) return;
-
-    updateTicket(selectedTicket.id, (ticket) => ({
-      ...ticket,
-      comments: [
-        ...ticket.comments,
-        {
-          id: buildCommentId(ticket.id),
-          author: currentUser?.name ?? 'Usuario',
-          message: commentDraft.trim(),
-          createdAt: formatDateTime(),
-        },
-      ],
-      history: appendHistory(ticket, 'Comentou'),
-    }));
-    setCommentDraft('');
-  }
-
-  function toggleTag(ticketId: number, tagId: string) {
-    updateTicket(ticketId, (ticket) => ({
-      ...ticket,
-      tags: ticket.tags.includes(tagId)
-        ? ticket.tags.filter((currentTagId) => currentTagId !== tagId)
-        : [...ticket.tags, tagId],
-      history: appendHistory(ticket, 'Etiquetas atualizadas'),
-    }));
-  }
-
-  function openDeadlineModal(ticketId: number) {
-    const ticket = tickets.find((currentTicket) => currentTicket.id === ticketId);
-    setDeadlineTicketId(ticketId);
-    setDeadlineDraft(ticket?.deadline ?? '');
-    setDeadlineReason('');
-  }
-
-  function closeDeadlineModal() {
-    setDeadlineTicketId(null);
-    setDeadlineDraft('');
-    setDeadlineReason('');
-  }
-
-  function handleSaveDeadline() {
-    if (!selectedDeadlineTicket || !deadlineDraft || !deadlineReason.trim()) return;
-
-    const previousDeadline = selectedDeadlineTicket.deadline;
-    updateTicket(selectedDeadlineTicket.id, (ticket) => ({
-      ...ticket,
-      deadline: deadlineDraft,
-      history: appendHistory(
-        ticket,
-        `Prazo alterado: ${formatDate(previousDeadline)} -> ${formatDate(deadlineDraft)}. Motivo: ${deadlineReason.trim()}`,
-      ),
-    }));
-    closeDeadlineModal();
-  }
-
-  function handleDeleteSelectedTicket() {
-    if (!selectedTicket) return;
-    if (!window.confirm('Remover este ticket do kanban?')) return;
-
-    setTickets((current) => current.filter((ticket) => ticket.id !== selectedTicket.id));
-    setSelectedTicketId(null);
-  }
-
-  function handleExport() {
-    const rows = [
-      ['Protocolo', 'Tipo', 'Titulo', 'Categoria', 'Status', 'Responsavel', 'Score', 'Sprint'],
-      ...visibleTickets.map((ticket) => [
-        ticket.proto,
-        ticket.devType,
-        ticket.title,
-        ticket.category,
-        ticket.devStatus,
-        usersById[ticket.resp]?.name ?? '-',
-        String(ticket.score),
-        ticket.sprintId ? sprintsById[ticket.sprintId]?.name ?? '-' : '-',
-      ]),
-    ];
-
-    const csv = rows
-      .map((row) => row.map((value) => `"${String(value).replaceAll('"', '""')}"`).join(','))
-      .join('\n');
-
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'kanban-dev.csv';
-    link.click();
-    URL.revokeObjectURL(url);
-  }
-
+  function closeFormModal() { setFormMode(null); setEditingTicketId(null); }
+  function appendHistory(ticket: DevTicket, message: string) { return [...ticket.history, { id: buildHistoryId(ticket.id), user: currentUser?.name ?? 'Sistema', message, createdAt: formatDateTime() }]; }
+  function updateTicket(ticketId: number, updater: (ticket: DevTicket) => DevTicket) { setTickets((current) => current.map((ticket) => (ticket.id === ticketId ? updater(ticket) : ticket))); }
+  function moveTicket(ticketId: number, nextStatus: DevStatus) { updateTicket(ticketId, (ticket) => ({ ...ticket, devStatus: nextStatus, history: ticket.devStatus === nextStatus ? ticket.history : appendHistory(ticket, `Status: ${ticket.devStatus} -> ${nextStatus}`) })); }
+  function handleConcludeSelectedTicket() { if (!selectedTicket) return; updateTicket(selectedTicket.id, (ticket) => ({ ...ticket, devStatus: 'Concluído', history: appendHistory(ticket, 'Task concluida') })); setSelectedTicketId(null); }
+  function handleAddComment() { if (!selectedTicket || !commentDraft.trim()) return; updateTicket(selectedTicket.id, (ticket) => ({ ...ticket, comments: [...ticket.comments, { id: buildCommentId(ticket.id), author: currentUser?.name ?? 'Usuario', message: commentDraft.trim(), createdAt: formatDateTime() }], history: appendHistory(ticket, 'Comentou') })); setCommentDraft(''); }
+  function toggleTag(ticketId: number, tagId: string) { updateTicket(ticketId, (ticket) => ({ ...ticket, tags: ticket.tags.includes(tagId) ? ticket.tags.filter((currentTagId) => currentTagId !== tagId) : [...ticket.tags, tagId], history: appendHistory(ticket, 'Etiquetas atualizadas') })); }
+  function openDeadlineModal(ticketId: number) { const ticket = tickets.find((currentTicket) => currentTicket.id === ticketId); setDeadlineTicketId(ticketId); setDeadlineDraft(ticket?.deadline ?? ''); setDeadlineReason(''); }
+  function closeDeadlineModal() { setDeadlineTicketId(null); setDeadlineDraft(''); setDeadlineReason(''); }
+  function handleSaveDeadline() { if (!selectedDeadlineTicket || !deadlineDraft || !deadlineReason.trim()) return; const previousDeadline = selectedDeadlineTicket.deadline; updateTicket(selectedDeadlineTicket.id, (ticket) => ({ ...ticket, deadline: deadlineDraft, history: appendHistory(ticket, `Prazo alterado: ${formatDate(previousDeadline)} -> ${formatDate(deadlineDraft)}. Motivo: ${deadlineReason.trim()}`) })); closeDeadlineModal(); }
+  function handleDeleteSelectedTicket() { if (!selectedTicket) return; if (!window.confirm('Remover este ticket do kanban?')) return; setTickets((current) => current.filter((ticket) => ticket.id !== selectedTicket.id)); setSelectedTicketId(null); }
+  function handleExport() { const rows = [['Protocolo', 'Tipo', 'Titulo', 'Categoria', 'Status', 'Responsavel', 'Score', 'Sprint'], ...visibleTickets.map((ticket) => [ticket.proto, ticket.devType, ticket.title, ticket.category, ticket.devStatus, usersById[ticket.resp]?.name ?? '-', String(ticket.score), ticket.sprintId ? sprintsById[ticket.sprintId]?.name ?? '-' : '-'])]; const csv = rows.map((row) => row.map((value) => `"${String(value).replaceAll('"', '""')}"`).join(',')).join('\n'); const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = 'kanban-dev.csv'; link.click(); URL.revokeObjectURL(url); }
+  
   function handleSaveTicket() {
     if (!formState.title.trim()) return;
-
     if (formMode === 'edit' && editingTicketId) {
-      setTickets((current) =>
-        current.map((ticket) =>
-          ticket.id === editingTicketId
-            ? {
-                ...ticket,
-                title: formState.title.trim(),
-                category: formState.category,
-                devType: formState.devType,
-                devStatus: formState.devStatus,
-                resp: formState.resp,
-                score: formScore,
-                sprintId: formState.sprintId || undefined,
-                parentId: formState.parentId ? Number(formState.parentId) : undefined,
-                clientName: formState.clientName.trim() || undefined,
-                protoExt: formState.protoExt.trim() || undefined,
-                instance: formState.instance.trim() || undefined,
-                cnpj: formState.cnpj.trim() || undefined,
-                clientPhone: formState.clientPhone.trim() || undefined,
-                startDate: formState.startDate || undefined,
-                deadline: formState.deadline || undefined,
-                description: formState.description.trim(),
-                criteria: formCriteria,
-                history: appendHistory(ticket, 'Ticket editado'),
-              }
-            : ticket,
-        ),
-      );
+      setTickets((current) => current.map((ticket) => ticket.id === editingTicketId ? { ...ticket, title: formState.title.trim(), category: formState.category, devType: formState.devType, devStatus: formState.devStatus, resp: formState.resp, score: formScore, sprintId: formState.sprintId || undefined, parentId: formState.parentId ? Number(formState.parentId) : undefined, clientName: formState.clientName.trim() || undefined, protoExt: formState.protoExt.trim() || undefined, instance: formState.instance.trim() || undefined, cnpj: formState.cnpj.trim() || undefined, clientPhone: formState.clientPhone.trim() || undefined, startDate: formState.startDate || undefined, deadline: formState.deadline || undefined, description: formState.description.trim(), criteria: formCriteria, history: appendHistory(ticket, 'Ticket editado') } : ticket));
     } else {
       const nextTicketId = buildTicketId();
-      const nextTicket: DevTicket = {
-        id: nextTicketId,
-        proto: buildProtocol(),
-        title: formState.title.trim(),
-        category: formState.category,
-        devType: formState.devType,
-        devStatus: formState.devStatus,
-        resp: formState.resp,
-        score: formScore,
-        createdAt: new Date().toISOString().slice(0, 10),
-        sprintId: formState.sprintId || undefined,
-        parentId: formState.parentId ? Number(formState.parentId) : undefined,
-        clientName: formState.clientName.trim() || undefined,
-        protoExt: formState.protoExt.trim() || undefined,
-        instance: formState.instance.trim() || undefined,
-        cnpj: formState.cnpj.trim() || undefined,
-        clientPhone: formState.clientPhone.trim() || undefined,
-        startDate: formState.startDate || undefined,
-        deadline: formState.deadline || undefined,
-        description: formState.description.trim(),
-        comments: [],
-        createdBy: currentUser?.id ?? CURRENT_USER_ID,
-        tags: [],
-        criteria: formCriteria,
-        history: [
-          {
-            id: buildHistoryId(nextTicketId),
-            user: currentUser?.name ?? 'Sistema',
-            message: 'Ticket criado',
-            createdAt: formatDateTime(),
-          },
-        ],
-      };
-
+      const nextTicket: DevTicket = { id: nextTicketId, proto: buildProtocol(), title: formState.title.trim(), category: formState.category, devType: formState.devType, devStatus: formState.devStatus, resp: formState.resp, score: formScore, createdAt: new Date().toISOString().slice(0, 10), sprintId: formState.sprintId || undefined, parentId: formState.parentId ? Number(formState.parentId) : undefined, clientName: formState.clientName.trim() || undefined, protoExt: formState.protoExt.trim() || undefined, instance: formState.instance.trim() || undefined, cnpj: formState.cnpj.trim() || undefined, clientPhone: formState.clientPhone.trim() || undefined, startDate: formState.startDate || undefined, deadline: formState.deadline || undefined, description: formState.description.trim(), comments: [], createdBy: currentUser?.id ?? CURRENT_USER_ID, tags: [], criteria: formCriteria, history: [{ id: buildHistoryId(nextTicketId), user: currentUser?.name ?? 'Sistema', message: 'Ticket criado', createdAt: formatDateTime() }] };
       setTickets((current) => [nextTicket, ...current]);
     }
-
     closeFormModal();
   }
 
   return (
-    <>
-      <div className="-mx-4 -my-6 flex flex-col md:-mx-6 lg:-mx-8 lg:-my-8">
-        {/* Cabeçalho Fixo (Toolbar) */}
-        <header className="sticky top-0 z-20 flex min-h-14 items-center justify-between gap-4 border-b bg-background/95 px-6 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="flex flex-col">
-            <h1 className="text-lg font-bold tracking-tight text-foreground">Kanban Dev</h1>
-            <p className="text-xs text-muted-foreground">Desenvolvimento & Sprints</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleExport}>
-              Exportar
-            </Button>
-            <Link
-              href="/desenvolvimento/sprints"
-              className={buttonVariants({ variant: 'outline', size: 'sm' })}
-            >
-              Nova Sprint
-            </Link>
-            <Button variant="outline" size="sm" onClick={() => openCreateModal('Task')}>
-              <Plus className="mr-1 size-4" /> Task
-            </Button>
-            <Button variant="destructive" size="sm" onClick={() => openCreateModal('Bug')}>
-              Bug
-            </Button>
-          </div>
-        </header>
-
-        {/* Área Principal (Filtros e Kanban) */}
-        <main className="flex-1 bg-muted/30 px-6 py-6">
-          {/* Barra de Filtros */}
-          <div className="mb-6 flex flex-wrap items-center gap-3 rounded-lg border bg-card p-3 shadow-sm">
-            <div className="flex items-center gap-2 border-r pr-3">
-              <CalendarDays className="size-4 text-muted-foreground" />
-              <div className="flex items-center gap-1">
-                <Input
-                  type="date"
-                  value={dateFrom}
-                  onChange={(e) => setDateFrom(e.target.value)}
-                  className="h-8 w-[130px] text-xs"
-                />
-                <span className="text-xs text-muted-foreground">até</span>
-                <Input
-                  type="date"
-                  value={dateTo}
-                  onChange={(e) => setDateTo(e.target.value)}
-                  className="h-8 w-[130px] text-xs"
-                />
-              </div>
-            </div>
-
-            <NativeSelect
-              className="h-8 w-auto text-xs"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as 'all' | DevStatus)}
-            >
-              <option value="all">Todos os status</option>
-              {DEV_COLUMNS.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </NativeSelect>
-
-            <NativeSelect
-              className="h-8 w-auto text-xs"
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-            >
-              <option value="">Todos os tipos</option>
-              {DEV_FILTER_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </NativeSelect>
-
-            <NativeSelect
-              className="h-8 w-auto text-xs"
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-            >
-              <option value="">Categorias</option>
-              {DEV_CATEGORIES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </NativeSelect>
-
-            <NativeSelect
-              className="h-8 w-auto text-xs"
-              value={responsibleFilter}
-              onChange={(e) => setResponsibleFilter(e.target.value)}
-            >
-              <option value="">Responsáveis</option>
-              {responsibleUsers.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.name}
-                </option>
-              ))}
-            </NativeSelect>
-
-            <NativeSelect
-              className="h-8 w-auto text-xs"
-              value={sprintFilter}
-              onChange={(e) => setSprintFilter(e.target.value)}
-            >
-              <option value="">Todas as sprints</option>
-              {DEV_SPRINTS.map((sprint) => (
-                <option key={sprint.id} value={sprint.id}>
-                  {sprint.name}
-                </option>
-              ))}
-            </NativeSelect>
-
-            <Link
-              href="/desenvolvimento/sprints"
-              className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'ml-auto')}
-            >
-              Ver Sprints
-            </Link>
-
-            {(typeFilter || categoryFilter || responsibleFilter || sprintFilter || dateFrom || dateTo) && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setTypeFilter('');
-                  setCategoryFilter('');
-                  setResponsibleFilter('');
-                  setSprintFilter('');
-                  setDateFrom('');
-                  setDateTo('');
-                }}
-                className="text-muted-foreground"
-              >
-                Limpar Filtros
-              </Button>
-            )}
-          </div>
-
-          {/* Kanban Board */}
-          {statusFilter === 'all' ? (
-            <div className="scrollbar-minimal flex min-h-[calc(100svh-250px)] gap-4 overflow-x-auto pb-4">
-              {DEV_COLUMNS.map((column) => {
-                const columnTickets = visibleTickets.filter((t) => t.devStatus === column);
-
-                return (
-                  <div
-                    key={column}
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      const ticketId = Number(e.dataTransfer.getData('application/kanban-item-id'));
-                      if (ticketId) moveTicket(ticketId, column);
-                    }}
-                    className="flex min-w-[280px] max-w-[280px] shrink-0 flex-col rounded-xl border bg-muted/40"
-                  >
-                    <div className="flex items-center justify-between border-b px-4 py-3">
-                      <span className="text-sm font-semibold text-foreground">{column}</span>
-                      <span className="flex size-5 items-center justify-center rounded-full bg-background text-xs font-medium text-muted-foreground shadow-sm">
-                        {columnTickets.length}
-                      </span>
-                    </div>
-
-                    <div className="scrollbar-minimal flex min-h-[100px] flex-1 flex-col gap-3 overflow-y-auto p-3">
-                      {columnTickets.length ? (
-                        columnTickets.map((ticket) => {
-                          const priority = getPriority(ticket.score);
-                          const responsible = usersById[ticket.resp];
-                          const epicName = ticket.parentId ? epicMap[ticket.parentId] : null;
-
-                          return (
-                            <div
-                              key={ticket.id}
-                              draggable
-                              onDragStart={(e) => e.dataTransfer.setData('application/kanban-item-id', String(ticket.id))}
-                              onClick={() => setSelectedTicketId(ticket.id)}
-                              className={cn(
-                                'group relative cursor-pointer rounded-lg border border-l-4 bg-card p-3 shadow-sm transition-all hover:border-primary/50 hover:shadow-md',
-                                priority.borderClassName
-                              )}
-                            >
-                              <div className="mb-2 flex flex-wrap gap-1.5">
-                                <Badge className={getTypeBadgeClass(ticket.devType)}>{ticket.devType}</Badge>
-                                <Badge className={priority.badgeClassName}>{priority.label}</Badge>
-                                <span className="ml-auto font-mono text-[10px] text-muted-foreground">{ticket.proto}</span>
-                              </div>
-
-                              {epicName && <div className="mb-1 text-[11px] font-medium text-purple-600 dark:text-purple-400">{epicName}</div>}
-                              
-                              <h4 className="mb-1.5 text-sm font-semibold leading-tight text-card-foreground group-hover:text-primary transition-colors">
-                                {ticket.title}
-                              </h4>
-
-                              <div className="mb-3 text-xs text-muted-foreground">
-                                {ticket.category} {ticket.clientName && <span className="opacity-70">· {ticket.clientName}</span>}
-                              </div>
-
-                              <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-2">
-                                <div className="flex items-center gap-2">
-                                  {responsible && (
-                                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-[10px] font-bold text-foreground" title={responsible.name}>
-                                      {getInitials(responsible.name)}
-                                    </div>
-                                  )}
-                                  <Badge className="border-border bg-background font-medium text-muted-foreground">
-                                    {ticket.score} pts
-                                  </Badge>
-                                </div>
-                                {ticket.comments.length > 0 && (
-                                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                     <MessageSquareText className="size-3" />
-                                     <span>{ticket.comments.length}</span>
-                                   </div>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })
-                      ) : (
-                        <div className="flex h-full items-center justify-center py-8 text-sm text-muted-foreground">
-                          Nenhum ticket
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : visibleTickets.length ? (
-            /* Visualização em Lista quando filtrado por Status */
-            <div className="flex flex-col gap-3">
-              {visibleTickets.map((ticket) => {
-                const priority = getPriority(ticket.score);
-                const responsible = usersById[ticket.resp];
-                const epicName = ticket.parentId ? epicMap[ticket.parentId] : null;
-
-                return (
-                  <div
-                    key={ticket.id}
-                    onClick={() => setSelectedTicketId(ticket.id)}
-                    className={cn(
-                      'flex cursor-pointer items-start gap-4 rounded-xl border border-l-4 bg-card px-5 py-4 shadow-sm transition-all hover:border-primary/50 hover:shadow-md',
-                      priority.borderClassName,
-                    )}
-                  >
-                    <div className="min-w-0 flex-1">
-                      <div className="mb-2 flex flex-wrap gap-2">
-                        <Badge className={getTypeBadgeClass(ticket.devType)}>{ticket.devType}</Badge>
-                        <Badge className={priority.badgeClassName}>{priority.label}</Badge>
-                        <Badge className={getStatusBadgeClass(ticket.devStatus)}>
-                          {ticket.devStatus}
-                        </Badge>
-                        <span className="font-mono text-xs text-muted-foreground">
-                          {ticket.proto}
-                        </span>
-                      </div>
-
-                      {epicName && <div className="mb-1 text-xs font-medium text-purple-600 dark:text-purple-400">{epicName}</div>}
-
-                      <h3 className="mb-1 text-base font-semibold text-card-foreground">{ticket.title}</h3>
-                      <div className="mb-3 text-sm text-muted-foreground">
-                        {ticket.category}
-                        {ticket.clientName ? ` · ${ticket.clientName}` : ''}
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        {responsible && (
-                          <Badge className="border-border bg-muted text-muted-foreground">
-                            {responsible.name}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex shrink-0 flex-col items-end gap-1">
-                      <div className={cn('text-2xl font-bold', priority.scoreClassName)}>
-                        {ticket.score}
-                      </div>
-                      <div className="text-xs text-muted-foreground">Score / 15</div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="flex min-h-[200px] flex-col items-center justify-center rounded-xl border border-dashed bg-card px-6 py-10 text-center">
-              <p className="text-base font-semibold text-foreground">Nenhum ticket encontrado</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Tente ajustar ou limpar os filtros para ver mais resultados.
-              </p>
-            </div>
-          )}
-        </main>
+    <div className="animate-in fade-in slide-in-from-bottom-2 duration-200">
+      <div className="mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+        <div>
+          <h1 className="text-[20px] font-extrabold tracking-[-0.4px] text-[#0f172a]">
+            Kanban Dev
+          </h1>
+          <p className="mt-0.5 text-[13px] text-[#64748b]">
+            Fluxo de desenvolvimento e priorização
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+           <button onClick={handleExport} className="h-9 rounded-[8px] border border-[#e2e8f0] bg-white px-4 text-[13px] font-semibold text-[#0f172a] shadow-sm transition-colors hover:bg-[#f8fafc]">
+             Exportar
+           </button>
+           <Link href="/desenvolvimento/sprints" className="inline-flex h-9 items-center justify-center rounded-[8px] border border-[#e2e8f0] bg-white px-4 text-[13px] font-semibold text-[#0f172a] shadow-sm transition-colors hover:bg-[#f8fafc]">
+             Sprints
+           </Link>
+           <button onClick={() => openCreateModal('Task')} className="inline-flex h-9 items-center gap-2 rounded-[8px] bg-[#2563eb] px-4 text-[13px] font-semibold text-white shadow-sm transition-colors hover:bg-[#1d4ed8]">
+             <Plus className="size-4"/> Task
+           </button>
+           <button onClick={() => openCreateModal('Bug')} className="h-9 rounded-[8px] bg-[#dc2626] px-4 text-[13px] font-semibold text-white shadow-sm transition-colors hover:bg-[#b91c1c]">
+             Bug
+           </button>
+        </div>
       </div>
 
-      {/* Modal de Detalhes do Ticket */}
+      <div className="mb-6 rounded-[10px] border border-[#e2e8f0] bg-white p-3 shadow-sm">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
+          <div className="flex flex-1 flex-wrap items-center gap-3">
+             <div className="flex h-9 items-center gap-2 rounded-[6px] border border-[#e2e8f0] bg-[#f8fafc] px-3 text-[13px]">
+               <CalendarDays className="h-[14px] w-[14px] text-[#64748b]" />
+               <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="bg-transparent text-[#0f172a] outline-none" />
+               <span className="text-[#94a3b8]">até</span>
+               <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="bg-transparent text-[#0f172a] outline-none" />
+             </div>
+
+             <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as 'all' | DevStatus)} className="h-9 min-w-[150px] rounded-[6px] border border-[#e2e8f0] bg-transparent px-3 text-[13px] text-[#0f172a] outline-none focus:border-[#2563eb]">
+                <option value="all">Todos os status</option>
+                {DEV_COLUMNS.map((s) => <option key={s} value={s}>{s}</option>)}
+             </select>
+
+             <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="h-9 min-w-[140px] rounded-[6px] border border-[#e2e8f0] bg-transparent px-3 text-[13px] text-[#0f172a] outline-none focus:border-[#2563eb]">
+                <option value="">Todos os tipos</option>
+                {DEV_FILTER_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+             </select>
+
+             <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="h-9 min-w-[140px] rounded-[6px] border border-[#e2e8f0] bg-transparent px-3 text-[13px] text-[#0f172a] outline-none focus:border-[#2563eb]">
+                <option value="">Todas as categorias</option>
+                {DEV_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+             </select>
+
+             <select value={responsibleFilter} onChange={(e) => setResponsibleFilter(e.target.value)} className="h-9 min-w-[150px] rounded-[6px] border border-[#e2e8f0] bg-transparent px-3 text-[13px] text-[#0f172a] outline-none focus:border-[#2563eb]">
+                <option value="">Todos responsáveis</option>
+                {responsibleUsers.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+             </select>
+
+             {DEV_SPRINTS.length > 0 && (
+               <select value={sprintFilter} onChange={(e) => setSprintFilter(e.target.value)} className="h-9 min-w-[140px] rounded-[6px] border border-[#e2e8f0] bg-transparent px-3 text-[13px] text-[#0f172a] outline-none focus:border-[#2563eb]">
+                  <option value="">Todas as sprints</option>
+                  {DEV_SPRINTS.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+               </select>
+             )}
+
+             {(typeFilter || categoryFilter || responsibleFilter || sprintFilter || dateFrom || dateTo) && (
+               <button onClick={() => { setTypeFilter(''); setCategoryFilter(''); setResponsibleFilter(''); setSprintFilter(''); setDateFrom(''); setDateTo(''); }} className="h-9 px-3 text-[13px] font-medium text-[#64748b] hover:text-[#0f172a]">
+                 Limpar Filtros
+               </button>
+             )}
+          </div>
+        </div>
+      </div>
+
+      {statusFilter === 'all' ? (
+        <div className="scrollbar-minimal flex min-h-[calc(100svh-250px)] gap-4 overflow-x-auto pb-4">
+          {DEV_COLUMNS.map((column) => {
+            const columnTickets = visibleTickets.filter((t) => t.devStatus === column);
+
+            return (
+              <div
+                key={column}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const ticketId = Number(e.dataTransfer.getData('application/kanban-item-id'));
+                  if (ticketId) moveTicket(ticketId, column);
+                }}
+                className="flex min-w-[300px] max-w-[300px] shrink-0 flex-col rounded-[12px] bg-[#f8fafc] border border-[#e2e8f0] p-2 shadow-sm"
+              >
+                <div className="mb-3 flex items-center justify-between px-2 pt-2">
+                  <span className="text-[14px] font-bold text-[#0f172a]">{column}</span>
+                  <span className="flex h-[22px] items-center justify-center rounded-full bg-white border border-[#e2e8f0] px-2 text-[11px] font-extrabold text-[#64748b] shadow-sm">
+                    {columnTickets.length}
+                  </span>
+                </div>
+
+                <div className="flex flex-col gap-3 min-h-[100px]">
+                  {columnTickets.length ? (
+                    columnTickets.map((ticket) => {
+                      const priority = getPriority(ticket.score);
+                      const responsible = usersById[ticket.resp];
+                      const epicName = ticket.parentId ? epicMap[ticket.parentId] : null;
+
+                      return (
+                        <div
+                          key={ticket.id}
+                          draggable
+                          onDragStart={(e) => e.dataTransfer.setData('application/kanban-item-id', String(ticket.id))}
+                          onClick={() => setSelectedTicketId(ticket.id)}
+                          className={cn('group cursor-pointer rounded-[10px] border border-[#e2e8f0] border-l-[3px] bg-white p-3 shadow-[0_2px_8px_rgba(15,23,42,.03)] transition-all hover:border-[#bfdbfe] hover:shadow-md', priority.borderClassName)}
+                        >
+                          <div className="mb-2 flex flex-wrap gap-1.5">
+                            <Badge className={getTypeBadgeClass(ticket.devType)}>{ticket.devType}</Badge>
+                            <Badge className={priority.badgeClassName}>{priority.label}</Badge>
+                            <span className="ml-auto font-mono text-[10px] font-semibold text-[#94a3b8]">{ticket.proto}</span>
+                          </div>
+                          {epicName && <div className="mb-1 text-[11px] font-bold text-[#7c3aed]">{epicName}</div>}
+                          <h4 className="mb-1.5 text-[13px] font-semibold leading-tight text-[#0f172a]">
+                            {ticket.title}
+                          </h4>
+                          <div className="mb-3 text-[11px] text-[#64748b]">
+                            {ticket.category} {ticket.clientName && `· ${ticket.clientName}`}
+                          </div>
+                          <div className="flex items-center justify-between border-t border-[#f1f5f9] pt-2">
+                            <div className="flex items-center gap-2">
+                              {responsible && <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[#f1f5f9] text-[9px] font-bold text-[#475569]">{getInitials(responsible.name)}</div>}
+                              <span className="rounded-[4px] bg-[#f8fafc] border border-[#e2e8f0] px-1.5 py-0.5 text-[10px] font-bold text-[#64748b]">{ticket.score} pts</span>
+                            </div>
+                            {ticket.comments.length > 0 && (
+                              <div className="flex items-center gap-1 text-[11px] text-[#64748b]">
+                                <MessageSquareText className="size-3.5" /> {ticket.comments.length}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="py-6 text-center text-[12px] font-medium text-[#94a3b8]">Nenhum ticket</div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : visibleTickets.length ? (
+        <div className="flex flex-col gap-3">
+          {visibleTickets.map((ticket) => {
+            const priority = getPriority(ticket.score);
+            const responsible = usersById[ticket.resp];
+            const epicName = ticket.parentId ? epicMap[ticket.parentId] : null;
+
+            return (
+              <div key={ticket.id} onClick={() => setSelectedTicketId(ticket.id)} className={cn('flex cursor-pointer items-start gap-4 rounded-[12px] border border-[#e2e8f0] border-l-[4px] bg-white p-4 shadow-sm transition-all hover:border-[#bfdbfe] hover:shadow-md', priority.borderClassName)}>
+                <div className="min-w-0 flex-1">
+                  <div className="mb-2 flex flex-wrap gap-2">
+                    <Badge className={getTypeBadgeClass(ticket.devType)}>{ticket.devType}</Badge>
+                    <Badge className={priority.badgeClassName}>{priority.label}</Badge>
+                    <Badge className={getStatusBadgeClass(ticket.devStatus)}>{ticket.devStatus}</Badge>
+                    <span className="font-mono text-[11px] font-semibold text-[#94a3b8]">{ticket.proto}</span>
+                  </div>
+                  {epicName && <div className="mb-1 text-[11px] font-bold text-[#7c3aed]">{epicName}</div>}
+                  <h3 className="mb-1 text-[15px] font-extrabold text-[#0f172a]">{ticket.title}</h3>
+                  <div className="mb-3 text-[12px] text-[#64748b]">{ticket.category} {ticket.clientName ? ` · ${ticket.clientName}` : ''}</div>
+                  <div className="flex items-center gap-2">
+                    {responsible && <span className="rounded-full border border-[#e2e8f0] bg-[#f8fafc] px-2 py-1 text-[10px] font-bold text-[#64748b]">{responsible.name}</span>}
+                  </div>
+                </div>
+                <div className="flex shrink-0 flex-col items-end gap-1">
+                  <div className={cn('text-[20px] font-extrabold', priority.scoreClassName)}>{ticket.score}</div>
+                  <div className="text-[11px] font-bold tracking-[.06em] text-[#64748b] uppercase">Pts</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="mt-4 rounded-[16px] border border-dashed border-[#cbd5e1] bg-white px-6 py-12 text-center shadow-sm">
+          <div className="text-[16px] font-bold text-[#0f172a]">Nenhum ticket encontrado</div>
+          <div className="mt-1 text-[13px] text-[#64748b]">Tente ajustar ou limpar os filtros.</div>
+        </div>
+      )}
+
       <ModalShell
         open={Boolean(selectedTicket)}
         title={selectedTicket?.title ?? 'Detalhes do ticket'}
-        description={
-          selectedTicket
-            ? `${selectedTicket.proto} · ${selectedTicket.devType} · ${selectedTicket.devStatus}`
-            : undefined
-        }
+        description={selectedTicket ? `${selectedTicket.proto} · ${selectedTicket.devType} · ${selectedTicket.devStatus}` : undefined}
         maxWidthClassName="max-w-[800px]"
-        onClose={() => {
-          setSelectedTicketId(null);
-          setCommentDraft('');
-        }}
+        onClose={() => { setSelectedTicketId(null); setCommentDraft(''); }}
         footer={
           selectedTicket ? (
             <div className="flex w-full items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                 <Button variant="ghost" onClick={() => setSelectedTicketId(null)}>Fechar</Button>
-                 <Button variant="outline" onClick={() => setTagPickerTicketId(selectedTicket.id)}>
-                   Etiquetas
-                 </Button>
-                 <Button variant="outline" onClick={() => openDeadlineModal(selectedTicket.id)}>
-                   Alterar Prazo
-                 </Button>
-                 <Button variant="destructive" onClick={handleDeleteSelectedTicket}>
-                   Excluir
-                 </Button>
+              <div className="flex flex-wrap items-center gap-2">
+                 <button type="button" onClick={() => setSelectedTicketId(null)} className="h-9 rounded-[8px] border border-[#e2e8f0] bg-white px-4 text-[13px] font-semibold text-[#64748b] hover:bg-[#f8fafc]">Fechar</button>
+                 <button type="button" onClick={() => setTagPickerTicketId(selectedTicket.id)} className="h-9 rounded-[8px] border border-[#e2e8f0] bg-white px-4 text-[13px] font-semibold text-[#0f172a] hover:bg-[#f8fafc]">Etiquetas</button>
+                 <button type="button" onClick={() => openDeadlineModal(selectedTicket.id)} className="h-9 rounded-[8px] border border-[#e2e8f0] bg-white px-4 text-[13px] font-semibold text-[#0f172a] hover:bg-[#f8fafc]">Alterar Prazo</button>
+                 <button type="button" onClick={handleDeleteSelectedTicket} className="h-9 rounded-[8px] border border-[#fecaca] bg-white px-4 text-[13px] font-semibold text-[#dc2626] hover:bg-[#fef2f2]">Excluir</button>
               </div>
-              <div className="flex items-center gap-2">
-                 <Button
-                  variant="outline"
-                  onClick={() => {
-                    openEditModal(selectedTicket);
-                    setSelectedTicketId(null);
-                  }}
-                >
-                  Editar
-                </Button>
-                <NativeSelect
-                  value={selectedTicket.devStatus}
-                  onChange={(event) => moveTicket(selectedTicket.id, event.target.value as DevStatus)}
-                  className="w-auto"
-                >
-                  {ALL_DEV_STATUSES.map((status) => (
-                    <option key={status} value={status}>
-                      {status}
-                    </option>
-                  ))}
-                </NativeSelect>
-                {selectedTicket.devStatus !== 'Concluído' && (
-                  <Button onClick={handleConcludeSelectedTicket} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-                    Concluir
-                  </Button>
-                )}
+              <div className="flex flex-wrap items-center gap-2">
+                 <button type="button" onClick={() => { openEditModal(selectedTicket); setSelectedTicketId(null); }} className="h-9 rounded-[8px] border border-[#e2e8f0] bg-white px-4 text-[13px] font-semibold text-[#0f172a] hover:bg-[#f8fafc]">Editar</button>
+                 <select value={selectedTicket.devStatus} onChange={(event) => moveTicket(selectedTicket.id, event.target.value as DevStatus)} className="h-9 rounded-[6px] border border-[#e2e8f0] bg-white px-3 text-[13px] font-semibold outline-none focus:border-[#2563eb]">
+                  {ALL_DEV_STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}
+                 </select>
+                 {selectedTicket.devStatus !== 'Concluído' && (
+                  <button type="button" onClick={handleConcludeSelectedTicket} className="h-9 rounded-[8px] bg-[#059669] px-4 text-[13px] font-semibold text-white hover:bg-[#047857]">Concluir</button>
+                 )}
               </div>
             </div>
           ) : null
         }
       >
-        {selectedTicket ? (
-          <div className="grid gap-6">
-            {/* Etiquetas Superiores */}
+        {selectedTicket && (
+          <div className="grid gap-4">
             {selectedTicket.tags.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {selectedTicket.tags.map((tagId) =>
-                  tagsById[tagId] ? (
-                    <Badge
-                      key={tagId}
-                      className="border-transparent text-white"
-                      style={{ backgroundColor: tagsById[tagId].color }}
-                    >
-                      {tagsById[tagId].name}
-                    </Badge>
-                  ) : null,
-                )}
+              <div className="flex flex-wrap gap-1">
+                {selectedTicket.tags.map((tagId) => tagsById[tagId] && (
+                  <span key={tagId} className="inline-flex items-center rounded-full px-[10px] py-[4px] text-[11px] font-bold text-white" style={{ backgroundColor: tagsById[tagId].color }}>{tagsById[tagId].name}</span>
+                ))}
               </div>
             )}
 
-            {/* Cabeçalho de Protocolo */}
-            <div className="rounded-xl border bg-muted/40 p-4">
+            <div className="rounded-[10px] border border-[#e2e8f0] bg-[#f8fafc] p-4">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
-                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                    Protocolo
-                  </span>
-                  <span className="font-mono text-lg font-bold text-primary">
-                    {selectedTicket.proto}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    onClick={() => navigator.clipboard?.writeText(selectedTicket.proto)}
-                    title="Copiar Protocolo"
-                  >
-                    <Copy className="size-4" />
-                  </Button>
+                  <span className="text-[10px] font-bold tracking-[.06em] text-[#64748b] uppercase">Protocolo</span>
+                  <span className="font-mono text-[16px] font-extrabold text-[#2563eb]">{selectedTicket.proto}</span>
+                  <button type="button" onClick={() => navigator.clipboard?.writeText(selectedTicket.proto)} className="flex h-8 w-8 items-center justify-center rounded-[6px] border border-[#e2e8f0] bg-white text-[#64748b] hover:bg-[#f1f5f9]"><Copy className="size-4" /></button>
                 </div>
-
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge className={getTypeBadgeClass(selectedTicket.devType)}>
-                    {selectedTicket.devType}
-                  </Badge>
-                  <Badge className={getPriority(selectedTicket.score).badgeClassName}>
-                    {getPriority(selectedTicket.score).label}
-                  </Badge>
-                  <Badge className={getStatusBadgeClass(selectedTicket.devStatus)}>
-                    {selectedTicket.devStatus}
-                  </Badge>
+                  <Badge className={getTypeBadgeClass(selectedTicket.devType)}>{selectedTicket.devType}</Badge>
+                  <Badge className={getPriority(selectedTicket.score).badgeClassName}>{getPriority(selectedTicket.score).label}</Badge>
+                  <Badge className={getStatusBadgeClass(selectedTicket.devStatus)}>{selectedTicket.devStatus}</Badge>
                 </div>
               </div>
             </div>
 
-            {/* Grid de Informações Rápidas */}
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              <div className="rounded-lg border bg-card p-3 shadow-sm">
-                <Label className="mb-1 text-[10px] text-muted-foreground uppercase tracking-wider">Score</Label>
-                <div className={cn('text-xl font-bold', getPriority(selectedTicket.score).scoreClassName)}>
-                  {selectedTicket.score} <span className="text-xs font-normal text-muted-foreground">/15</span>
-                </div>
+              <div className="rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] p-3">
+                <div className="mb-1 text-[10px] font-bold tracking-[.06em] text-[#64748b] uppercase">Score</div>
+                <div className={cn('text-[18px] font-extrabold', getPriority(selectedTicket.score).scoreClassName)}>{selectedTicket.score} <span className="text-[12px] font-medium text-[#64748b]">/15</span></div>
               </div>
-              <div className="rounded-lg border bg-card p-3 shadow-sm">
-                <Label className="mb-1 text-[10px] text-muted-foreground uppercase tracking-wider">Categoria</Label>
-                <div className="text-sm font-medium text-foreground">{selectedTicket.category}</div>
+              <div className="rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] p-3">
+                <div className="mb-1 text-[10px] font-bold tracking-[.06em] text-[#64748b] uppercase">Categoria</div>
+                <div className="text-[13px] font-semibold text-[#0f172a]">{selectedTicket.category}</div>
               </div>
-              <div className="rounded-lg border bg-card p-3 shadow-sm">
-                <Label className="mb-1 text-[10px] text-muted-foreground uppercase tracking-wider">Responsável</Label>
-                <div className="text-sm font-medium text-foreground">{usersById[selectedTicket.resp]?.name ?? '-'}</div>
+              <div className="rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] p-3">
+                <div className="mb-1 text-[10px] font-bold tracking-[.06em] text-[#64748b] uppercase">Responsável</div>
+                <div className="text-[13px] font-semibold text-[#0f172a]">{usersById[selectedTicket.resp]?.name ?? '-'}</div>
               </div>
-              <div className="rounded-lg border bg-card p-3 shadow-sm">
-                <Label className="mb-1 text-[10px] text-muted-foreground uppercase tracking-wider">Período</Label>
-                <div className="text-sm font-medium text-foreground">
-                  {formatDate(selectedTicket.startDate)} → {formatDate(selectedTicket.deadline)}
-                </div>
+              <div className="rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] p-3">
+                <div className="mb-1 text-[10px] font-bold tracking-[.06em] text-[#64748b] uppercase">Período</div>
+                <div className="text-[13px] font-semibold text-[#0f172a]">{formatDate(selectedTicket.startDate)} → {formatDate(selectedTicket.deadline)}</div>
               </div>
-              <div className="rounded-lg border bg-card p-3 shadow-sm">
-                <Label className="mb-1 text-[10px] text-muted-foreground uppercase tracking-wider">Cliente</Label>
-                <div className="text-sm font-medium text-foreground">{selectedTicket.clientName || '-'}</div>
+              <div className="rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] p-3">
+                <div className="mb-1 text-[10px] font-bold tracking-[.06em] text-[#64748b] uppercase">Cliente</div>
+                <div className="text-[13px] font-semibold text-[#0f172a]">{selectedTicket.clientName || '-'}</div>
               </div>
-              <div className="rounded-lg border bg-card p-3 shadow-sm">
-                <Label className="mb-1 text-[10px] text-muted-foreground uppercase tracking-wider">Sprint</Label>
-                <div className="text-sm font-medium text-foreground">{sprintsById[selectedTicket.sprintId ?? '']?.name ?? '-'}</div>
+              <div className="rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] p-3">
+                <div className="mb-1 text-[10px] font-bold tracking-[.06em] text-[#64748b] uppercase">Sprint</div>
+                <div className="text-[13px] font-semibold text-[#0f172a]">{sprintsById[selectedTicket.sprintId ?? '']?.name ?? '-'}</div>
               </div>
             </div>
 
-            {/* Descrição */}
-            <div className="rounded-xl border bg-card p-4 shadow-sm">
-              <Label className="mb-2 text-xs text-muted-foreground uppercase tracking-wider">Descrição</Label>
-              <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
-                {selectedTicket.description || 'Sem descrição informada.'}
-              </p>
+            <div className="rounded-[10px] border border-[#e2e8f0] bg-white p-4 shadow-sm">
+              <div className="mb-2 text-[10px] font-bold tracking-[.06em] text-[#64748b] uppercase">Descrição</div>
+              <p className="whitespace-pre-wrap text-[13px] leading-6 text-[#475569]">{selectedTicket.description || 'Sem descrição informada.'}</p>
             </div>
 
-            {/* Histórico */}
             <div>
-              <h3 className="mb-3 text-sm font-semibold text-foreground border-b pb-2">Histórico</h3>
+              <h3 className="mb-3 border-b border-[#e2e8f0] pb-2 text-[14px] font-bold text-[#0f172a]">Histórico</h3>
               {selectedTicket.history.length > 0 ? (
-                 <div className="space-y-4">
+                 <div className="space-y-3">
                   {[...selectedTicket.history].reverse().map((item) => (
                     <div key={item.id} className="flex gap-3">
-                      <span className="mt-1.5 size-2 shrink-0 rounded-full bg-primary" />
-                      <div className="flex-1">
-                        <p className="text-sm text-foreground">
-                          <span className="font-semibold">{item.user}</span> {item.message}
-                        </p>
-                        <p className="text-xs text-muted-foreground">{item.createdAt}</p>
+                      <span className="mt-[7px] h-2 w-2 shrink-0 rounded-full bg-[#2563eb]" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[13px] text-[#0f172a]"><span className="font-semibold">{item.user}</span> {item.message}</p>
+                        <p className="text-[12px] text-[#64748b]">{item.createdAt}</p>
                       </div>
                     </div>
                   ))}
                 </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">Nenhum histórico registrado.</p>
-              )}
+              ) : <p className="text-[13px] text-[#64748b]">Nenhum histórico registrado.</p>}
             </div>
 
-             {/* Comentários */}
-             <div className="rounded-xl border bg-muted/20 p-4">
+             <div className="rounded-[10px] border border-[#e2e8f0] bg-white p-4 shadow-sm">
               <div className="mb-4 flex items-center gap-2">
-                <MessageSquareText className="size-4 text-muted-foreground" />
-                <h3 className="text-sm font-semibold text-foreground">Comentários</h3>
-                <Badge className="bg-primary/10 text-primary border-primary/20">
-                  {selectedTicket.comments.length}
-                </Badge>
+                <MessageSquareText className="size-4 text-[#64748b]" />
+                <h3 className="text-[13px] font-bold text-[#0f172a]">Comentários</h3>
+                <span className="flex h-[20px] min-w-[20px] items-center justify-center rounded-full bg-[#eff6ff] px-1.5 text-[10px] font-bold text-[#2563eb]">{selectedTicket.comments.length}</span>
               </div>
-
               {selectedTicket.comments.length > 0 ? (
                 <div className="space-y-3 mb-4">
                   {selectedTicket.comments.map((comment) => (
-                    <div key={comment.id} className="rounded-lg border bg-card p-3 shadow-sm">
+                    <div key={comment.id} className="rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] p-3">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-semibold text-foreground">{comment.author}</span>
-                        <span className="text-xs text-muted-foreground">{comment.createdAt}</span>
+                        <span className="text-[13px] font-semibold text-[#0f172a]">{comment.author}</span>
+                        <span className="text-[11px] text-[#64748b]">{comment.createdAt}</span>
                       </div>
-                      <p className="text-sm text-foreground whitespace-pre-wrap">{comment.message}</p>
+                      <p className="text-[13px] text-[#475569] whitespace-pre-wrap leading-6">{comment.message}</p>
                     </div>
                   ))}
                 </div>
-              ) : (
-                <div className="mb-4 text-sm text-muted-foreground text-center py-4 border border-dashed rounded-lg">
-                  Nenhum comentário.
-                </div>
-              )}
-
+              ) : <div className="mb-4 rounded-[8px] border border-dashed border-[#cbd5e1] bg-[#f8fafc] py-4 text-center text-[13px] text-[#64748b]">Nenhum comentário.</div>}
               <div className="flex items-center gap-3">
-                <Input
-                  value={commentDraft}
-                  onChange={(e) => setCommentDraft(e.target.value)}
-                  placeholder="Escreva um comentário..."
-                  className="flex-1"
-                />
-                <Button onClick={handleAddComment}>Enviar</Button>
+                <input value={commentDraft} onChange={(e) => setCommentDraft(e.target.value)} placeholder="Escreva um comentário..." className="h-9 flex-1 rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] px-3 text-[13px] outline-none focus:border-[#2563eb]" />
+                <button type="button" onClick={handleAddComment} className="h-9 rounded-[8px] bg-[#2563eb] px-4 text-[13px] font-semibold text-white hover:bg-[#1d4ed8]">Enviar</button>
               </div>
             </div>
           </div>
-        ) : null}
+        )}
       </ModalShell>
 
-      {/* Modal de Etiquetas */}
       <ModalShell
         open={Boolean(selectedTagTicket)}
         title="Gerenciar Etiquetas"
-        maxWidthClassName="max-w-[400px]"
+        maxWidthClassName="max-w-[440px]"
         onClose={() => setTagPickerTicketId(null)}
-        footer={<Button variant="outline" onClick={() => setTagPickerTicketId(null)} className="w-full">Fechar</Button>}
+        footer={<button type="button" onClick={() => setTagPickerTicketId(null)} className="h-9 w-full rounded-[8px] border border-[#e2e8f0] bg-white text-[13px] font-semibold text-[#64748b] hover:bg-[#f8fafc]">Fechar</button>}
       >
         {selectedTagTicket && (
           <div className="flex flex-col gap-2">
@@ -1182,18 +619,16 @@ export function DevKanbanPage() {
               const active = selectedTagTicket.tags.includes(tag.id);
               return (
                 <button
+                  type="button"
                   key={tag.id}
                   onClick={() => toggleTag(selectedTagTicket.id, tag.id)}
-                  className={cn(
-                    'flex items-center justify-between rounded-lg border p-3 transition-colors',
-                    active ? 'border-primary bg-primary/5' : 'border-border bg-card hover:border-primary/50'
-                  )}
+                  className={cn('flex items-center justify-between rounded-[8px] border p-3 transition-colors', active ? 'border-[#2563eb] bg-[#eff6ff]' : 'border-[#e2e8f0] bg-white hover:border-[#bfdbfe]')}
                 >
                   <div className="flex items-center gap-3">
                     <span className="size-3 rounded-full" style={{ backgroundColor: tag.color }} />
-                    <span className="text-sm font-medium text-foreground">{tag.name}</span>
+                    <span className="text-[13px] font-semibold text-[#0f172a]">{tag.name}</span>
                   </div>
-                  {active && <span className="text-xs font-semibold text-primary">Selecionada</span>}
+                  {active && <span className="text-[12px] font-semibold text-[#2563eb]">Selecionada</span>}
                 </button>
               );
             })}
@@ -1201,148 +636,98 @@ export function DevKanbanPage() {
         )}
       </ModalShell>
 
-      {/* Modal de Alteração de Prazo */}
       <ModalShell
         open={Boolean(selectedDeadlineTicket)}
         title="Alterar Prazo"
-        maxWidthClassName="max-w-[400px]"
+        maxWidthClassName="max-w-[440px]"
         onClose={closeDeadlineModal}
         footer={
           <div className="flex justify-end gap-2 w-full">
-            <Button variant="ghost" onClick={closeDeadlineModal}>Cancelar</Button>
-            <Button onClick={handleSaveDeadline}>Salvar Prazo</Button>
+            <button type="button" onClick={closeDeadlineModal} className="h-9 rounded-[8px] border border-[#e2e8f0] bg-white px-4 text-[13px] font-semibold text-[#64748b] hover:bg-[#f8fafc]">Cancelar</button>
+            <button type="button" onClick={handleSaveDeadline} className="h-9 rounded-[8px] bg-[#2563eb] px-4 text-[13px] font-semibold text-white hover:bg-[#1d4ed8]">Salvar Prazo</button>
           </div>
         }
       >
         <div className="flex flex-col gap-4">
-          <div className="grid gap-1.5">
-            <Label>Nova data de entrega</Label>
-            <Input
-              type="date"
-              value={deadlineDraft}
-              onChange={(e) => setDeadlineDraft(e.target.value)}
-            />
+          <div className="flex flex-col gap-1.5">
+            <FormLabel>Nova data de entrega</FormLabel>
+            <input type="date" value={deadlineDraft} onChange={(e) => setDeadlineDraft(e.target.value)} className="h-9 w-full rounded-[6px] border border-[#e2e8f0] px-3 text-[13px] outline-none focus:border-[#2563eb]" />
           </div>
-          <div className="grid gap-1.5">
-            <Label>Motivo da alteração</Label>
-            <textarea
-              value={deadlineReason}
-              onChange={(e) => setDeadlineReason(e.target.value)}
-              className="min-h-[100px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-              placeholder="Explique por que o prazo está sendo alterado..."
-            />
+          <div className="flex flex-col gap-1.5">
+            <FormLabel>Motivo da alteração</FormLabel>
+            <textarea value={deadlineReason} onChange={(e) => setDeadlineReason(e.target.value)} className="min-h-[100px] w-full resize-y rounded-[6px] border border-[#e2e8f0] p-3 text-[13px] outline-none focus:border-[#2563eb]" placeholder="Explique por que o prazo está sendo alterado..." />
           </div>
         </div>
       </ModalShell>
 
-      {/* Modal de Criação / Edição */}
       <ModalShell
         open={Boolean(formMode)}
         title={formMode === 'edit' ? 'Editar Ticket' : 'Novo Ticket'}
-        maxWidthClassName="max-w-[700px]"
+        maxWidthClassName="max-w-[920px]"
         onClose={closeFormModal}
         footer={
           <div className="flex justify-end gap-2 w-full">
-            <Button variant="ghost" onClick={closeFormModal}>Cancelar</Button>
-            <Button onClick={handleSaveTicket}>
-              {formMode === 'edit' ? 'Salvar Alterações' : 'Criar Ticket'}
-            </Button>
+            <button type="button" onClick={closeFormModal} className="h-9 rounded-[8px] border border-[#e2e8f0] bg-white px-4 text-[13px] font-semibold text-[#64748b] hover:bg-[#f8fafc]">Cancelar</button>
+            <button type="button" onClick={handleSaveTicket} className="h-9 rounded-[8px] bg-[#2563eb] px-4 text-[13px] font-semibold text-white hover:bg-[#1d4ed8]">{formMode === 'edit' ? 'Salvar Alterações' : 'Criar Ticket'}</button>
           </div>
         }
       >
         <div className="grid gap-4 sm:grid-cols-2">
-          <div className="grid gap-1.5 sm:col-span-2">
-            <Label>Título do Ticket</Label>
-            <Input
-              value={formState.title}
-              onChange={(e) => updateFormField('title', e.target.value)}
-              placeholder="Descreva a atividade de forma breve"
-            />
+          <div className="flex flex-col gap-1.5 sm:col-span-2">
+            <FormLabel>Título do Ticket</FormLabel>
+            <input value={formState.title} onChange={(e) => updateFormField('title', e.target.value)} placeholder="Descreva a atividade de forma breve" className="h-9 w-full rounded-[6px] border border-[#e2e8f0] px-3 text-[13px] outline-none focus:border-[#2563eb]" />
           </div>
-
-          <div className="grid gap-1.5">
-            <Label>Tipo</Label>
-            <NativeSelect
-              value={formState.devType}
-              onChange={(e) => updateFormField('devType', e.target.value as DevType)}
-            >
-              {(['Epic', 'Feature', 'Task', 'Bug'] as DevType[]).map((type) => (
-                <option key={type} value={type}>{type}</option>
-              ))}
-            </NativeSelect>
+          <div className="flex flex-col gap-1.5">
+            <FormLabel>Tipo</FormLabel>
+            <select value={formState.devType} onChange={(e) => updateFormField('devType', e.target.value as DevType)} className="h-9 w-full rounded-[6px] border border-[#e2e8f0] bg-white px-3 text-[13px] outline-none focus:border-[#2563eb]">
+              {(['Epic', 'Feature', 'Task', 'Bug'] as DevType[]).map((type) => <option key={type} value={type}>{type}</option>)}
+            </select>
           </div>
-
-          <div className="grid gap-1.5">
-            <Label>Categoria</Label>
-            <NativeSelect
-              value={formState.category}
-              onChange={(e) => updateFormField('category', e.target.value)}
-            >
+          <div className="flex flex-col gap-1.5">
+            <FormLabel>Categoria</FormLabel>
+            <select value={formState.category} onChange={(e) => updateFormField('category', e.target.value)} className="h-9 w-full rounded-[6px] border border-[#e2e8f0] bg-white px-3 text-[13px] outline-none focus:border-[#2563eb]">
               {DEV_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-            </NativeSelect>
+            </select>
           </div>
-
-          <div className="grid gap-1.5">
-            <Label>Status</Label>
-            <NativeSelect
-              value={formState.devStatus}
-              onChange={(e) => updateFormField('devStatus', e.target.value as DevStatus)}
-            >
+          <div className="flex flex-col gap-1.5">
+            <FormLabel>Status</FormLabel>
+            <select value={formState.devStatus} onChange={(e) => updateFormField('devStatus', e.target.value as DevStatus)} className="h-9 w-full rounded-[6px] border border-[#e2e8f0] bg-white px-3 text-[13px] outline-none focus:border-[#2563eb]">
                {ALL_DEV_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-            </NativeSelect>
+            </select>
           </div>
-
-          <div className="grid gap-1.5">
-            <Label>Responsável</Label>
-            <NativeSelect
-              value={formState.resp}
-              onChange={(e) => updateFormField('resp', e.target.value)}
-            >
+          <div className="flex flex-col gap-1.5">
+            <FormLabel>Responsável</FormLabel>
+            <select value={formState.resp} onChange={(e) => updateFormField('resp', e.target.value)} className="h-9 w-full rounded-[6px] border border-[#e2e8f0] bg-white px-3 text-[13px] outline-none focus:border-[#2563eb]">
                {DEV_USERS.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-            </NativeSelect>
+            </select>
           </div>
-
-          <div className="grid gap-1.5">
-            <Label>Data de Início</Label>
-            <Input
-              type="date"
-              value={formState.startDate}
-              onChange={(e) => updateFormField('startDate', e.target.value)}
-            />
+          <div className="flex flex-col gap-1.5">
+            <FormLabel>Data de Início</FormLabel>
+            <input type="date" value={formState.startDate} onChange={(e) => updateFormField('startDate', e.target.value)} className="h-9 w-full rounded-[6px] border border-[#e2e8f0] px-3 text-[13px] outline-none focus:border-[#2563eb]" />
           </div>
-
-          <div className="grid gap-1.5">
-            <Label>Data de Entrega</Label>
-            <Input
-              type="date"
-              value={formState.deadline}
-              onChange={(e) => updateFormField('deadline', e.target.value)}
-            />
+          <div className="flex flex-col gap-1.5">
+            <FormLabel>Data de Entrega</FormLabel>
+            <input type="date" value={formState.deadline} onChange={(e) => updateFormField('deadline', e.target.value)} className="h-9 w-full rounded-[6px] border border-[#e2e8f0] px-3 text-[13px] outline-none focus:border-[#2563eb]" />
           </div>
-
-           <div className="grid gap-1.5 sm:col-span-2">
-            <Label>Sprint Vinculada</Label>
-            <NativeSelect
-              value={formState.sprintId}
-              onChange={(e) => updateFormField('sprintId', e.target.value)}
-            >
+          <div className="flex flex-col gap-1.5 sm:col-span-2">
+            <FormLabel>Sprint Vinculada</FormLabel>
+            <select value={formState.sprintId} onChange={(e) => updateFormField('sprintId', e.target.value)} className="h-9 w-full rounded-[6px] border border-[#e2e8f0] bg-white px-3 text-[13px] outline-none focus:border-[#2563eb]">
               <option value="">Nenhuma / Backlog</option>
               {DEV_SPRINTS.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </NativeSelect>
+            </select>
           </div>
 
-          {/* Seção de Score */}
-          <div className="rounded-lg border bg-muted/30 p-4 sm:col-span-2">
+          <div className="rounded-[10px] border border-[#e2e8f0] bg-[#f8fafc] p-4 sm:col-span-2">
              <div className="mb-4 flex items-center justify-between">
                 <div>
-                   <h4 className="text-sm font-semibold text-foreground">Score & Critérios</h4>
-                   <p className="text-xs text-muted-foreground">Ajuste de 0 a 3 para priorizar a tarefa.</p>
+                   <h4 className="text-[13px] font-bold text-[#0f172a]">Score & Critérios</h4>
+                   <p className="text-[12px] text-[#64748b]">Ajuste de 0 a 3 para priorizar a tarefa.</p>
                 </div>
-                <div className="flex h-10 w-16 items-center justify-center rounded-md bg-primary/10 text-lg font-bold text-primary border border-primary/20">
+                <div className="flex h-10 min-w-[3rem] px-2 items-center justify-center rounded-[6px] bg-[#eff6ff] text-[18px] font-extrabold text-[#2563eb] border border-[#bfdbfe]">
                   {formScore}
                 </div>
              </div>
-             <div className="grid grid-cols-5 gap-2">
+             <div className="grid grid-cols-5 gap-3">
                 {[
                   ['imp', 'Impacto', formState.imp],
                   ['ris', 'Risco', formState.ris],
@@ -1350,32 +735,20 @@ export function DevKanbanPage() {
                   ['esf', 'Esforço', formState.esf],
                   ['deb', 'Débito', formState.deb],
                 ].map(([key, label, value]) => (
-                  <div key={key} className="grid gap-1.5">
-                    <Label className="text-center text-xs">{label}</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      max="3"
-                      value={value}
-                      className="text-center"
-                      onChange={(e) => updateFormField(key as keyof TicketFormState, e.target.value)}
-                    />
+                  <div key={key} className="flex flex-col gap-1.5">
+                    <FormLabel>{label}</FormLabel>
+                    <input type="number" min="0" max="3" value={value} onChange={(e) => updateFormField(key as keyof TicketFormState, e.target.value)} className="h-9 w-full rounded-[6px] border border-[#e2e8f0] px-2 text-center text-[13px] outline-none focus:border-[#2563eb]" />
                   </div>
                 ))}
              </div>
           </div>
 
-          <div className="grid gap-1.5 sm:col-span-2">
-            <Label>Descrição Completa</Label>
-            <textarea
-              value={formState.description}
-              onChange={(e) => updateFormField('description', e.target.value)}
-              className="min-h-[120px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-              placeholder="Descreva os requisitos, regras de negócio e links de referência..."
-            />
+          <div className="flex flex-col gap-1.5 sm:col-span-2">
+            <FormLabel>Descrição Completa</FormLabel>
+            <textarea value={formState.description} onChange={(e) => updateFormField('description', e.target.value)} placeholder="Descreva os requisitos, regras de negócio e links de referência..." className="min-h-[120px] w-full resize-y rounded-[6px] border border-[#e2e8f0] p-3 text-[13px] outline-none focus:border-[#2563eb]" />
           </div>
         </div>
       </ModalShell>
-    </>
+    </div>
   );
 }

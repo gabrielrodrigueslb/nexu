@@ -1,14 +1,13 @@
 import Image from "next/image";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { LoginForm } from "@/components/login-form";
-import { AUTH_COOKIE_NAME } from "@/lib/auth";
+import { getCurrentSession } from "@/lib/server-session";
 
 export default async function LoginPage() {
-  const hasSession = (await cookies()).has(AUTH_COOKIE_NAME);
+  const session = await getCurrentSession();
 
-  if (hasSession) {
+  if (session) {
     redirect("/dashboard");
   }
 

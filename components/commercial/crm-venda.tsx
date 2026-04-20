@@ -1,7 +1,7 @@
 'use client';
 
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
-import { CalendarDays, Search, WalletCards, X } from 'lucide-react';
+import { CalendarDays, Search, WalletCards, X, Plus, Filter } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import { leads as initialLeads, users } from '@/components/data';
@@ -35,9 +35,9 @@ export function CommercialCrmVenda() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [originItems] = useAdminOrigins();
-  const [sdrItems] = useAdminSdrs();
-  const [indicatorItems] = useAdminIndicators();
+  const { items: originItems } = useAdminOrigins();
+  const { items: sdrItems } = useAdminSdrs();
+  const { items: indicatorItems } = useAdminIndicators();
   const [crmLeads, setCrmLeads] = useState<CommercialLeadRecord[]>(() =>
     initialLeads.map(toCommercialLeadRecord),
   );
@@ -224,119 +224,136 @@ export function CommercialCrmVenda() {
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-2 duration-200">
-      <div className="mb-[18px] flex items-start justify-between gap-3">
+      {/* Header e Ação Principal */}
+      <div className="mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <div className="text-[19px] font-extrabold tracking-[-0.4px] text-[#0f172a]">
+          <h1 className="text-[20px] font-extrabold tracking-[-0.4px] text-[#0f172a]">
             CRM de Venda
-          </div>
-          <div className="mt-0.5 text-[13px] text-[#64748b]">
+          </h1>
+          <p className="mt-0.5 text-[13px] text-[#64748b]">
             Pipeline comercial - Kanban de Leads
-          </div>
+          </p>
         </div>
-      </div>
-
-      <div className="mb-4 flex flex-wrap items-center gap-2 py-1">
+        
         <button
           type="button"
           onClick={() => handleOpenCreate()}
-          className="whitespace-nowrap rounded-[6px] bg-[#2563eb] px-[14px] py-2 text-[13px] font-semibold text-white transition-colors hover:bg-[#1d4ed8]"
+          className="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-[8px] bg-[#2563eb] px-4 text-[13px] font-semibold text-white shadow-sm transition-colors hover:bg-[#1d4ed8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:ring-offset-2"
         >
-          + Novo Lead
+          <Plus className="h-4 w-4" />
+          Novo Lead
         </button>
-
-        <div className="relative min-w-[160px] max-w-[260px] flex-1">
-          <span className="pointer-events-none absolute left-[9px] top-1/2 -translate-y-1/2 text-[#64748b]">
-            <Search className="h-[14px] w-[14px]" />
-          </span>
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Nome ou CNPJ..."
-            className="w-full rounded-[8px] border border-[#e2e8f0] bg-white py-[7px] pr-[10px] pl-[30px] text-[13px] text-[#0f172a] outline-none"
-          />
-        </div>
-
-        <select
-          value={sellerFilter}
-          onChange={(event) => setSellerFilter(event.target.value)}
-          className="min-w-[160px] rounded-[8px] border border-[#e2e8f0] bg-white px-[10px] py-[7px] text-[13px] text-[#0f172a] outline-none"
-        >
-          <option value="">Todos os vendedores</option>
-          <option value="sem">- Sem responsavel</option>
-          {users.map((user) => (
-            <option key={user.id} value={user.id}>
-              {user.name}
-            </option>
-          ))}
-        </select>
-
-        <div className="flex items-center gap-1">
-          <span className="inline-flex items-center gap-1 whitespace-nowrap text-[12px] text-[#64748b]">
-            <CalendarDays className="h-[13px] w-[13px]" />
-            <span>De</span>
-          </span>
-          <input
-            type="date"
-            value={dateFrom}
-            onChange={(event) => setDateFrom(event.target.value)}
-            className="cursor-pointer rounded-[8px] border border-[#e2e8f0] bg-white px-2 py-[6px] text-[13px] text-[#0f172a] outline-none"
-          />
-          <span className="text-[12px] text-[#64748b]">ate</span>
-          <input
-            type="date"
-            value={dateTo}
-            onChange={(event) => setDateTo(event.target.value)}
-            className="cursor-pointer rounded-[8px] border border-[#e2e8f0] bg-white px-2 py-[6px] text-[13px] text-[#0f172a] outline-none"
-          />
-        </div>
-
-        <button
-          type="button"
-          onClick={() => setShowWon((value) => !value)}
-          className={`whitespace-nowrap rounded-[8px] border-[1.5px] px-3 py-[7px] text-[12px] font-bold transition-colors ${
-            showWon
-              ? 'border-[#059669] bg-[#059669] text-white'
-              : 'border-[#e2e8f0] bg-white text-[#64748b]'
-          }`}
-        >
-          <span className="inline-flex items-center gap-2">
-            Ganhos
-            <span
-              className={`rounded-full px-2 py-[1px] text-[11px] ${
-                showWon ? 'bg-white/20 text-white' : 'bg-[#ecfdf5] text-[#059669]'
-              }`}
-            >
-              {wonLeads.length}
-            </span>
-          </span>
-        </button>
-
-        {wonLeads.length ? (
-          <div className="inline-flex items-center gap-1 text-[11px] font-bold text-[#059669]">
-            <WalletCards className="h-[13px] w-[13px]" />
-            <span>{formatMoney(totalWonValue)}</span>
-          </div>
-        ) : null}
-
-        {hasFilter ? (
-          <button
-            type="button"
-            onClick={() => {
-              setQuery('');
-              setSellerFilter('');
-              setDateFrom('');
-              setDateTo('');
-            }}
-            className="whitespace-nowrap rounded-[6px] border border-[#e2e8f0] bg-white px-3 py-[6px] text-[12px] font-semibold text-[#64748b] transition-colors hover:bg-[#f8fafc] hover:text-[#0f172a]"
-          >
-            <span className="inline-flex items-center gap-1">
-              <X className="h-[13px] w-[13px]" />
-              <span>Limpar filtros</span>
-            </span>
-          </button>
-        ) : null}
       </div>
 
+      {/* Toolbar de Filtros */}
+      <div className="mb-6 rounded-[10px] border border-[#e2e8f0] bg-white p-3 shadow-sm">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          
+          {/* Grupo Esquerdo: Filtros Principais */}
+          <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
+            
+            {/* Busca */}
+            <div className="relative min-w-[220px] flex-1">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#64748b]">
+                <Search className="h-[14px] w-[14px]" />
+              </span>
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Nome ou CNPJ..."
+                className="h-9 w-full rounded-[6px] border border-[#e2e8f0] bg-transparent pl-[34px] pr-3 text-[13px] text-[#0f172a] outline-none transition-colors focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb]"
+              />
+            </div>
+
+            {/* Vendedor */}
+            <div className="relative">
+              <select
+                value={sellerFilter}
+                onChange={(event) => setSellerFilter(event.target.value)}
+                className="h-9 w-full min-w-[160px] appearance-none rounded-[6px] border border-[#e2e8f0] bg-transparent pl-8 pr-8 text-[13px] text-[#0f172a] outline-none transition-colors focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb] sm:w-auto"
+              >
+                <option value="">Todos os vendedores</option>
+                <option value="sem">- Sem responsável</option>
+                {users.map((user) => (
+                  <option key={user.id} value={user.id}>
+                    {user.name}
+                  </option>
+                ))}
+              </select>
+              <Filter className="pointer-events-none absolute left-2.5 top-1/2 h-[14px] w-[14px] -translate-y-1/2 text-[#64748b]" />
+            </div>
+
+            {/* Data */}
+            <div className="flex h-9 items-center gap-2 rounded-[6px] border border-[#e2e8f0] bg-[#f8fafc] px-3 text-[13px]">
+              <CalendarDays className="h-[14px] w-[14px] text-[#64748b]" />
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(event) => setDateFrom(event.target.value)}
+                className="cursor-pointer bg-transparent text-[#0f172a] outline-none"
+              />
+              <span className="text-[#94a3b8]">até</span>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(event) => setDateTo(event.target.value)}
+                className="cursor-pointer bg-transparent text-[#0f172a] outline-none"
+              />
+            </div>
+
+            {/* Limpar Filtros */}
+            {hasFilter && (
+              <button
+                type="button"
+                onClick={() => {
+                  setQuery('');
+                  setSellerFilter('');
+                  setDateFrom('');
+                  setDateTo('');
+                }}
+                className="inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-[6px] px-3 text-[13px] font-medium text-[#64748b] transition-colors hover:bg-[#f1f5f9] hover:text-[#0f172a]"
+              >
+                <X className="h-[14px] w-[14px]" />
+                Limpar
+              </button>
+            )}
+          </div>
+
+          {/* Divisor Visuais em telas grandes */}
+          <div className="hidden h-6 w-px bg-[#e2e8f0] lg:block" />
+
+          {/* Grupo Direito: Toggle e Métricas */}
+          <div className="flex items-center justify-between gap-4 border-t border-[#e2e8f0] pt-3 lg:border-none lg:pt-0">
+            <button
+              type="button"
+              onClick={() => setShowWon((value) => !value)}
+              className={`inline-flex h-9 items-center gap-2 whitespace-nowrap rounded-[6px] border px-3 text-[13px] font-semibold transition-colors ${
+                showWon
+                  ? 'border-[#059669] bg-[#059669] text-white shadow-sm'
+                  : 'border-[#e2e8f0] bg-white text-[#64748b] hover:bg-[#f8fafc]'
+              }`}
+            >
+              Ganhos
+              <span
+                className={`flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1.5 text-[11px] ${
+                  showWon ? 'bg-white/25 text-white' : 'bg-[#ecfdf5] text-[#059669]'
+                }`}
+              >
+                {wonLeads.length}
+              </span>
+            </button>
+
+            {wonLeads.length > 0 && (
+              <div className="inline-flex items-center gap-1.5 text-[13px] font-bold text-[#059669] bg-[#ecfdf5] px-3 h-9 rounded-[6px] border border-[#d1fae5]">
+                <WalletCards className="h-[14px] w-[14px]" />
+                {formatMoney(totalWonValue)}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Conteúdo */}
       {showWon ? (
         <CrmWonLeads
           leads={wonLeads}

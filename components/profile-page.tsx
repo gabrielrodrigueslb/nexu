@@ -12,6 +12,7 @@ import {
   AppSurface,
 } from '@/components/app-ui-kit';
 import { useCurrentAdminUser } from '@/components/admin-users-storage';
+import { apiRequest } from '@/lib/api-client';
 
 function getInitials(label: string) {
   return (
@@ -26,38 +27,40 @@ function getInitials(label: string) {
 
 function roleLabel(role: string) {
   if (role === 'admin') return 'Administrador';
-  if (role === 'supervisor') return 'Supervisor';
-  return 'Agente';
+  if (role === 'leader') return 'Lider';
+  return 'Basico';
 }
 
 export function ProfilePage() {
-  const { users, setUsers, currentUser } = useCurrentAdminUser();
+  const { currentUser } = useCurrentAdminUser();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [message, setMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   const subtitle = useMemo(
-    () => `${roleLabel(currentUser.role)} · ${currentUser.sector}`,
-    [currentUser.role, currentUser.sector],
+    () =>
+      currentUser ? `${roleLabel(currentUser.role)} · ${currentUser.sector}` : '',
+    [currentUser],
   );
 
-  function handleSave() {
+  async function handleSave() {
+    if (!currentUser) {
+      setErrorMessage('Sessao nao encontrada.');
+      setMessage('');
+      return;
+    }
+
     if (!currentPassword || !newPassword || !confirmPassword) {
       setErrorMessage('Preencha todos os campos.');
       setMessage('');
       return;
     }
 
-    if (currentPassword !== currentUser.password) {
-      setErrorMessage('Senha atual incorreta.');
-      setMessage('');
-      return;
-    }
-
-    if (newPassword.length < 6) {
-      setErrorMessage('Nova senha min. 6 caracteres.');
+    if (newPassword.length < 10) {
+      setErrorMessage('Nova senha com no minimo 10 caracteres.');
       setMessage('');
       return;
     }
@@ -68,23 +71,37 @@ export function ProfilePage() {
       return;
     }
 
-    setUsers(
-      users.map((user) =>
-        user.id === currentUser.id
-          ? {
-              ...user,
-              password: newPassword,
-              updatedAt: new Date().toISOString(),
-            }
-          : user,
-      ),
-    );
-
-    setCurrentPassword('');
-    setNewPassword('');
-    setConfirmPassword('');
+    setIsSaving(true);
     setErrorMessage('');
-    setMessage('Senha alterada com sucesso.');
+    setMessage('');
+
+    try {
+      await apiRequest('/api/backend/auth/change-password', {
+        method: 'POST',
+        body: JSON.stringify({
+          currentPassword,
+          newPassword,
+        }),
+      });
+
+      await fetch('/api/session/logout', {
+        method: 'POST',
+      });
+
+      setMessage('Senha alterada com sucesso. Entrando novamente...');
+      window.location.assign('/');
+    } catch (nextError) {
+      setErrorMessage(nextError instanceof Error ? nextError.message : 'Falha ao alterar senha.');
+    } finally {
+      setIsSaving(false);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    }
+  }
+
+  if (!currentUser) {
+    return <AppAlert tone="danger">Sessao indisponivel.</AppAlert>;
   }
 
   return (
@@ -126,7 +143,7 @@ export function ProfilePage() {
               type="password"
               value={newPassword}
               onChange={(event) => setNewPassword(event.target.value)}
-              placeholder="Min. 6 caracteres"
+              placeholder="Min. 10 caracteres"
             />
           </div>
 
@@ -147,10 +164,11 @@ export function ProfilePage() {
 
           <AppPrimaryButton
             onClick={handleSave}
+            disabled={isSaving}
             className="rounded-[8px] px-[16px] py-[10px] text-[13px]"
           >
             <Save className="size-4" />
-            Salvar Nova Senha
+            {isSaving ? 'Salvando...' : 'Salvar Nova Senha'}
           </AppPrimaryButton>
         </div>
       </AppSurface>

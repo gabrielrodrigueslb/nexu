@@ -16,6 +16,7 @@ import {
   X,
 } from "lucide-react";
 
+import { rankIcon } from "@/components/ui";
 import { cn } from "@/lib/utils";
 
 type CommercialStatus =
@@ -424,6 +425,7 @@ function RankingTable({ rows }: { rows: RankingRow[] }) {
         </thead>
         <tbody>
           {rows.map((row, index) => {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             const position =
               index === 0 ? (
                 "🥇"
@@ -440,7 +442,7 @@ function RankingTable({ rows }: { rows: RankingRow[] }) {
                 key={row.name}
                 className="border-b border-[#e2e8f0] last:border-b-0 hover:bg-[#f8fafc]"
               >
-                <td className="px-[14px] py-[11px] text-base">{position}</td>
+                <td className="px-[14px] py-[11px] text-base">{rankIcon(index)}</td>
                 <td className="px-[14px] py-[11px] text-[13px]">
                   <strong>{row.name}</strong>
                 </td>

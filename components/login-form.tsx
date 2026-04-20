@@ -1,4 +1,9 @@
+"use client";
+
+import { useActionState } from "react";
+
 import { loginAction } from "@/app/actions/auth";
+import { AppAlert } from "@/components/app-ui-kit";
 import { Button } from "@/components/ui/button";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -8,8 +13,10 @@ export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"form">) {
+  const [state, formAction, isPending] = useActionState(loginAction, {});
+
   return (
-    <form action={loginAction} className={cn("flex flex-col gap-6", className)} {...props}>
+    <form action={formAction} className={cn("flex flex-col gap-6", className)} {...props}>
       <FieldGroup>
         <div className="flex flex-col items-center gap-1 text-center pb-4">
           <h1 className="text-2xl font-bold">Faca login na sua conta</h1>
@@ -41,9 +48,10 @@ export function LoginForm({
             required
           />
         </Field>
+        {state.error ? <AppAlert tone="danger">{state.error}</AppAlert> : null}
         <Field className="pt-4">
-          <Button className="bg-primary" type="submit">
-            Login
+          <Button className="bg-primary" type="submit" disabled={isPending}>
+            {isPending ? "Entrando..." : "Login"}
           </Button>
         </Field>
       </FieldGroup>

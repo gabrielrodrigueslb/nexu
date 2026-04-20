@@ -18,9 +18,9 @@ export function sumBy<T>(items: T[], getter: (item: T) => number) {
 }
 
 export function progressColor(value: number) {
-  if (value >= 100) return 'var(--success)';
-  if (value >= 70) return 'var(--warning)';
-  return 'var(--accent)';
+  if (value >= 100) return '#059669';
+  if (value >= 70) return '#d97706';
+  return '#2563eb';
 }
 
 export function statusToneColor(value: number) {

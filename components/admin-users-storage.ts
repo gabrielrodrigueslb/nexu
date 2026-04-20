@@ -1,119 +1,217 @@
-'use client';
+"use client";
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from "react";
 
-export type UserRole = 'admin' | 'supervisor' | 'agent';
-export type UserSector =
-  | 'CS'
-  | 'Comercial'
-  | 'Financeiro'
-  | 'Desenvolvimento'
-  | 'Suporte'
-  | 'Implantacao';
+import { apiRequest } from "@/lib/api-client";
+import type { SessionAccess, SessionUser, UserRole, UserSector } from "@/lib/auth";
+import { useSession } from "@/components/providers/session-provider";
 
-export type AdminUserRecord = {
+export type AccessPresetRecord = {
   id: string;
   name: string;
-  email: string;
-  password: string;
+  slug: string;
+  description?: string | null;
   role: UserRole;
-  sector: UserSector;
-  createdAt: string;
-  updatedAt?: string;
+  isSystem: boolean;
+  modulePermissions: Array<{
+    moduleKey: string;
+    accessLevel: "none" | "view" | "edit" | "manage";
+  }>;
 };
 
-export const ADMIN_USERS_STORAGE_KEY = 'nx_admin_users';
-export const CURRENT_USER_ID = 'usr-1';
+export type AccessModuleRecord = {
+  key: string;
+  name: string;
+  description?: string | null;
+  active: boolean;
+  sortOrder: number;
+};
 
-export const ROLE_OPTIONS: UserRole[] = ['agent', 'supervisor', 'admin'];
+export type UserModulePermissionRecord = {
+  moduleKey: string;
+  accessLevel: "none" | "view" | "edit" | "manage";
+};
+
+export type AdminUserRecord = SessionUser;
+
+export const ROLE_OPTIONS: UserRole[] = ["basic", "leader", "admin"];
 export const SECTOR_OPTIONS: UserSector[] = [
-  'CS',
-  'Comercial',
-  'Financeiro',
-  'Desenvolvimento',
-  'Suporte',
-  'Implantacao',
+  "CS",
+  "Comercial",
+  "Financeiro",
+  "Desenvolvimento",
+  "Suporte",
+  "Implantacao",
 ];
 
-export const INITIAL_ADMIN_USERS: AdminUserRecord[] = [
-  {
-    id: 'usr-1',
-    name: 'Gabriel Admin',
-    email: 'gabriel@nexu.com.br',
-    password: 'nexu123',
-    role: 'admin',
-    sector: 'Desenvolvimento',
-    createdAt: '2026-03-01',
-  },
-  {
-    id: 'usr-2',
-    name: 'Moara Pereira',
-    email: 'moara@nexu.com.br',
-    password: 'nexu123',
-    role: 'supervisor',
-    sector: 'Desenvolvimento',
-    createdAt: '2026-03-03',
-  },
-  {
-    id: 'usr-3',
-    name: 'Bianca Souza',
-    email: 'bianca@nexu.com.br',
-    password: 'nexu123',
-    role: 'agent',
-    sector: 'Comercial',
-    createdAt: '2026-03-05',
-  },
-  {
-    id: 'usr-4',
-    name: 'Mariana Alves',
-    email: 'mariana@nexu.com.br',
-    password: 'nexu123',
-    role: 'agent',
-    sector: 'Implantacao',
-    createdAt: '2026-03-07',
-  },
-];
-
-export function loadStoredUsers() {
-  if (typeof window === 'undefined') return INITIAL_ADMIN_USERS;
-
-  try {
-    const raw = window.localStorage.getItem(ADMIN_USERS_STORAGE_KEY);
-    if (!raw) return INITIAL_ADMIN_USERS;
-    const parsed = JSON.parse(raw);
-
-    if (!Array.isArray(parsed)) return INITIAL_ADMIN_USERS;
-
-    return parsed.filter(
-      (item): item is AdminUserRecord =>
-        Boolean(item && typeof item === 'object' && 'id' in item && 'email' in item),
-    );
-  } catch {
-    return INITIAL_ADMIN_USERS;
+export function getRoleMeta(role: UserRole) {
+  if (role === "admin") {
+    return {
+      label: "Admin",
+      className: "border-[#ddd6fe] bg-[#f5f3ff] text-[#7c3aed]",
+    };
   }
-}
 
-export function saveStoredUsers(users: AdminUserRecord[]) {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem(ADMIN_USERS_STORAGE_KEY, JSON.stringify(users));
+  if (role === "leader") {
+    return {
+      label: "Lider",
+      className: "border-[#fbcfe8] bg-[#fdf2f8] text-[#be185d]",
+    };
+  }
+
+  return {
+    label: "Basico",
+    className: "border-[#bfdbfe] bg-[#eff6ff] text-[#2563eb]",
+  };
 }
 
 export function useAdminUsers() {
-  const [users, setUsers] = useState<AdminUserRecord[]>(() => loadStoredUsers());
+  const [users, setUsers] = useState<AdminUserRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const reload = useCallback(async () => {
+    setIsLoading(true);
+    setError("");
+
+    try {
+      const payload = await apiRequest("/api/backend/users?page=1&limit=100");
+      setUsers(payload.items || []);
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : "Falha ao carregar usuarios.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    saveStoredUsers(users);
-  }, [users]);
+    void reload();
+  }, [reload]);
 
-  return [users, setUsers] as const;
+  const createUser = useCallback(
+    async (input: {
+      name: string;
+      email: string;
+      password: string;
+      role: UserRole;
+      sector: UserSector;
+      accessPresetId?: string | null;
+      modulePermissions?: UserModulePermissionRecord[];
+    }) => {
+      await apiRequest("/api/backend/users", {
+        method: "POST",
+        body: JSON.stringify(input),
+      });
+      await reload();
+    },
+    [reload],
+  );
+
+  const updateUser = useCallback(
+    async (
+      userId: string,
+      input: {
+        name?: string;
+        role?: UserRole;
+        sector?: UserSector;
+        isActive?: boolean;
+        accessPresetId?: string | null;
+        modulePermissions?: UserModulePermissionRecord[];
+      },
+    ) => {
+      await apiRequest(`/api/backend/users/${userId}`, {
+        method: "PATCH",
+        body: JSON.stringify(input),
+      });
+      await reload();
+    },
+    [reload],
+  );
+
+  const resetPassword = useCallback(async (userId: string, newPassword: string) => {
+    await apiRequest(`/api/backend/users/${userId}/reset-password`, {
+      method: "POST",
+      body: JSON.stringify({ newPassword }),
+    });
+  }, []);
+
+  const fetchUserAccess = useCallback(async (userId: string) => {
+    const payload = await apiRequest(`/api/backend/access/users/${userId}`);
+    return payload.item as {
+      userId: string;
+      role: UserRole;
+      accessPresetId?: string | null;
+      accessPreset?: AccessPresetRecord | null;
+      modulePermissions: UserModulePermissionRecord[];
+      effectiveAccess: SessionAccess;
+    };
+  }, []);
+
+  return {
+    users,
+    isLoading,
+    error,
+    reload,
+    createUser,
+    updateUser,
+    resetPassword,
+    fetchUserAccess,
+  };
+}
+
+export function useAccessDefinitions() {
+  const [presets, setPresets] = useState<AccessPresetRecord[]>([]);
+  const [modules, setModules] = useState<AccessModuleRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const reload = useCallback(async () => {
+    setIsLoading(true);
+    setError("");
+
+    try {
+      const [presetsPayload, modulesPayload] = await Promise.all([
+        apiRequest("/api/backend/access/presets"),
+        apiRequest("/api/backend/access/modules"),
+      ]);
+
+      setPresets(presetsPayload.items || []);
+      setModules(modulesPayload.items || []);
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : "Falha ao carregar acessos.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void reload();
+  }, [reload]);
+
+  const moduleOptions = useMemo(
+    () =>
+      modules.map((module) => ({
+        key: module.key,
+        name: module.name,
+      })),
+    [modules],
+  );
+
+  return {
+    presets,
+    modules,
+    moduleOptions,
+    isLoading,
+    error,
+    reload,
+  };
 }
 
 export function useCurrentAdminUser() {
-  const [users, setUsers] = useAdminUsers();
-  const currentUser = useMemo(
-    () => users.find((user) => user.id === CURRENT_USER_ID) ?? INITIAL_ADMIN_USERS[0],
-    [users],
-  );
+  const session = useSession();
 
-  return { users, setUsers, currentUser };
+  return {
+    currentUser: session?.user ?? null,
+    access: session?.access ?? null,
+  };
 }

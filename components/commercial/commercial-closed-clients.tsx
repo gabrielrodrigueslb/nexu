@@ -1324,347 +1324,11 @@ function TicketDetailsModal({
       }
     />
   );
-
-  /* legacy block kept temporarily for reference
-  return (
-    <ModalShell
-      open={open}
-      title={ticket.company}
-      description={`${ticket.cnpj || '-'} - ${statusMeta.label}`}
-      maxWidthClassName="max-w-[980px]"
-      onClose={onClose}
-      footer={
-        <>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-[8px] border border-[#e2e8f0] bg-white px-4 py-[9px] text-[13px] font-semibold text-[#64748b]"
-          >
-            Fechar
-          </button>
-          {ticket.status !== 'concluido' ? (
-            <button
-              type="button"
-              onClick={onEdit}
-              className="rounded-[8px] border border-[#e2e8f0] bg-white px-4 py-[9px] text-[13px] font-semibold text-[#0f172a]"
-            >
-              Editar ticket
-            </button>
-          ) : null}
-          {canAdvance ? (
-            <button
-              type="button"
-              onClick={onAdvanceStatus}
-              className="rounded-[8px] bg-[#2563eb] px-4 py-[9px] text-[13px] font-semibold text-white"
-            >
-              {advanceLabel}
-            </button>
-          ) : null}
-        </>
-      }
-    >
-      <div className="grid gap-4">
-        {ticket.status === 'concluido' ? (
-          <div className="flex flex-wrap items-center gap-3 rounded-[12px] border border-[#86efac] bg-[#f0fdf4] px-4 py-3">
-            <span className="inline-flex items-center gap-2 text-[11px] font-bold tracking-[.06em] text-[#15803d] uppercase">
-              <CheckCircle2 className="size-4" />
-              Somente leitura
-            </span>
-            <span className="text-[12px] text-[#166534]">
-              Ticket finalizado. Visualizacao ajustada para ficar mais proxima do layout
-              original.
-            </span>
-          </div>
-        ) : null}
-
-        <div className="flex flex-col gap-3 rounded-[12px] border border-[#d7dfeb] bg-[#f8fafc] p-4 md:flex-row md:items-center md:justify-between">
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="text-[11px] font-bold tracking-[.12em] text-[#0f172a] uppercase">
-              Protocolo
-            </span>
-            <span className="font-mono text-[15px] font-extrabold tracking-[.04em] text-[#1d4ed8]">
-              {ticket.proto}
-            </span>
-            <button
-              type="button"
-              onClick={() => copyText(ticket.proto)}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-[8px] border border-[#d7dfeb] bg-white text-[#64748b]"
-            >
-              <Copy className="size-4" />
-            </button>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2 md:justify-end">
-            <span
-              className={`inline-flex items-center gap-1 rounded-full border px-[10px] py-[4px] text-[11px] font-bold ${statusMeta.badge}`}
-            >
-              <StatusIcon className="size-3.5" />
-              {statusMeta.label}
-            </span>
-            <span
-              className={`inline-flex rounded-full border px-[10px] py-[4px] text-[11px] font-bold ${typeMeta.badge}`}
-            >
-              {typeMeta.label}
-            </span>
-            {ticket.csStatus ? (
-              <span className="inline-flex rounded-full border border-[#e2e8f0] bg-white px-[10px] py-[4px] text-[11px] font-bold text-[#475569]">
-                {ticket.csStatus}
-              </span>
-            ) : null}
-          </div>
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-[#e2e8f0] bg-white px-3 py-1.5 text-[11px] font-medium text-[#475569]">
-            <CalendarDays className="size-3.5 text-[#64748b]" />
-            Criado em {formatDate(ticket.createdAt)}
-          </span>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-[#e2e8f0] bg-white px-3 py-1.5 text-[11px] font-medium text-[#475569]">
-            <User className="size-3.5 text-[#64748b]" />
-            Resp. solicitacao: {assigneeName}
-          </span>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-[#e2e8f0] bg-white px-3 py-1.5 text-[11px] font-medium text-[#475569]">
-            <Hammer className="size-3.5 text-[#64748b]" />
-            Resp. tecnico: {technicalName}
-          </span>
-          {ticket.updatedAt ? (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-[#e2e8f0] bg-white px-3 py-1.5 text-[11px] font-medium text-[#475569]">
-              <ClipboardList className="size-3.5 text-[#64748b]" />
-              Atualizado em {formatDate(ticket.updatedAt)}
-            </span>
-          ) : null}
-        </div>
-
-        <div className="rounded-[12px] border border-[#e2e8f0] bg-white p-4">
-          <div className="mb-4 text-[12px] font-bold tracking-[.06em] text-[#64748b] uppercase">
-            Jornada do ticket
-          </div>
-          <div className="flex flex-col gap-3 md:flex-row md:items-center">
-            {JOURNEY_STEPS.map((step, index) => {
-              const active = index === statusMeta.step;
-              const done = index < statusMeta.step || ticket.status === 'concluido';
-
-              return (
-                <div key={step} className="flex min-w-0 flex-1 items-center gap-3">
-                  <div
-                    className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-[13px] font-bold ${
-                      active
-                        ? 'border-[#2563eb] bg-[#2563eb] text-white'
-                        : done
-                          ? 'border-[#93c5fd] bg-[#dbeafe] text-[#1d4ed8]'
-                          : 'border-[#d7dfeb] bg-white text-[#64748b]'
-                    }`}
-                  >
-                    {index + 1}
-                  </div>
-                  <div className="min-w-0 text-[13px] font-semibold text-[#0f172a]">
-                    {step}
-                  </div>
-                  {index < JOURNEY_STEPS.length - 1 ? (
-                    <div className="hidden h-px flex-1 bg-[#d7dfeb] md:block" />
-                  ) : null}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="grid gap-3 md:grid-cols-2">
-          <div className="rounded-[12px] border border-[#bfdbfe] bg-[#eff6ff] p-4">
-            <div className="text-[10px] font-bold tracking-[.06em] text-[#2563eb] uppercase">
-              Total Setup
-            </div>
-            <div className="mt-1 text-[24px] font-extrabold text-[#2563eb]">
-              {formatMoney(sumSetupValue(ticket))}
-            </div>
-          </div>
-          <div className="rounded-[12px] border border-[#ddd6fe] bg-[#f5f3ff] p-4">
-            <div className="text-[10px] font-bold tracking-[.06em] text-[#7c3aed] uppercase">
-              Recorrencia
-            </div>
-            <div className="mt-1 text-[24px] font-extrabold text-[#7c3aed]">
-              {formatMoney(sumRecurringValue(ticket))}
-            </div>
-          </div>
-        </div>
-
-        <div className="grid gap-4 xl:grid-cols-[1.2fr_.8fr]">
-          <div className="grid gap-4">
-          <div className="rounded-[12px] border border-[#e2e8f0] bg-white p-4">
-            <div className="mb-3 text-[12px] font-bold tracking-[.06em] text-[#64748b] uppercase">
-              Dados do cliente
-            </div>
-            <div className="grid gap-3 md:grid-cols-2">
-              <InfoField label="Empresa" value={ticket.company} />
-              <InfoField label="CNPJ" value={ticket.cnpj} />
-              <InfoField label="Contato" value={ticket.contact || '-'} />
-              <InfoField label="Telefone" value={ticket.phone || '-'} />
-              <InfoField label="Instancia" value={ticket.instance || '-'} />
-              <InfoField label="Plano" value={ticket.plan || '-'} />
-              <InfoField label="Pagamento" value={ticket.paymentMethod || '-'} />
-              <InfoField label="Parcelamento" value={ticket.installment || '-'} />
-              <InfoField label="Responsavel" value={assigneeName} />
-              <InfoField label="Resp. tecnico" value={technicalName} />
-              <InfoField label="Criado em" value={formatDate(ticket.createdAt)} />
-              <InfoField label="Atualizado em" value={formatDate(ticket.updatedAt)} />
-            </div>
-          </div>
-
-          <div className="rounded-[12px] border border-[#e2e8f0] bg-white p-4">
-            <div className="mb-3 text-[12px] font-bold tracking-[.06em] text-[#64748b] uppercase">
-              Canais e observacoes
-            </div>
-            <div className="grid gap-3 md:grid-cols-2">
-              <div className="rounded-[10px] border border-[#e2e8f0] bg-[#f8fafc] p-3">
-                <div className="mb-1 text-[11px] font-bold tracking-[.06em] text-[#64748b] uppercase">
-                  E-mail do cliente
-                </div>
-                <div className="inline-flex items-center gap-2 text-[13px] font-medium text-[#0f172a]">
-                  <Mail className="size-4 text-[#64748b]" />
-                  {ticket.email || '-'}
-                </div>
-              </div>
-
-              <div className="rounded-[10px] border border-[#e2e8f0] bg-[#f8fafc] p-3">
-                <div className="mb-1 text-[11px] font-bold tracking-[.06em] text-[#64748b] uppercase">
-                  Site do cliente
-                </div>
-                <div className="inline-flex items-center gap-2 text-[13px] font-medium text-[#0f172a]">
-                  <Globe className="size-4 text-[#64748b]" />
-                  {ticket.website || '-'}
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-3 rounded-[10px] border border-[#e2e8f0] bg-[#f8fafc] p-3">
-              <div className="mb-1 text-[11px] font-bold tracking-[.06em] text-[#64748b] uppercase">
-                Observacoes
-              </div>
-              <p className="text-[13px] leading-6 text-[#475569]">
-                {ticket.notes || 'Sem observacoes registradas para este ticket.'}
-              </p>
-            </div>
-          </div>
-          </div>
-
-          <div className="rounded-[12px] border border-[#e2e8f0] bg-white p-4">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <div className="text-[12px] font-bold tracking-[.06em] text-[#64748b] uppercase">
-                Tarefas
-              </div>
-              <div className="text-[12px] font-semibold text-[#475569]">
-                {completedTasks}/{ticket.tasks.length} ({progressPercent}%)
-              </div>
-            </div>
-            {ticket.tasks.length ? (
-              <div className="space-y-2">
-                <div className="mb-3 h-2 overflow-hidden rounded-full bg-[#e2e8f0]">
-                  <div
-                    className="h-full rounded-full bg-[#2563eb] transition-all"
-                    style={{ width: `${progressPercent}%` }}
-                  />
-                </div>
-                {ticket.tasks.map((task) => (
-                  <button
-                    type="button"
-                    key={task.id}
-                    onClick={() => onToggleTask(task.id)}
-                    className={`flex w-full items-start gap-3 rounded-[10px] border px-3 py-3 text-left ${
-                      task.done
-                        ? 'border-[#a7f3d0] bg-[#ecfdf5]'
-                        : 'border-[#e2e8f0] bg-[#f8fafc]'
-                    }`}
-                  >
-                    <span
-                      className={`mt-[1px] inline-flex h-5 w-5 items-center justify-center rounded-full border text-[11px] ${
-                        task.done
-                          ? 'border-[#059669] bg-[#059669] text-white'
-                          : 'border-[#cbd5e1] bg-white text-[#64748b]'
-                      }`}
-                    >
-                      {task.done ? '✓' : ''}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-[13px] font-semibold text-[#0f172a]">
-                        {task.label}
-                      </div>
-                      <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-[#64748b]">
-                        {task.assigneeId ? (
-                          <span className="inline-flex items-center gap-1">
-                            <User className="size-3.5" />
-                            {users.find((user) => user.id === task.assigneeId)?.name ?? '-'}
-                          </span>
-                        ) : null}
-                        {task.dueDate ? (
-                          <span className="inline-flex items-center gap-1">
-                            <CalendarDays className="size-3.5" />
-                            {formatDate(task.dueDate)}
-                          </span>
-                        ) : null}
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div className="rounded-[10px] border border-dashed border-[#cbd5e1] bg-[#f8fafc] px-4 py-6 text-center text-[13px] text-[#64748b]">
-                Nenhuma tarefa cadastrada para este ticket.
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="grid gap-4 xl:grid-cols-2">
-          <TicketValueTable
-            title="Produtos"
-            icon={<FileText className="size-4 text-[#2563eb]" />}
-            rows={visibleProducts}
-          />
-          <TicketValueTable
-            title="Integracoes"
-            icon={<ExternalLink className="size-4 text-[#7c3aed]" />}
-            rows={visibleIntegrations}
-          />
-        </div>
-
-        <div className="rounded-[12px] border border-[#e2e8f0] bg-white p-4">
-          <div className="mb-3 text-[12px] font-bold tracking-[.06em] text-[#64748b] uppercase">
-            Historico
-          </div>
-          {historyItems.length ? (
-            <div className="space-y-2">
-              {historyItems.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex gap-3 rounded-[10px] border border-[#e2e8f0] bg-[#f8fafc] px-3 py-3"
-                >
-                  <div className="mt-1 h-2.5 w-2.5 rounded-full bg-[#2563eb]" />
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[13px] font-semibold text-[#0f172a]">
-                      {item.message}
-                    </div>
-                    <div className="mt-1 text-[11px] text-[#64748b]">
-                      {formatDate(item.createdAt)}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-[10px] border border-dashed border-[#cbd5e1] bg-[#f8fafc] px-4 py-6 text-center text-[13px] text-[#64748b]">
-              Sem historico registrado.
-            </div>
-          )}
-        </div>
-      </div>
-    </ModalShell>
-  );
-  */
 }
 
 export function CommercialClosedClients() {
-  const [productItems] = useAdminProducts();
-  const [integrationItems] = useAdminIntegrations();
+  const { items: productItems } = useAdminProducts();
+  const { items: integrationItems } = useAdminIntegrations();
   const productCatalog = getActiveCatalogNames(productItems);
   const integrationCatalog = getActiveCatalogNames(integrationItems);
   const [tickets, setTickets] = useState<ClosedClientTicketRecord[]>(() =>
@@ -1928,23 +1592,24 @@ export function CommercialClosedClients() {
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-2 duration-200">
-      <div className="mb-[18px] flex flex-wrap items-start justify-between gap-3">
+      {/* Header e Ação Principal */}
+      <div className="mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <div className="text-[19px] font-extrabold tracking-[-0.4px] text-[#0f172a]">
+          <h1 className="text-[20px] font-extrabold tracking-[-0.4px] text-[#0f172a]">
             Cliente Fechado
-          </div>
-          <div className="mt-0.5 text-[13px] text-[#64748b]">
+          </h1>
+          <p className="mt-0.5 text-[13px] text-[#64748b]">
             Jornada dos tickets comerciais, valores contratados e acompanhamento pos-venda.
-          </div>
+          </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => exportTicketsCsv(filteredTickets)}
-            className="inline-flex items-center gap-2 rounded-[8px] border border-[#e2e8f0] bg-white px-[14px] py-2 text-[13px] font-semibold text-[#0f172a] transition-colors hover:bg-[#f8fafc]"
+            className="inline-flex h-9 items-center justify-center gap-2 rounded-[8px] border border-[#e2e8f0] bg-white px-4 text-[13px] font-semibold text-[#0f172a] shadow-sm transition-colors hover:bg-[#f8fafc] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e2e8f0]"
           >
-            <Download className="h-[14px] w-[14px]" />
+            <Download className="h-4 w-4" />
             <span>Exportar</span>
           </button>
           <button
@@ -1953,92 +1618,111 @@ export function CommercialClosedClients() {
               setCreating(true);
               setEditingTicketId(null);
             }}
-            className="inline-flex items-center gap-2 rounded-[8px] bg-[#2563eb] px-[14px] py-2 text-[13px] font-semibold text-white transition-colors hover:bg-[#1d4ed8]"
+            className="inline-flex h-9 items-center justify-center gap-2 rounded-[8px] bg-[#2563eb] px-4 text-[13px] font-semibold text-white shadow-sm transition-colors hover:bg-[#1d4ed8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:ring-offset-2"
           >
-            <Plus className="h-[14px] w-[14px]" />
+            <Plus className="h-4 w-4" />
             <span>Novo Ticket</span>
           </button>
         </div>
       </div>
 
-      <div className="mb-4 rounded-[14px] border border-[#e2e8f0] bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,.05)]">
-        <div className="mb-3 flex flex-wrap items-center gap-2">
-          <div className="relative min-w-[180px] flex-1">
-            <span className="pointer-events-none absolute left-[10px] top-1/2 -translate-y-1/2 text-[#64748b]">
-              <Search className="h-[14px] w-[14px]" />
-            </span>
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Buscar por empresa, protocolo, CNPJ ou instancia..."
-              className="w-full rounded-[8px] border border-[#e2e8f0] bg-white py-[8px] pr-[10px] pl-[32px] text-[13px] text-[#0f172a] outline-none"
-            />
-          </div>
+      {/* Toolbar de Filtros */}
+      <div className="mb-6 rounded-[10px] border border-[#e2e8f0] bg-white p-3 shadow-sm">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+          
+          {/* Grupo Esquerdo: Filtros Principais */}
+          <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center sm:flex-wrap">
+            
+            {/* Busca */}
+            <div className="relative min-w-[220px] flex-1">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#64748b]">
+                <Search className="h-[14px] w-[14px]" />
+              </span>
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Buscar por empresa, protocolo, CNPJ..."
+                className="h-9 w-full rounded-[6px] border border-[#e2e8f0] bg-transparent pl-[34px] pr-3 text-[13px] text-[#0f172a] outline-none transition-colors focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb]"
+              />
+            </div>
 
-          <select
-            value={filter}
-            onChange={(event) => setFilter(event.target.value as TicketFilterValue)}
-            className="min-w-[180px] rounded-[8px] border border-[#e2e8f0] bg-white px-[10px] py-[8px] text-[13px] text-[#0f172a] outline-none"
-          >
-            {statusOptions().map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+            {/* Status */}
+            <div className="relative">
+              <select
+                value={filter}
+                onChange={(event) => setFilter(event.target.value as TicketFilterValue)}
+                className="h-9 w-full min-w-[160px] appearance-none rounded-[6px] border border-[#e2e8f0] bg-transparent pl-8 pr-8 text-[13px] text-[#0f172a] outline-none transition-colors focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb] sm:w-auto"
+              >
+                {statusOptions().map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <Filter className="pointer-events-none absolute left-2.5 top-1/2 h-[14px] w-[14px] -translate-y-1/2 text-[#64748b]" />
+            </div>
 
-          <select
-            value={responsibleFilter}
-            onChange={(event) => setResponsibleFilter(event.target.value)}
-            className="min-w-[190px] rounded-[8px] border border-[#e2e8f0] bg-white px-[10px] py-[8px] text-[13px] text-[#0f172a] outline-none"
-          >
-            <option value="">Todos os responsaveis</option>
-            {responsibleOptions.map((user) => (
-              <option key={user.id} value={user.id}>
-                {user.name}
-              </option>
-            ))}
-          </select>
-        </div>
+            {/* Responsável */}
+            <div className="relative">
+              <select
+                value={responsibleFilter}
+                onChange={(event) => setResponsibleFilter(event.target.value)}
+                className="h-9 w-full min-w-[170px] appearance-none rounded-[6px] border border-[#e2e8f0] bg-transparent pl-8 pr-8 text-[13px] text-[#0f172a] outline-none transition-colors focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb] sm:w-auto"
+              >
+                <option value="">Todos os responsáveis</option>
+                {responsibleOptions.map((user) => (
+                  <option key={user.id} value={user.id}>
+                    {user.name}
+                  </option>
+                ))}
+              </select>
+              <User className="pointer-events-none absolute left-2.5 top-1/2 h-[14px] w-[14px] -translate-y-1/2 text-[#64748b]" />
+            </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center gap-1 text-[12px] text-[#64748b]">
-            <CalendarDays className="h-[13px] w-[13px]" />
-            <span>De</span>
-          </span>
-          <input
-            type="date"
-            value={dateFrom}
-            onChange={(event) => setDateFrom(event.target.value)}
-            className="cursor-pointer rounded-[8px] border border-[#e2e8f0] bg-white px-2 py-[6px] text-[13px] text-[#0f172a] outline-none"
-          />
-          <span className="text-[12px] text-[#64748b]">ate</span>
-          <input
-            type="date"
-            value={dateTo}
-            onChange={(event) => setDateTo(event.target.value)}
-            className="cursor-pointer rounded-[8px] border border-[#e2e8f0] bg-white px-2 py-[6px] text-[13px] text-[#0f172a] outline-none"
-          />
+            {/* Data */}
+            <div className="flex h-9 items-center gap-2 rounded-[6px] border border-[#e2e8f0] bg-[#f8fafc] px-3 text-[13px]">
+              <CalendarDays className="h-[14px] w-[14px] text-[#64748b]" />
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(event) => setDateFrom(event.target.value)}
+                className="cursor-pointer bg-transparent text-[#0f172a] outline-none"
+              />
+              <span className="text-[#94a3b8]">até</span>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(event) => setDateTo(event.target.value)}
+                className="cursor-pointer bg-transparent text-[#0f172a] outline-none"
+              />
+            </div>
 
-          <div className="ml-auto flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1 rounded-full border border-[#bfdbfe] bg-[#eff6ff] px-[10px] py-[5px] text-[11px] font-bold text-[#2563eb]">
-              <WalletCards className="size-3.5" />
-              Setup {formatMoney(totalSetup)}
-            </span>
-            <span className="inline-flex items-center gap-1 rounded-full border border-[#ddd6fe] bg-[#f5f3ff] px-[10px] py-[5px] text-[11px] font-bold text-[#7c3aed]">
-              <Filter className="size-3.5" />
-              Recorrencia {formatMoney(totalRecurring)}
-            </span>
-            {hasFilter ? (
+            {/* Limpar Filtros */}
+            {hasFilter && (
               <button
                 type="button"
                 onClick={resetFilters}
-                className="inline-flex items-center gap-1 rounded-[8px] border border-[#e2e8f0] bg-white px-3 py-[6px] text-[12px] font-semibold text-[#64748b] hover:bg-[#f8fafc]"
+                className="inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-[6px] px-3 text-[13px] font-medium text-[#64748b] transition-colors hover:bg-[#f1f5f9] hover:text-[#0f172a]"
               >
-                <X className="h-[13px] w-[13px]" />
-                <span>Limpar filtros</span>
+                <X className="h-[14px] w-[14px]" />
+                Limpar
               </button>
-            ) : null}
+            )}
+          </div>
+
+          {/* Divisor Visual em telas grandes */}
+          <div className="hidden h-6 w-px bg-[#e2e8f0] xl:block" />
+
+          {/* Grupo Direito: Totais */}
+          <div className="flex flex-wrap items-center gap-3 border-t border-[#e2e8f0] pt-3 xl:border-none xl:pt-0">
+            <div className="inline-flex h-9 items-center gap-2 rounded-[6px] border border-[#bfdbfe] bg-[#eff6ff] px-3 text-[12px] font-bold text-[#2563eb]">
+              <WalletCards className="size-[14px]" />
+              <span>Setup: {formatMoney(totalSetup)}</span>
+            </div>
+            <div className="inline-flex h-9 items-center gap-2 rounded-[6px] border border-[#ddd6fe] bg-[#f5f3ff] px-3 text-[12px] font-bold text-[#7c3aed]">
+              <FileText className="size-[14px]" />
+              <span>Recorrência: {formatMoney(totalRecurring)}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -2055,7 +1739,7 @@ export function CommercialClosedClients() {
             <div
               key={ticket.id}
               onClick={() => setViewingTicketId(ticket.id)}
-              className="rounded-[14px] border border-[#e2e8f0] bg-white p-4 text-left shadow-[0_8px_24px_rgba(15,23,42,.04)] transition-all hover:-translate-y-[1px] hover:border-[#bfdbfe] hover:shadow-[0_12px_28px_rgba(37,99,235,.08)]"
+              className="rounded-[14px] border border-[#e2e8f0] bg-white p-4 text-left shadow-[0_8px_24px_rgba(15,23,42,.04)] transition-all hover:-translate-y-[1px] hover:border-[#bfdbfe] hover:shadow-[0_12px_28px_rgba(37,99,235,.08)] cursor-pointer"
             >
               <div className="mb-3 flex items-start gap-2">
                 <div className="min-w-0 flex-1">
@@ -2087,7 +1771,7 @@ export function CommercialClosedClients() {
                     event.stopPropagation();
                     copyText(ticket.proto);
                   }}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-[8px] border border-[#e2e8f0] bg-white text-[#64748b]"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-[8px] border border-[#e2e8f0] bg-white text-[#64748b] transition-colors hover:bg-[#f8fafc]"
                 >
                   <Copy className="size-4" />
                 </button>
@@ -2195,4 +1879,3 @@ export function CommercialClosedClients() {
     </div>
   );
 }
-

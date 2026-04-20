@@ -1,75 +1,76 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from "react";
 
-import { INTEGRATION_CATALOG, PRODUCT_CATALOG } from '@/components/commercial/types';
-
-export const PRODUCTS_STORAGE_KEY = 'nx_admin_products';
-export const INTEGRATIONS_STORAGE_KEY = 'nx_admin_integrations';
+import { apiRequest } from "@/lib/api-client";
 
 export type AdminCatalogItem = {
   id: string;
   name: string;
   active: boolean;
+  type: "PRODUCT" | "INTEGRATION";
 };
 
-function slugify(value: string) {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-}
+function useCatalog(type: "PRODUCT" | "INTEGRATION") {
+  const [items, setItems] = useState<AdminCatalogItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
 
-function buildInitialCatalog(values: readonly string[]) {
-  return values.map((name) => ({
-    id: slugify(name),
-    name,
-    active: true,
-  }));
-}
+  const reload = useCallback(async () => {
+    setIsLoading(true);
+    setError("");
 
-function loadCatalog(storageKey: string, fallback: readonly string[]) {
-  if (typeof window === 'undefined') return buildInitialCatalog(fallback);
-
-  try {
-    const raw = window.localStorage.getItem(storageKey);
-    if (!raw) return buildInitialCatalog(fallback);
-    const parsed = JSON.parse(raw);
-
-    if (!Array.isArray(parsed)) return buildInitialCatalog(fallback);
-
-    return parsed.filter(
-      (item): item is AdminCatalogItem =>
-        Boolean(item && typeof item === 'object' && 'id' in item && 'name' in item),
-    );
-  } catch {
-    return buildInitialCatalog(fallback);
-  }
-}
-
-function saveCatalog(storageKey: string, items: AdminCatalogItem[]) {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem(storageKey, JSON.stringify(items));
-}
-
-function useAdminCatalog(storageKey: string, fallback: readonly string[]) {
-  const [items, setItems] = useState<AdminCatalogItem[]>(() => loadCatalog(storageKey, fallback));
+    try {
+      const payload = await apiRequest(`/api/backend/catalog/items?type=${type}`);
+      setItems(payload.items || []);
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : "Falha ao carregar catalogo.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [type]);
 
   useEffect(() => {
-    saveCatalog(storageKey, items);
-  }, [items, storageKey]);
+    void reload();
+  }, [reload]);
 
-  return [items, setItems] as const;
+  return {
+    items,
+    isLoading,
+    error,
+    reload,
+    createItem: async (input: { name: string }) => {
+      await apiRequest("/api/backend/catalog/items", {
+        method: "POST",
+        body: JSON.stringify({
+          name: input.name,
+          type,
+        }),
+      });
+      await reload();
+    },
+    updateItem: async (id: string, input: Partial<{ name: string; active: boolean }>) => {
+      await apiRequest(`/api/backend/catalog/items/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(input),
+      });
+      await reload();
+    },
+    deleteItem: async (id: string) => {
+      await apiRequest(`/api/backend/catalog/items/${id}`, {
+        method: "DELETE",
+      });
+      await reload();
+    },
+  };
 }
 
 export function useAdminProducts() {
-  return useAdminCatalog(PRODUCTS_STORAGE_KEY, PRODUCT_CATALOG);
+  return useCatalog("PRODUCT");
 }
 
 export function useAdminIntegrations() {
-  return useAdminCatalog(INTEGRATIONS_STORAGE_KEY, INTEGRATION_CATALOG);
+  return useCatalog("INTEGRATION");
 }
 
 export function getActiveCatalogNames(items: AdminCatalogItem[]) {
@@ -77,7 +78,12 @@ export function getActiveCatalogNames(items: AdminCatalogItem[]) {
 }
 
 export function buildCatalogId(name: string) {
-  return slugify(name) || `item-${Date.now()}`;
+  return name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
 export function syncCatalogRows<
@@ -88,13 +94,6 @@ export function syncCatalogRows<
     setup: number;
     recurring: number;
   },
->(
-  rows: T[],
-  names: string[],
-  createRow: (name: string) => T,
-) {
-  return names.map((name) => {
-    const existing = rows.find((row) => row.name === name);
-    return existing ?? createRow(name);
-  });
+>(rows: T[], names: string[], createRow: (name: string) => T) {
+  return names.map((name) => rows.find((row) => row.name === name) ?? createRow(name));
 }

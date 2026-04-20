@@ -426,8 +426,8 @@ export function LeadModal({
   onMarkWon: (lead: CommercialLeadRecord) => void;
   onRequestLoss: (lead: CommercialLeadRecord) => void;
 }) {
-  const [productItems] = useAdminProducts();
-  const [integrationItems] = useAdminIntegrations();
+  const { items: productItems } = useAdminProducts();
+  const { items: integrationItems } = useAdminIntegrations();
   const productCatalog = getActiveCatalogNames(productItems);
   const integrationCatalog = getActiveCatalogNames(integrationItems);
   const [draft, setDraft] = useState<CommercialLeadRecord | null>(() =>

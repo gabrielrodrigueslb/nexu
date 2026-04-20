@@ -119,12 +119,13 @@ export function DevDateFilter({
   onClear: () => void;
 }) {
   return (
-    <div className="mb-4 flex flex-wrap items-center gap-[10px] rounded-[10px] border border-[#e2e8f0] bg-white px-4 py-3">
+    <div className="mb-4 flex flex-wrap items-center gap-[10px] rounded-[10px] border border-[#e2e8f0] bg-white px-4 py-3 justify-between">
       <span className="inline-flex items-center gap-2 text-[13px] font-bold text-[#64748b]">
         <CalendarDays className="size-4" />
         Periodo (concluidos)
       </span>
-      <label className="text-[12px] text-[#64748b]">De:</label>
+      <span className='flex gap-2 items-center'>
+<label className="text-[12px] text-[#64748b]">De:</label>
       <input
         type="date"
         value={dateRange.from}
@@ -153,6 +154,8 @@ export function DevDateFilter({
           </span>
         </>
       ) : null}
+      </span>
+      
     </div>
   );
 }

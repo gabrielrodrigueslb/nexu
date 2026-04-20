@@ -1,12 +1,15 @@
 ﻿'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Building2, Copy, MessageSquareText, Search, Upload, X } from 'lucide-react';
-
 import {
-  AppFormLabel as FormLabel,
-  AppToolbarButton as ToolbarButton,
-} from '@/components/app-ui-kit';
+  Building2,
+  Copy,
+  MessageSquareText,
+  Search,
+  Upload,
+  X,
+} from 'lucide-react';
+
 import { ModalShell } from '@/components/modal-shell';
 import {
   ALL_DEV_STATUSES,
@@ -34,20 +37,13 @@ type DevCriteria = {
   esf: number;
   deb: number;
 };
-
 type DevHistoryItem = {
   id: string;
   user: string;
   message: string;
   createdAt: string;
 };
-
-type DevTag = {
-  id: string;
-  name: string;
-  color: string;
-};
-
+type DevTag = { id: string; name: string; color: string };
 type DevTicket = BaseDevTicket & {
   createdBy: string;
   protoExt?: string;
@@ -61,7 +57,6 @@ type DevTicket = BaseDevTicket & {
   criteria: DevCriteria;
   history: DevHistoryItem[];
 };
-
 type TicketFormState = {
   title: string;
   category: string;
@@ -84,17 +79,10 @@ type TicketFormState = {
   deb: string;
   description: string;
 };
-
-type ImportedInstance = {
-  id: string;
-  name: string;
-  cnpj: string | undefined;
-};
-
+type ImportedInstance = { id: string; name: string; cnpj: string | undefined };
 type InstanceItem =
   | { kind: 'implantacao'; ticket: ImplantacaoTicket }
   | { kind: 'dev'; ticket: DevTicket };
-
 type InstanceGroup = {
   key: string;
   name: string;
@@ -115,7 +103,8 @@ const CURRENT_USER_ID = DEV_USERS[0]?.id ?? '';
 const ANALYSIS_STATUS = ALL_DEV_STATUSES[1];
 const COMPLETED_STATUS = ALL_DEV_STATUSES[ALL_DEV_STATUSES.length - 1];
 const IMPORTED_INSTANCES_STORAGE_KEY = 'nx_inst_importadas';
-let nextGeneratedTicketId = Math.max(...INITIAL_DEV_TICKETS.map((ticket) => ticket.id), 0) + 1;
+let nextGeneratedTicketId =
+  Math.max(...INITIAL_DEV_TICKETS.map((ticket) => ticket.id), 0) + 1;
 let nextGeneratedHistoryId = 1;
 let nextGeneratedCommentId = 1;
 
@@ -143,11 +132,12 @@ const EMPTY_FORM: TicketFormState = {
 };
 
 function formatDateTime(value: Date = new Date()) {
-  return value.toLocaleDateString('pt-BR') +
+  return (
+    value.toLocaleDateString('pt-BR') +
     ' ' +
-    value.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    value.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+  );
 }
-
 function getInitials(name: string) {
   return (
     name
@@ -158,7 +148,6 @@ function getInitials(name: string) {
       .join('') || '?'
   );
 }
-
 function calcScore(criteria: DevCriteria) {
   return Math.round(
     criteria.imp * 0.3 * 5 +
@@ -168,18 +157,17 @@ function calcScore(criteria: DevCriteria) {
       criteria.esf * 0.1 * 5,
   );
 }
-
 function defaultCriteriaForScore(score: number): DevCriteria {
   if (score >= 12) return { imp: 3, ris: 3, fre: 3, esf: 3, deb: 1 };
   if (score >= 9) return { imp: 2, ris: 2, fre: 2, esf: 1, deb: 1 };
   if (score >= 6) return { imp: 2, ris: 1, fre: 1, esf: 1, deb: 1 };
   return { imp: 1, ris: 1, fre: 0, esf: 1, deb: 0 };
 }
-
 function normalizeInitialTickets(tickets: BaseDevTicket[]): DevTicket[] {
   return tickets.map((ticket, index) => {
     const criteria = defaultCriteriaForScore(ticket.score);
-    const activityDate = ticket.deadline ?? ticket.startDate ?? ticket.createdAt;
+    const activityDate =
+      ticket.deadline ?? ticket.startDate ?? ticket.createdAt;
     const activityTimestamp = activityDate
       ? new Date(`${activityDate}T18:00:00`).getTime()
       : undefined;
@@ -193,7 +181,6 @@ function normalizeInitialTickets(tickets: BaseDevTicket[]): DevTicket[] {
             : ticket.category === 'UX / Interface'
               ? 'tag-ux'
               : 'tag-prioridade';
-
     return {
       ...ticket,
       createdBy: DEV_USERS[index % DEV_USERS.length]?.id ?? CURRENT_USER_ID,
@@ -202,10 +189,14 @@ function normalizeInitialTickets(tickets: BaseDevTicket[]): DevTicket[] {
           ? `EXT-${String(240 + index).padStart(3, '0')}`
           : undefined,
       instance: ticket.clientName ? ticket.clientName.toUpperCase() : undefined,
-      cnpj: index % 2 === 0 ? `00.000.000/000${(index % 9) + 1}-0${index % 9}` : undefined,
+      cnpj:
+        index % 2 === 0
+          ? `00.000.000/000${(index % 9) + 1}-0${index % 9}`
+          : undefined,
       clientPhone: index % 2 === 0 ? '(11) 99999-0000' : undefined,
       updatedAt: activityTimestamp,
-      concludedAt: ticket.devStatus === COMPLETED_STATUS ? activityTimestamp : undefined,
+      concludedAt:
+        ticket.devStatus === COMPLETED_STATUS ? activityTimestamp : undefined,
       totalPts: Math.max(0, Math.round(ticket.score / 2)),
       tags: [primaryTag],
       criteria,
@@ -220,13 +211,11 @@ function normalizeInitialTickets(tickets: BaseDevTicket[]): DevTicket[] {
     };
   });
 }
-
 function formatDate(date: string | undefined) {
   if (!date) return '-';
   const [year, month, day] = date.split('-');
   return `${day}/${month}/${year}`;
 }
-
 function formatLibraryDate(value: number | string | undefined) {
   if (!value) return '-';
   if (typeof value === 'number') {
@@ -234,19 +223,15 @@ function formatLibraryDate(value: number | string | undefined) {
   }
   return formatDate(value);
 }
-
 function getLibrarySortTime(ticket: DevTicket) {
   if (ticket.concludedAt) return ticket.concludedAt;
   if (ticket.updatedAt) return ticket.updatedAt;
-
   const fallbackDate = ticket.deadline ?? ticket.startDate ?? ticket.createdAt;
   return fallbackDate ? new Date(`${fallbackDate}T00:00:00`).getTime() : 0;
 }
-
 function getNowTimestamp() {
   return Date.now();
 }
-
 function normalizeSearchText(value: string) {
   return value
     .normalize('NFD')
@@ -254,67 +239,55 @@ function normalizeSearchText(value: string) {
     .trim()
     .toLowerCase();
 }
-
 function getInstanceGroupKey(value: string) {
   return normalizeSearchText(value).replace(/[^a-z0-9]+/g, '_');
 }
-
 function parseImportedTimestamp(value?: string | number) {
   if (typeof value === 'number') return value;
   if (!value) return 0;
   const timestamp = new Date(`${value}T00:00:00`).getTime();
   return Number.isNaN(timestamp) ? 0 : timestamp;
 }
-
 function normalizeImportedInstance(value: unknown): ImportedInstance | null {
   if (!value || typeof value !== 'object') return null;
-
-  const record = value as {
-    id?: unknown;
-    name?: unknown;
-    cnpj?: unknown;
-  };
-
-  if (typeof record.id !== 'string' || typeof record.name !== 'string') {
+  const record = value as { id?: unknown; name?: unknown; cnpj?: unknown };
+  if (typeof record.id !== 'string' || typeof record.name !== 'string')
     return null;
-  }
-
   return {
     id: record.id,
     name: record.name,
     cnpj: typeof record.cnpj === 'string' ? record.cnpj : undefined,
   };
 }
-
-async function parseImportedInstancesFile(file: File): Promise<ImportedInstance[]> {
+async function parseImportedInstancesFile(
+  file: File,
+): Promise<ImportedInstance[]> {
   const XLSX = await import('xlsx');
   const workbook = XLSX.read(await file.arrayBuffer(), {
     type: 'array',
     cellDates: true,
   });
   const sheetName = workbook.SheetNames[0];
-
   if (!sheetName) return [];
-
   const rows = XLSX.utils.sheet_to_json<Record<string, string | number | null>>(
     workbook.Sheets[sheetName],
     { defval: null },
   );
-
   const parsed = rows
     .map((row, index) => {
       const entries = Object.entries(row);
       const findValue = (terms: string[]) =>
-        entries.find(([key]) => terms.some((term) => normalizeSearchText(key).includes(term)))?.[1];
-
+        entries.find(([key]) =>
+          terms.some((term) => normalizeSearchText(key).includes(term)),
+        )?.[1];
       const rawName =
-        findValue(['instancia', 'instância', 'nome', 'name']) ?? entries[0]?.[1] ?? '';
+        findValue(['instancia', 'instância', 'nome', 'name']) ??
+        entries[0]?.[1] ??
+        '';
       const rawCnpj = findValue(['cnpj']) ?? '';
       const name = String(rawName ?? '').trim();
       const cnpj = String(rawCnpj ?? '').trim();
-
       if (!name) return null;
-
       return {
         id: `imported-${getInstanceGroupKey(name)}-${index}`,
         name,
@@ -322,15 +295,12 @@ async function parseImportedInstancesFile(file: File): Promise<ImportedInstance[
       };
     })
     .filter((item): item is ImportedInstance => Boolean(item));
-
   const byName = new Map<string, ImportedInstance>();
   parsed.forEach((item) => {
     byName.set(getInstanceGroupKey(item.name), item);
   });
-
   return [...byName.values()];
 }
-
 function buildProtocol() {
   const now = new Date();
   const year = now.getFullYear();
@@ -338,53 +308,43 @@ function buildProtocol() {
   const suffix = String(Math.floor(Math.random() * 900000) + 100000);
   return `DEV-${year}${month}-${suffix}`;
 }
-
 function buildTicketId() {
   const id = nextGeneratedTicketId;
   nextGeneratedTicketId += 1;
   return id;
 }
-
 function buildHistoryId(ticketId: number) {
   const id = `history-${ticketId}-${nextGeneratedHistoryId}`;
   nextGeneratedHistoryId += 1;
   return id;
 }
-
 function buildCommentId(ticketId: number) {
   const id = `comment-${ticketId}-${nextGeneratedCommentId}`;
   nextGeneratedCommentId += 1;
   return id;
 }
-
 function getPriority(score: number) {
-  if (score >= 12) {
+  if (score >= 12)
     return {
-      label: 'CRÃTICO',
+      label: 'CRÍTICO',
       badgeClassName: 'border-[#fecaca] bg-[#fef2f2] text-[#dc2626]',
       borderClassName: 'border-l-[#dc2626]',
       scoreClassName: 'text-[#dc2626]',
     };
-  }
-
-  if (score >= 9) {
+  if (score >= 9)
     return {
       label: 'ALTO',
       badgeClassName: 'border-[#fde68a] bg-[#fffbeb] text-[#d97706]',
       borderClassName: 'border-l-[#d97706]',
       scoreClassName: 'text-[#d97706]',
     };
-  }
-
-  if (score >= 6) {
+  if (score >= 6)
     return {
-      label: 'MÃ‰DIO',
+      label: 'MÉDIO',
       badgeClassName: 'border-[#fde68a] bg-[#fefce8] text-[#854d0e]',
       borderClassName: 'border-l-[#ca8a04]',
       scoreClassName: 'text-[#ca8a04]',
     };
-  }
-
   return {
     label: 'BAIXO',
     badgeClassName: 'border-[#a7f3d0] bg-[#ecfdf5] text-[#059669]',
@@ -392,7 +352,6 @@ function getPriority(score: number) {
     scoreClassName: 'text-[#059669]',
   };
 }
-
 function getStatusBadgeClass(status: DevStatus) {
   switch (status) {
     case 'Backlog':
@@ -411,7 +370,6 @@ function getStatusBadgeClass(status: DevStatus) {
       return 'border-[#a7f3d0] bg-[#ecfdf5] text-[#059669]';
   }
 }
-
 function getTypeBadgeClass(type: DevType) {
   const styles: Record<DevType, string> = {
     Epic: 'border-[#ddd6fe] bg-[#f5f3ff] text-[#7c3aed]',
@@ -419,10 +377,8 @@ function getTypeBadgeClass(type: DevType) {
     Task: 'border-[#e2e8f0] bg-[#f1f5f9] text-[#475569]',
     Bug: 'border-[#fecaca] bg-[#fef2f2] text-[#dc2626]',
   };
-
   return styles[type];
 }
-
 function Badge({
   children,
   className,
@@ -441,37 +397,53 @@ function Badge({
     </span>
   );
 }
+function FormLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <label className="mb-1 block text-[11px] font-bold tracking-[.06em] text-[#64748b] uppercase">
+      {children}
+    </label>
+  );
+}
 
 export function InstancesLibraryPage() {
-  const [tickets, setTickets] = useState<DevTicket[]>(() => normalizeInitialTickets(INITIAL_DEV_TICKETS));
+  const [tickets, setTickets] = useState<DevTicket[]>(() =>
+    normalizeInitialTickets(INITIAL_DEV_TICKETS),
+  );
   const [commercialTickets, setCommercialTickets] = useImplantacaoTickets();
-  const [importedInstances, setImportedInstances] = useState<ImportedInstance[]>([]);
+  const [importedInstances, setImportedInstances] = useState<
+    ImportedInstance[]
+  >([]);
   const [query, setQuery] = useState('');
-  const [expandedInstances, setExpandedInstances] = useState<Record<string, boolean>>({});
+  const [expandedInstances, setExpandedInstances] = useState<
+    Record<string, boolean>
+  >({});
   const [selectedTicketId, setSelectedTicketId] = useState<number | null>(null);
-  const [selectedCommercialTicketId, setSelectedCommercialTicketId] = useState<string | null>(null);
+  const [selectedCommercialTicketId, setSelectedCommercialTicketId] = useState<
+    string | null
+  >(null);
   const [formMode, setFormMode] = useState<'create' | 'edit' | null>(null);
   const [editingTicketId, setEditingTicketId] = useState<number | null>(null);
   const [formState, setFormState] = useState<TicketFormState>(EMPTY_FORM);
   const [commentDraft, setCommentDraft] = useState('');
-  const [tagPickerTicketId, setTagPickerTicketId] = useState<number | null>(null);
+  const [tagPickerTicketId, setTagPickerTicketId] = useState<number | null>(
+    null,
+  );
   const [deadlineTicketId, setDeadlineTicketId] = useState<number | null>(null);
   const [deadlineDraft, setDeadlineDraft] = useState('');
   const [deadlineReason, setDeadlineReason] = useState('');
 
-  const usersById = DEV_USERS.reduce<Record<string, (typeof DEV_USERS)[number]>>((acc, user) => {
+  const usersById = DEV_USERS.reduce<
+    Record<string, (typeof DEV_USERS)[number]>
+  >((acc, user) => {
     acc[user.id] = user;
     return acc;
   }, {});
-
-  const sprintsById = DEV_SPRINTS.reduce<Record<string, (typeof DEV_SPRINTS)[number]>>(
-    (acc, sprint) => {
-      acc[sprint.id] = sprint;
-      return acc;
-    },
-    {},
-  );
-
+  const sprintsById = DEV_SPRINTS.reduce<
+    Record<string, (typeof DEV_SPRINTS)[number]>
+  >((acc, sprint) => {
+    acc[sprint.id] = sprint;
+    return acc;
+  }, {});
   const epicMap = tickets.reduce<Record<number, string>>((acc, ticket) => {
     if (ticket.devType === 'Epic') {
       acc[ticket.id] = ticket.title;
@@ -479,19 +451,25 @@ export function InstancesLibraryPage() {
     return acc;
   }, {});
 
-  const selectedTicket = tickets.find((ticket) => ticket.id === selectedTicketId) ?? null;
+  const selectedTicket =
+    tickets.find((ticket) => ticket.id === selectedTicketId) ?? null;
   const selectedCommercialTicket =
-    commercialTickets.find((ticket) => ticket.id === selectedCommercialTicketId) ?? null;
-  const currentUser = DEV_USERS.find((user) => user.id === CURRENT_USER_ID) ?? DEV_USERS[0];
-  const selectedDeadlineTicket = tickets.find((ticket) => ticket.id === deadlineTicketId) ?? null;
-  const selectedTagTicket = tickets.find((ticket) => ticket.id === tagPickerTicketId) ?? null;
+    commercialTickets.find(
+      (ticket) => ticket.id === selectedCommercialTicketId,
+    ) ?? null;
+  const currentUser =
+    DEV_USERS.find((user) => user.id === CURRENT_USER_ID) ?? DEV_USERS[0];
+  const selectedDeadlineTicket =
+    tickets.find((ticket) => ticket.id === deadlineTicketId) ?? null;
+  const selectedTagTicket =
+    tickets.find((ticket) => ticket.id === tagPickerTicketId) ?? null;
   const tagsById = DEV_TAGS.reduce<Record<string, DevTag>>((acc, tag) => {
     acc[tag.id] = tag;
     return acc;
   }, {});
+
   const allInstanceGroups = useMemo<InstanceGroup[]>(() => {
     const groups = new Map<string, InstanceGroup>();
-
     importedInstances.forEach((instance) => {
       const key = getInstanceGroupKey(instance.name);
       groups.set(key, {
@@ -502,19 +480,15 @@ export function InstancesLibraryPage() {
         lastActivity: 0,
       });
     });
-
     commercialTickets.forEach((ticket) => {
       if (!ticket.instancia.trim()) return;
       const key = getInstanceGroupKey(ticket.instancia);
-      const currentGroup =
-        groups.get(key) ??
-        {
-          key,
-          name: ticket.instancia,
-          items: [],
-          lastActivity: 0,
-        };
-
+      const currentGroup = groups.get(key) ?? {
+        key,
+        name: ticket.instancia,
+        items: [],
+        lastActivity: 0,
+      };
       currentGroup.items.push({ kind: 'implantacao', ticket });
       currentGroup.lastActivity = Math.max(
         currentGroup.lastActivity,
@@ -522,25 +496,25 @@ export function InstancesLibraryPage() {
       );
       groups.set(key, currentGroup);
     });
-
     tickets.forEach((ticket) => {
       if (!ticket.instance?.trim()) return;
       const key = getInstanceGroupKey(ticket.instance);
-      const currentGroup =
-        groups.get(key) ??
-        {
-          key,
-          name: ticket.instance,
-          items: [],
-          lastActivity: 0,
-        };
-
+      const currentGroup = groups.get(key) ?? {
+        key,
+        name: ticket.instance,
+        items: [],
+        lastActivity: 0,
+      };
       currentGroup.items.push({ kind: 'dev', ticket });
-      currentGroup.lastActivity = Math.max(currentGroup.lastActivity, getLibrarySortTime(ticket));
+      currentGroup.lastActivity = Math.max(
+        currentGroup.lastActivity,
+        getLibrarySortTime(ticket),
+      );
       groups.set(key, currentGroup);
     });
-
-    return [...groups.values()].sort((left, right) => right.lastActivity - left.lastActivity);
+    return [...groups.values()].sort(
+      (left, right) => right.lastActivity - left.lastActivity,
+    );
   }, [commercialTickets, importedInstances, tickets]);
 
   const filteredInstanceGroups = useMemo(() => {
@@ -555,7 +529,6 @@ export function InstancesLibraryPage() {
     (sum, group) => sum + group.items.length,
     0,
   );
-
   const formCriteria: DevCriteria = {
     imp: Number(formState.imp) || 0,
     ris: Number(formState.ris) || 0,
@@ -567,7 +540,6 @@ export function InstancesLibraryPage() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-
     try {
       const raw = window.localStorage.getItem(IMPORTED_INSTANCES_STORAGE_KEY);
       if (!raw) return;
@@ -598,11 +570,11 @@ export function InstancesLibraryPage() {
   ) {
     setFormState((current) => ({ ...current, [key]: value }));
   }
-
-  async function handleImportInstances(event: React.ChangeEvent<HTMLInputElement>) {
+  async function handleImportInstances(
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) {
     const file = event.target.files?.[0];
     if (!file) return;
-
     try {
       const parsed = await parseImportedInstancesFile(file);
       setImportedInstances(parsed);
@@ -610,14 +582,12 @@ export function InstancesLibraryPage() {
       event.target.value = '';
     }
   }
-
   function toggleInstance(groupKey: string) {
     setExpandedInstances((current) => ({
       ...current,
       [groupKey]: !current[groupKey],
     }));
   }
-
   function openEditModal(ticket: DevTicket) {
     setFormState({
       title: ticket.title,
@@ -644,12 +614,10 @@ export function InstancesLibraryPage() {
     setEditingTicketId(ticket.id);
     setFormMode('edit');
   }
-
   function closeFormModal() {
     setFormMode(null);
     setEditingTicketId(null);
   }
-
   function appendHistory(ticket: DevTicket, message: string) {
     return [
       ...ticket.history,
@@ -661,32 +629,33 @@ export function InstancesLibraryPage() {
       },
     ];
   }
-
-  function updateTicket(ticketId: number, updater: (ticket: DevTicket) => DevTicket) {
+  function updateTicket(
+    ticketId: number,
+    updater: (ticket: DevTicket) => DevTicket,
+  ) {
     setTickets((current) =>
       current.map((ticket) =>
         ticket.id === ticketId
-          ? {
-              ...updater(ticket),
-              updatedAt: getNowTimestamp(),
-            }
+          ? { ...updater(ticket), updatedAt: getNowTimestamp() }
           : ticket,
       ),
     );
   }
-
   function moveTicket(ticketId: number, nextStatus: DevStatus) {
     updateTicket(ticketId, (ticket) => ({
       ...ticket,
       devStatus: nextStatus,
-      concludedAt: nextStatus === COMPLETED_STATUS ? getNowTimestamp() : undefined,
+      concludedAt:
+        nextStatus === COMPLETED_STATUS ? getNowTimestamp() : undefined,
       history:
         ticket.devStatus === nextStatus
           ? ticket.history
-          : appendHistory(ticket, `Status: ${ticket.devStatus} -> ${nextStatus}`),
+          : appendHistory(
+              ticket,
+              `Status: ${ticket.devStatus} -> ${nextStatus}`,
+            ),
     }));
   }
-
   function handleConcludeSelectedTicket() {
     if (!selectedTicket) return;
     updateTicket(selectedTicket.id, (ticket) => ({
@@ -697,10 +666,8 @@ export function InstancesLibraryPage() {
     }));
     setSelectedTicketId(null);
   }
-
   function handleAddComment() {
     if (!selectedTicket || !commentDraft.trim()) return;
-
     updateTicket(selectedTicket.id, (ticket) => ({
       ...ticket,
       comments: [
@@ -716,7 +683,6 @@ export function InstancesLibraryPage() {
     }));
     setCommentDraft('');
   }
-
   function toggleTag(ticketId: number, tagId: string) {
     updateTicket(ticketId, (ticket) => ({
       ...ticket,
@@ -726,23 +692,22 @@ export function InstancesLibraryPage() {
       history: appendHistory(ticket, 'Etiquetas atualizadas'),
     }));
   }
-
   function openDeadlineModal(ticketId: number) {
-    const ticket = tickets.find((currentTicket) => currentTicket.id === ticketId);
+    const ticket = tickets.find(
+      (currentTicket) => currentTicket.id === ticketId,
+    );
     setDeadlineTicketId(ticketId);
     setDeadlineDraft(ticket?.deadline ?? '');
     setDeadlineReason('');
   }
-
   function closeDeadlineModal() {
     setDeadlineTicketId(null);
     setDeadlineDraft('');
     setDeadlineReason('');
   }
-
   function handleSaveDeadline() {
-    if (!selectedDeadlineTicket || !deadlineDraft || !deadlineReason.trim()) return;
-
+    if (!selectedDeadlineTicket || !deadlineDraft || !deadlineReason.trim())
+      return;
     const previousDeadline = selectedDeadlineTicket.deadline;
     updateTicket(selectedDeadlineTicket.id, (ticket) => ({
       ...ticket,
@@ -754,18 +719,16 @@ export function InstancesLibraryPage() {
     }));
     closeDeadlineModal();
   }
-
   function handleDeleteSelectedTicket() {
     if (!selectedTicket) return;
     if (!window.confirm('Remover este ticket do kanban?')) return;
-
-    setTickets((current) => current.filter((ticket) => ticket.id !== selectedTicket.id));
+    setTickets((current) =>
+      current.filter((ticket) => ticket.id !== selectedTicket.id),
+    );
     setSelectedTicketId(null);
   }
-
   function handleSaveTicket() {
     if (!formState.title.trim()) return;
-
     if (formMode === 'edit' && editingTicketId) {
       setTickets((current) =>
         current.map((ticket) =>
@@ -779,7 +742,9 @@ export function InstancesLibraryPage() {
                 resp: formState.resp,
                 score: formScore,
                 sprintId: formState.sprintId || undefined,
-                parentId: formState.parentId ? Number(formState.parentId) : undefined,
+                parentId: formState.parentId
+                  ? Number(formState.parentId)
+                  : undefined,
                 clientName: formState.clientName.trim() || undefined,
                 protoExt: formState.protoExt.trim() || undefined,
                 instance: formState.instance.trim() || undefined,
@@ -788,7 +753,10 @@ export function InstancesLibraryPage() {
                 startDate: formState.startDate || undefined,
                 deadline: formState.deadline || undefined,
                 description: formState.description.trim(),
-                concludedAt: formState.devStatus === COMPLETED_STATUS ? getNowTimestamp() : undefined,
+                concludedAt:
+                  formState.devStatus === COMPLETED_STATUS
+                    ? getNowTimestamp()
+                    : undefined,
                 criteria: formCriteria,
                 history: appendHistory(ticket, 'Ticket editado'),
               }
@@ -817,7 +785,10 @@ export function InstancesLibraryPage() {
         startDate: formState.startDate || undefined,
         deadline: formState.deadline || undefined,
         description: formState.description.trim(),
-        concludedAt: formState.devStatus === COMPLETED_STATUS ? getNowTimestamp() : undefined,
+        concludedAt:
+          formState.devStatus === COMPLETED_STATUS
+            ? getNowTimestamp()
+            : undefined,
         comments: [],
         createdBy: currentUser?.id ?? CURRENT_USER_ID,
         tags: [],
@@ -831,10 +802,8 @@ export function InstancesLibraryPage() {
           },
         ],
       };
-
       setTickets((current) => [nextTicket, ...current]);
     }
-
     closeFormModal();
   }
 
@@ -843,12 +812,9 @@ export function InstancesLibraryPage() {
     setCommercialTickets((current) =>
       current.map((ticket) => {
         if (ticket.id !== ticketId) return ticket;
-
         const targetTask = ticket.tasks.find((task) => task.id === taskId);
         if (!targetTask) return ticket;
-
         const nextDone = !targetTask.done;
-
         return {
           ...ticket,
           tasks: ticket.tasks.map((task) =>
@@ -868,7 +834,6 @@ export function InstancesLibraryPage() {
       }),
     );
   }
-
   function handleCommercialAddComment(ticketId: string, message: string) {
     const today = new Date().toISOString().slice(0, 10);
     setCommercialTickets((current) =>
@@ -881,7 +846,8 @@ export function InstancesLibraryPage() {
                 ...ticket.comments,
                 {
                   id: `${ticket.id}-comment-${today}-${ticket.comments.length + 1}`,
-                  author: ticket.respSolicitacao || getTechNameById(ticket.respTec),
+                  author:
+                    ticket.respSolicitacao || getTechNameById(ticket.respTec),
                   message,
                   createdAt: today,
                 },
@@ -891,7 +857,6 @@ export function InstancesLibraryPage() {
       ),
     );
   }
-
   function handleCommercialAddAttachments(ticketId: string, files: File[]) {
     setCommercialTickets((current) =>
       current.map((ticket) =>
@@ -911,7 +876,6 @@ export function InstancesLibraryPage() {
       ),
     );
   }
-
   function handleCommercialChangeTech(ticketId: string, techId: string) {
     const today = new Date().toISOString().slice(0, 10);
     setCommercialTickets((current) =>
@@ -935,8 +899,10 @@ export function InstancesLibraryPage() {
       ),
     );
   }
-
-  function handleCommercialChangeLabel(ticketId: string, label: ImplantacaoTicket['csStatus']) {
+  function handleCommercialChangeLabel(
+    ticketId: string,
+    label: ImplantacaoTicket['csStatus'],
+  ) {
     const today = new Date().toISOString().slice(0, 10);
     setCommercialTickets((current) =>
       current.map((ticket) =>
@@ -950,7 +916,8 @@ export function InstancesLibraryPage() {
                 ...ticket.history,
                 {
                   id: `${ticket.id}-hist-label-${today}`,
-                  actor: ticket.respSolicitacao || getTechNameById(ticket.respTec),
+                  actor:
+                    ticket.respSolicitacao || getTechNameById(ticket.respTec),
                   message: `Etiqueta alterada para ${label}.`,
                   createdAt: today,
                 },
@@ -962,256 +929,325 @@ export function InstancesLibraryPage() {
   }
 
   return (
-    <>
-      <div className="-mx-4 -my-6 md:-mx-6 lg:-mx-8 lg:-my-8">
-        <div className="sticky top-0 z-20 flex min-h-14 items-center gap-4 border-b border-[#e2e8f0] bg-white px-6">
-          <strong className="text-[15px] font-bold text-[#0f172a]">Biblioteca de Instâncias</strong>
-          <div className="ml-auto flex flex-wrap items-center gap-2 py-3">
-            <label className="inline-flex cursor-pointer items-center gap-[6px] rounded-[6px] border border-[#e2e8f0] bg-white px-3 py-[6px] text-[12px] font-semibold text-[#64748b] transition-colors hover:border-[#2563eb] hover:text-[#2563eb]">
-              <Upload className="size-4" />
-              Importar Lista
-              <input
-                type="file"
-                accept=".xlsx,.xls,.csv"
-                onChange={handleImportInstances}
-                className="hidden"
-              />
-            </label>
-            {importedInstances.length ? (
-              <span className="rounded-[6px] bg-[#ecfdf5] px-3 py-[6px] text-[11px] font-semibold text-[#059669]">
-                {importedInstances.length} instância(s) importada(s)
-              </span>
-            ) : null}
-            {importedInstances.length ? (
-              <ToolbarButton
-                onClick={() => {
-                  setImportedInstances([]);
-                }}
-                className="text-[#dc2626] hover:border-[#dc2626] hover:text-[#dc2626]"
-              >
-                <X className="size-4" />
-                Limpar
-              </ToolbarButton>
-            ) : null}
-          </div>
+    <div className="animate-in fade-in slide-in-from-bottom-2 duration-200">
+      <div className="mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+        <div>
+          <h1 className="text-[20px] font-extrabold tracking-[-0.4px] text-[#0f172a]">
+            Biblioteca de Instâncias
+          </h1>
+          <p className="mt-0.5 text-[13px] text-[#64748b]">
+            {allInstanceGroups.length} instância(s) · {totalGroupedRecords}{' '}
+            registros totais
+          </p>
         </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-[8px] border border-[#e2e8f0] bg-white px-4 text-[13px] font-semibold text-[#0f172a] shadow-sm transition-colors hover:bg-[#f8fafc] focus:outline-none">
+            <Upload className="size-4" />
+            Importar Lista
+            <input
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              onChange={handleImportInstances}
+              className="hidden"
+            />
+          </label>
+          {importedInstances.length ? (
+            <span className="rounded-[6px] bg-[#ecfdf5] px-3 py-[6px] text-[11px] font-semibold text-[#059669]">
+              {importedInstances.length} instâncias importadas
+            </span>
+          ) : null}
+          {importedInstances.length ? (
+            <button
+              type="button"
+              onClick={() => setImportedInstances([])}
+              className="inline-flex h-9 items-center justify-center gap-2 rounded-[8px] border border-[#fecaca] bg-white px-4 text-[13px] font-semibold text-[#dc2626] shadow-sm transition-colors hover:bg-[#fef2f2]"
+            >
+              <X className="size-4" /> Limpar
+            </button>
+          ) : null}
+        </div>
+      </div>
 
-        <div className="bg-[#f1f5f9] px-6 py-6">
-          <div className="mb-4">
-            <div className="text-[26px] font-extrabold tracking-[-0.03em] text-[#0f172a]">
-              Biblioteca de Instâncias
-            </div>
-            <div className="mt-2 text-[12px] text-[#64748b]">
-              {allInstanceGroups.length} instância(s) · {totalGroupedRecords} registros totais
-            </div>
+      <div className="mb-6 rounded-[10px] border border-[#e2e8f0] bg-white p-3 shadow-sm">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative w-full max-w-[380px]">
+            <Search className="absolute left-3 top-1/2 size-[14px] -translate-y-1/2 text-[#64748b]" />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Buscar por nome de instância..."
+              className="h-9 w-full rounded-[6px] border border-[#e2e8f0] bg-transparent pl-[34px] pr-3 text-[13px] text-[#0f172a] outline-none transition-colors focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb]"
+            />
           </div>
+          {query ? (
+            <button
+              type="button"
+              onClick={() => setQuery('')}
+              className="inline-flex h-9 items-center px-3 text-[13px] font-medium text-[#64748b] hover:text-[#0f172a]"
+            >
+              Limpar Busca
+            </button>
+          ) : null}
+        </div>
+      </div>
 
-          <div className="mb-4 flex flex-wrap items-center gap-3">
-            <label className="relative flex h-10 w-full max-w-[380px] items-center rounded-[8px] border border-[#e2e8f0] bg-white pl-10 pr-3 text-[13px] text-[#0f172a] shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
-              <Search className="absolute left-3 size-4 text-[#64748b]" />
-              <input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Buscar por nome de instância..."
-                className="h-full w-full bg-transparent outline-none"
-              />
-            </label>
-            {query ? <ToolbarButton onClick={() => setQuery('')}>Limpar</ToolbarButton> : null}
-          </div>
+      {filteredInstanceGroups.length ? (
+        <div className="flex flex-col gap-3">
+          {filteredInstanceGroups.map((group) => {
+            const isOpen = Boolean(expandedInstances[group.key]);
+            const commercialItems = group.items.filter(
+              (item): item is Extract<InstanceItem, { kind: 'implantacao' }> =>
+                item.kind === 'implantacao',
+            );
+            const devItems = group.items.filter(
+              (item): item is Extract<InstanceItem, { kind: 'dev' }> =>
+                item.kind === 'dev',
+            );
+            const totalSetup = commercialItems.reduce(
+              (sum, item) => sum + sumSetup(item.ticket),
+              0,
+            );
+            const devOpen = devItems.filter(
+              (item) => item.ticket.devStatus !== COMPLETED_STATUS,
+            ).length;
+            const devDone = devItems.length - devOpen;
+            const commercialActive = commercialItems.filter(
+              (item) => item.ticket.status === 'active',
+            ).length;
+            const commercialDone = commercialItems.filter(
+              (item) => item.ticket.status === 'done',
+            ).length;
+            const sortedItems = [...group.items].sort((left, right) => {
+              const leftTime =
+                left.kind === 'dev'
+                  ? getLibrarySortTime(left.ticket)
+                  : parseImportedTimestamp(
+                      left.ticket.updatedAt ?? left.ticket.createdAt,
+                    );
+              const rightTime =
+                right.kind === 'dev'
+                  ? getLibrarySortTime(right.ticket)
+                  : parseImportedTimestamp(
+                      right.ticket.updatedAt ?? right.ticket.createdAt,
+                    );
+              return rightTime - leftTime;
+            });
 
-          {filteredInstanceGroups.length ? (
-            <div className="flex flex-col gap-[10px]">
-              {filteredInstanceGroups.map((group) => {
-                const isOpen = Boolean(expandedInstances[group.key]);
-                const commercialItems = group.items.filter(
-                  (item): item is Extract<InstanceItem, { kind: 'implantacao' }> =>
-                    item.kind === 'implantacao',
-                );
-                const devItems = group.items.filter(
-                  (item): item is Extract<InstanceItem, { kind: 'dev' }> => item.kind === 'dev',
-                );
-                const totalSetup = commercialItems.reduce(
-                  (sum, item) => sum + sumSetup(item.ticket),
-                  0,
-                );
-                const devOpen = devItems.filter(
-                  (item) => item.ticket.devStatus !== COMPLETED_STATUS,
-                ).length;
-                const devDone = devItems.length - devOpen;
-                const commercialActive = commercialItems.filter(
-                  (item) => item.ticket.status === 'active',
-                ).length;
-                const commercialDone = commercialItems.filter(
-                  (item) => item.ticket.status === 'done',
-                ).length;
-                const sortedItems = [...group.items].sort((left, right) => {
-                  const leftTime =
-                    left.kind === 'dev'
-                      ? getLibrarySortTime(left.ticket)
-                      : parseImportedTimestamp(left.ticket.updatedAt ?? left.ticket.createdAt);
-                  const rightTime =
-                    right.kind === 'dev'
-                      ? getLibrarySortTime(right.ticket)
-                      : parseImportedTimestamp(right.ticket.updatedAt ?? right.ticket.createdAt);
-
-                  return rightTime - leftTime;
-                });
-
-                return (
-                  <div
-                    key={group.key}
-                    className="overflow-hidden rounded-[12px] border border-[#e2e8f0] bg-white"
-                  >
-                    <button
-                      type="button"
-                      onClick={() => toggleInstance(group.key)}
-                      className="flex w-full items-center gap-[14px] px-4 py-[14px] text-left"
-                    >
-                      <div className="flex size-[42px] shrink-0 items-center justify-center rounded-[10px] bg-[#2563eb] text-white">
-                        <Building2 className="size-5" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="mb-0.5 text-[15px] font-bold text-[#0f172a]">{group.name}</div>
-                        <div className="flex flex-wrap gap-x-3 gap-y-1 text-[12px] text-[#64748b]">
-                          {commercialItems.length ? (
-                            <span>
-                              {commercialItems.length} comercial ({commercialActive} ativo · {commercialDone} concluído)
-                            </span>
-                          ) : null}
-                          {devItems.length ? (
-                            <span>{devItems.length} dev ({devOpen} aberto · {devDone} concluído)</span>
-                          ) : null}
-                          {!group.items.length && group.importedInfo?.cnpj ? (
-                            <span>CNPJ: {group.importedInfo.cnpj}</span>
-                          ) : null}
-                        </div>
-                      </div>
-                      <div className="shrink-0 text-right">
-                        {commercialItems.length ? (
-                          <div className="text-[12px] text-[#64748b]">
-                            Setup: <strong className="text-[#0f172a]">R$ {totalSetup.toLocaleString('pt-BR')}</strong>
-                          </div>
-                        ) : null}
-                      </div>
-                      <span className="ml-2 text-[18px] text-[#94a3b8]">{isOpen ? '⌄' : '›'}</span>
-                    </button>
-
-                    {isOpen ? (
-                      <div className="border-t border-[#e2e8f0] px-4 py-2">
-                        {sortedItems.length ? (
-                          sortedItems.map((item) => {
-                            if (item.kind === 'dev') {
-                              const ticket = item.ticket;
-                              const responsible = usersById[ticket.resp];
-
-                              return (
-                                <button
-                                  key={`dev-${ticket.id}`}
-                                  type="button"
-                                  onClick={() => setSelectedTicketId(ticket.id)}
-                                  className="flex w-full items-start gap-3 border-b border-[#e2e8f0] py-3 text-left last:border-b-0"
-                                >
-                                  <div
-                                    className={cn(
-                                      'mt-1 min-h-10 w-[3px] shrink-0 rounded-full',
-                                      ticket.devStatus === COMPLETED_STATUS
-                                        ? 'bg-[#16a34a]'
-                                        : ticket.devType === 'Bug'
-                                          ? 'bg-[#dc2626]'
-                                          : 'bg-[#7c3aed]',
-                                    )}
-                                  />
-                                  <div className="min-w-0 flex-1">
-                                    <div className="mb-1 flex flex-wrap items-center gap-1.5">
-                                      <span className="font-mono text-[11px] font-bold text-[#7c3aed]">{ticket.proto}</span>
-                                      <Badge className="border-[#ddd6fe] bg-[#f5f3ff] text-[#7c3aed]">Dev</Badge>
-                                      <Badge className={getTypeBadgeClass(ticket.devType)}>{ticket.devType}</Badge>
-                                      <Badge className={getStatusBadgeClass(ticket.devStatus)}>{ticket.devStatus}</Badge>
-                                    </div>
-                                    <div className="mb-0.5 text-[13px] font-semibold text-[#0f172a]">{ticket.title}</div>
-                                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-[#64748b]">
-                                      <span>{formatLibraryDate(ticket.updatedAt ?? ticket.createdAt)}</span>
-                                      {responsible ? <span>{responsible.name}</span> : null}
-                                      {ticket.deadline ? <span>Prazo: {formatDate(ticket.deadline)}</span> : null}
-                                      {ticket.category ? <span>{ticket.category}</span> : null}
-                                    </div>
-                                  </div>
-                                  <span className="shrink-0 pt-0.5 text-[13px] text-[#7c3aed]">ver →</span>
-                                </button>
-                              );
-                            }
-
-                            const ticket = item.ticket;
-
-                            return (
-                              <button
-                                key={`implantacao-${ticket.id}`}
-                                type="button"
-                                onClick={() => setSelectedCommercialTicketId(ticket.id)}
-                                className="flex w-full items-start gap-3 border-b border-[#e2e8f0] py-3 text-left last:border-b-0"
-                              >
-                                <div
-                                  className={cn(
-                                    'mt-1 min-h-10 w-[3px] shrink-0 rounded-full',
-                                    ticket.status === 'done' ? 'bg-[#16a34a]' : 'bg-[#2563eb]',
-                                  )}
-                                />
-                                <div className="min-w-0 flex-1">
-                                  <div className="mb-1 flex flex-wrap items-center gap-1.5">
-                                    <span className="font-mono text-[11px] font-bold text-[#2563eb]">{ticket.proto}</span>
-                                    <Badge className="border-[#bfdbfe] bg-[#eff6ff] text-[#1d4ed8]">Comercial</Badge>
-                                    <Badge className={ticket.status === 'done' ? 'border-[#a7f3d0] bg-[#ecfdf5] text-[#059669]' : 'border-[#ddd6fe] bg-[#f5f3ff] text-[#7c3aed]'}>
-                                      {ticket.status === 'done' ? 'Concluído' : 'Em implantação'}
-                                    </Badge>
-                                    <Badge className={ticket.tipo === 'inclusao' ? 'border-[#ddd6fe] bg-[#f5f3ff] text-[#7c3aed]' : 'border-[#bfdbfe] bg-[#eff6ff] text-[#2563eb]'}>
-                                      {ticket.tipo === 'inclusao' ? 'Upsell' : 'Novo'}
-                                    </Badge>
-                                  </div>
-                                  <div className="mb-0.5 text-[13px] font-semibold text-[#0f172a]">{ticket.nome}</div>
-                                  <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-[#64748b]">
-                                    <span>{formatDate(ticket.updatedAt ?? ticket.createdAt)}</span>
-                                    <span>{ticket.respSolicitacao}</span>
-                                    <span>{getTechNameById(ticket.respTec)}</span>
-                                    <span>Setup: R$ {sumSetup(ticket).toLocaleString('pt-BR')}</span>
-                                  </div>
-                                </div>
-                                <span className="shrink-0 pt-0.5 text-[13px] text-[#2563eb]">ver →</span>
-                              </button>
-                            );
-                          })
-                        ) : (
-                          <div className="py-4 text-[13px] text-[#64748b]">
-                            Instância importada sem registros vinculados no momento.
-                            {group.importedInfo?.cnpj ? ` CNPJ: ${group.importedInfo.cnpj}` : ''}
-                          </div>
-                        )}
+            return (
+              <div
+                key={group.key}
+                className="overflow-hidden rounded-[12px] border border-[#e2e8f0] bg-white shadow-sm transition-all hover:shadow-md"
+              >
+                <button
+                  type="button"
+                  onClick={() => toggleInstance(group.key)}
+                  className="flex w-full items-center gap-[14px] px-4 py-3 text-left hover:bg-[#f8fafc]"
+                >
+                  <div className="flex size-[42px] shrink-0 items-center justify-center rounded-[10px] bg-[#eff6ff] text-[#2563eb] border border-[#bfdbfe]">
+                    <Building2 className="size-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-0.5 text-[14px] font-bold text-[#0f172a]">
+                      {group.name}
+                    </div>
+                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-[12px] text-[#64748b]">
+                      {commercialItems.length ? (
+                        <span>
+                          {commercialItems.length} comercial ({commercialActive}{' '}
+                          ativo · {commercialDone} concluído)
+                        </span>
+                      ) : null}
+                      {devItems.length ? (
+                        <span>
+                          {devItems.length} dev ({devOpen} aberto · {devDone}{' '}
+                          concluído)
+                        </span>
+                      ) : null}
+                      {!group.items.length && group.importedInfo?.cnpj ? (
+                        <span>CNPJ: {group.importedInfo.cnpj}</span>
+                      ) : null}
+                    </div>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    {commercialItems.length ? (
+                      <div className="text-[12px] text-[#64748b]">
+                        Setup:{' '}
+                        <strong className="text-[#0f172a]">
+                          R$ {totalSetup.toLocaleString('pt-BR')}
+                        </strong>
                       </div>
                     ) : null}
                   </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="rounded-[10px] border border-dashed border-[#cbd5e1] bg-white px-6 py-10 text-center">
-              <div className="inline-flex size-14 items-center justify-center rounded-full bg-[#eff6ff] text-[#2563eb]">
-                <Building2 className="size-7" />
+                  <span className="ml-2 text-[18px] text-[#94a3b8]">
+                    {isOpen ? '⌄' : '›'}
+                  </span>
+                </button>
+
+                {isOpen ? (
+                  <div className="border-t border-[#e2e8f0] px-4 py-2 bg-[#f8fafc]">
+                    {sortedItems.length ? (
+                      sortedItems.map((item) => {
+                        if (item.kind === 'dev') {
+                          const ticket = item.ticket;
+                          const responsible = usersById[ticket.resp];
+                          return (
+                            <button
+                              key={`dev-${ticket.id}`}
+                              type="button"
+                              onClick={() => setSelectedTicketId(ticket.id)}
+                              className="group flex w-full items-start gap-3 border-b border-[#e2e8f0] py-3 text-left last:border-b-0 hover:bg-white rounded-md px-2 -mx-2 transition-colors"
+                            >
+                              <div
+                                className={cn(
+                                  'mt-1 min-h-[36px] w-[3px] shrink-0 rounded-full',
+                                  ticket.devStatus === COMPLETED_STATUS
+                                    ? 'bg-[#16a34a]'
+                                    : ticket.devType === 'Bug'
+                                      ? 'bg-[#dc2626]'
+                                      : 'bg-[#7c3aed]',
+                                )}
+                              />
+                              <div className="min-w-0 flex-1">
+                                <div className="mb-1 flex flex-wrap items-center gap-1.5">
+                                  <span className="font-mono text-[11px] font-bold text-[#7c3aed]">
+                                    {ticket.proto}
+                                  </span>
+                                  <Badge className="border-[#ddd6fe] bg-[#f5f3ff] text-[#7c3aed]">
+                                    Dev
+                                  </Badge>
+                                  <Badge
+                                    className={getTypeBadgeClass(
+                                      ticket.devType,
+                                    )}
+                                  >
+                                    {ticket.devType}
+                                  </Badge>
+                                  <Badge
+                                    className={getStatusBadgeClass(
+                                      ticket.devStatus,
+                                    )}
+                                  >
+                                    {ticket.devStatus}
+                                  </Badge>
+                                </div>
+                                <div className="mb-0.5 text-[13px] font-semibold text-[#0f172a] group-hover:text-[#2563eb]">
+                                  {ticket.title}
+                                </div>
+                                <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-[#64748b]">
+                                  <span>
+                                    {formatLibraryDate(
+                                      ticket.updatedAt ?? ticket.createdAt,
+                                    )}
+                                  </span>
+                                  {responsible ? (
+                                    <span>{responsible.name}</span>
+                                  ) : null}
+                                  {ticket.deadline ? (
+                                    <span>
+                                      Prazo: {formatDate(ticket.deadline)}
+                                    </span>
+                                  ) : null}
+                                </div>
+                              </div>
+                              <span className="shrink-0 pt-0.5 text-[13px] font-semibold text-[#7c3aed] opacity-0 group-hover:opacity-100 transition-opacity">
+                                ver →
+                              </span>
+                            </button>
+                          );
+                        }
+                        const ticket = item.ticket;
+                        return (
+                          <button
+                            key={`implantacao-${ticket.id}`}
+                            type="button"
+                            onClick={() =>
+                              setSelectedCommercialTicketId(ticket.id)
+                            }
+                            className="group flex w-full items-start gap-3 border-b border-[#e2e8f0] py-3 text-left last:border-b-0 hover:bg-white rounded-md px-2 -mx-2 transition-colors"
+                          >
+                            <div
+                              className={cn(
+                                'mt-1 min-h-[36px] w-[3px] shrink-0 rounded-full',
+                                ticket.status === 'done'
+                                  ? 'bg-[#16a34a]'
+                                  : 'bg-[#2563eb]',
+                              )}
+                            />
+                            <div className="min-w-0 flex-1">
+                              <div className="mb-1 flex flex-wrap items-center gap-1.5">
+                                <span className="font-mono text-[11px] font-bold text-[#2563eb]">
+                                  {ticket.proto}
+                                </span>
+                                <Badge className="border-[#bfdbfe] bg-[#eff6ff] text-[#1d4ed8]">
+                                  Comercial
+                                </Badge>
+                                <Badge
+                                  className={
+                                    ticket.status === 'done'
+                                      ? 'border-[#a7f3d0] bg-[#ecfdf5] text-[#059669]'
+                                      : 'border-[#ddd6fe] bg-[#f5f3ff] text-[#7c3aed]'
+                                  }
+                                >
+                                  {ticket.status === 'done'
+                                    ? 'Concluído'
+                                    : 'Em implantação'}
+                                </Badge>
+                              </div>
+                              <div className="mb-0.5 text-[13px] font-semibold text-[#0f172a] group-hover:text-[#2563eb]">
+                                {ticket.nome}
+                              </div>
+                              <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-[#64748b]">
+                                <span>
+                                  {formatDate(
+                                    ticket.updatedAt ?? ticket.createdAt,
+                                  )}
+                                </span>
+                                <span>{ticket.respSolicitacao}</span>
+                                <span>{getTechNameById(ticket.respTec)}</span>
+                              </div>
+                            </div>
+                            <span className="shrink-0 pt-0.5 text-[13px] font-semibold text-[#2563eb] opacity-0 group-hover:opacity-100 transition-opacity">
+                              ver →
+                            </span>
+                          </button>
+                        );
+                      })
+                    ) : (
+                      <div className="py-4 text-[13px] text-[#64748b]">
+                        Instância importada sem registros vinculados no momento.
+                        {group.importedInfo?.cnpj
+                          ? ` CNPJ: ${group.importedInfo.cnpj}`
+                          : ''}
+                      </div>
+                    )}
+                  </div>
+                ) : null}
               </div>
-              <div className="mt-3 text-[14px] font-semibold text-[#0f172a]">Nenhuma instância encontrada</div>
-              <div className="mt-1 text-[12px] text-[#64748b]">
-                {query
-                  ? 'Tente outro termo de busca.'
-                  : 'Crie tickets com o campo de instância preenchido ou importe uma lista.'}
-              </div>
-            </div>
-          )}
+            );
+          })}
         </div>
-      </div>
+      ) : (
+        <div className="rounded-[12px] border border-dashed border-[#cbd5e1] bg-white px-6 py-12 text-center shadow-sm">
+          <div className="inline-flex size-14 items-center justify-center rounded-full bg-[#eff6ff] text-[#2563eb]">
+            <Building2 className="size-7" />
+          </div>
+          <div className="mt-3 text-[15px] font-bold text-[#0f172a]">
+            Nenhuma instância encontrada
+          </div>
+          <div className="mt-1 text-[13px] text-[#64748b]">
+            {query
+              ? 'Tente outro termo de busca.'
+              : 'Crie tickets ou importe uma lista de instâncias.'}
+          </div>
+        </div>
+      )}
+
       <ModalShell
         open={Boolean(selectedTicket)}
         title={selectedTicket?.title ?? 'Detalhes do ticket'}
         description={
           selectedTicket
-            ? `${selectedTicket.proto} Â· ${selectedTicket.devType} Â· ${selectedTicket.devStatus} Â· Score ${selectedTicket.score}/15`
+            ? `${selectedTicket.proto} · ${selectedTicket.devType} · ${selectedTicket.devStatus} · Score ${selectedTicket.score}/15`
             : undefined
         }
         maxWidthClassName="max-w-[760px]"
@@ -1221,50 +1257,75 @@ export function InstancesLibraryPage() {
         }}
         footer={
           selectedTicket ? (
-            <>
-              <ToolbarButton onClick={() => setSelectedTicketId(null)}>Fechar</ToolbarButton>
-              <ToolbarButton onClick={() => setTagPickerTicketId(selectedTicket.id)}>
-                Etiquetas
-              </ToolbarButton>
-              <ToolbarButton onClick={() => openDeadlineModal(selectedTicket.id)}>
-                Alterar Prazo
-              </ToolbarButton>
-              <button
-                type="button"
-                onClick={handleDeleteSelectedTicket}
-                className="rounded-[8px] border border-[#fecaca] px-4 py-[10px] text-[13px] font-semibold text-[#dc2626] transition-colors hover:bg-[#fef2f2]"
-              >
-                Excluir
-              </button>
-              <ToolbarButton
-                onClick={() => {
-                  openEditModal(selectedTicket);
-                  setSelectedTicketId(null);
-                }}
-              >
-                Editar
-              </ToolbarButton>
-              <select
-                value={selectedTicket.devStatus}
-                onChange={(event) => moveTicket(selectedTicket.id, event.target.value as DevStatus)}
-                className="w-auto rounded-[7px] border-[1.5px] border-[#e2e8f0] bg-white px-[10px] py-[7px] text-[12px] text-[#0f172a] outline-none focus:border-[#2563eb]"
-              >
-                {ALL_DEV_STATUSES.map((status) => (
-                  <option key={status} value={status}>
-                    {status}
-                  </option>
-                ))}
-              </select>
-              {selectedTicket.devStatus !== COMPLETED_STATUS ? (
+            <div className="flex w-full items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={handleConcludeSelectedTicket}
-                  className="rounded-[8px] bg-[#16a34a] px-4 py-[10px] text-[13px] font-semibold text-white transition-colors hover:bg-[#15803d]"
+                  onClick={() => setSelectedTicketId(null)}
+                  className="h-9 rounded-[8px] border border-[#e2e8f0] bg-white px-4 text-[13px] font-semibold text-[#64748b] hover:bg-[#f8fafc]"
                 >
-                  Concluir
+                  Fechar
                 </button>
-              ) : null}
-            </>
+                <button
+                  type="button"
+                  onClick={() => setTagPickerTicketId(selectedTicket.id)}
+                  className="h-9 rounded-[8px] border border-[#e2e8f0] bg-white px-4 text-[13px] font-semibold text-[#0f172a] hover:bg-[#f8fafc]"
+                >
+                  Etiquetas
+                </button>
+                <button
+                  type="button"
+                  onClick={() => openDeadlineModal(selectedTicket.id)}
+                  className="h-9 rounded-[8px] border border-[#e2e8f0] bg-white px-4 text-[13px] font-semibold text-[#0f172a] hover:bg-[#f8fafc]"
+                >
+                  Alterar Prazo
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteSelectedTicket}
+                  className="h-9 rounded-[8px] border border-[#fecaca] bg-white px-4 text-[13px] font-semibold text-[#dc2626] hover:bg-[#fef2f2]"
+                >
+                  Excluir
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    openEditModal(selectedTicket);
+                    setSelectedTicketId(null);
+                  }}
+                  className="h-9 rounded-[8px] border border-[#e2e8f0] bg-white px-4 text-[13px] font-semibold text-[#0f172a] hover:bg-[#f8fafc]"
+                >
+                  Editar
+                </button>
+                <select
+                  value={selectedTicket.devStatus}
+                  onChange={(event) =>
+                    moveTicket(
+                      selectedTicket.id,
+                      event.target.value as DevStatus,
+                    )
+                  }
+                  className="h-9 rounded-[6px] border border-[#e2e8f0] bg-white px-3 text-[13px] font-semibold text-[#0f172a] outline-none focus:border-[#2563eb]"
+                >
+                  {ALL_DEV_STATUSES.map((status) => (
+                    <option key={status} value={status}>
+                      {status}
+                    </option>
+                  ))}
+                </select>
+                {selectedTicket.devStatus !== COMPLETED_STATUS ? (
+                  <button
+                    type="button"
+                    onClick={handleConcludeSelectedTicket}
+                    className="h-9 rounded-[8px] bg-[#10b981] px-4 text-[13px] font-semibold text-white hover:bg-[#059669]"
+                  >
+                    Concluir
+                  </button>
+                ) : null}
+              </div>
+            </div>
           ) : null
         }
       >
@@ -1286,273 +1347,166 @@ export function InstancesLibraryPage() {
               </div>
             ) : null}
 
-            <div className="rounded-[12px] border border-[#d7dfeb] bg-[#f8fafc] p-4">
+            <div className="rounded-[10px] border border-[#e2e8f0] bg-white p-4 shadow-sm">
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-3">
                   <span className="text-[11px] font-bold tracking-[.12em] text-[#64748b] uppercase">
                     Protocolo
                   </span>
-                  <span className="font-mono text-[15px] font-extrabold tracking-[.04em] text-[#2563eb]">
+                  <span className="font-mono text-[14px] font-extrabold tracking-[.04em] text-[#2563eb]">
                     {selectedTicket.proto}
                   </span>
                   <button
                     type="button"
-                    onClick={() => navigator.clipboard?.writeText(selectedTicket.proto)}
-                    className="inline-flex size-8 items-center justify-center rounded-[8px] border border-[#d7dfeb] bg-white text-[#64748b]"
+                    onClick={() =>
+                      navigator.clipboard?.writeText(selectedTicket.proto)
+                    }
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] text-[#64748b] hover:bg-[#f1f5f9]"
                   >
                     <Copy className="size-4" />
                   </button>
                 </div>
-
                 <div className="flex flex-wrap gap-2">
                   <Badge className={getTypeBadgeClass(selectedTicket.devType)}>
                     {selectedTicket.devType}
                   </Badge>
-                  <Badge className={getPriority(selectedTicket.score).badgeClassName}>
+                  <Badge
+                    className={getPriority(selectedTicket.score).badgeClassName}
+                  >
                     {getPriority(selectedTicket.score).label}
                   </Badge>
-                  <Badge className={getStatusBadgeClass(selectedTicket.devStatus)}>
+                  <Badge
+                    className={getStatusBadgeClass(selectedTicket.devStatus)}
+                  >
                     {selectedTicket.devStatus}
-                  </Badge>
-                  {selectedTicket.protoExt ? (
-                    <Badge className="border-[#fde68a] bg-[#fffbeb] text-[#92400e]">
-                      Ext: {selectedTicket.protoExt}
-                    </Badge>
-                  ) : null}
-                  <Badge className="border-[#d7dfeb] bg-white text-[#334155]">
-                    {selectedTicket.proto}
                   </Badge>
                 </div>
               </div>
             </div>
 
             <div className="grid gap-[9px] md:grid-cols-2">
-              <div className="rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] px-3 py-[10px]">
-                <div className="mb-1 text-[10px] font-bold tracking-[.07em] text-[#64748b] uppercase">
-                  Score
-                </div>
-                <div className={cn('text-[20px] font-extrabold', getPriority(selectedTicket.score).scoreClassName)}>
+              <div className="rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] p-3">
+                <FormLabel>Score</FormLabel>
+                <div
+                  className={cn(
+                    'text-[16px] font-extrabold',
+                    getPriority(selectedTicket.score).scoreClassName,
+                  )}
+                >
                   {selectedTicket.score}
-                  <span className="ml-1 text-[11px] font-normal text-[#64748b]">/15</span>
+                  <span className="ml-1 text-[11px] font-normal text-[#64748b]">
+                    /15
+                  </span>
                 </div>
               </div>
-
-              <div className="rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] px-3 py-[10px]">
-                <div className="mb-1 text-[10px] font-bold tracking-[.07em] text-[#64748b] uppercase">
-                  Categoria
+              <div className="rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] p-3">
+                <FormLabel>Categoria</FormLabel>
+                <div className="text-[13px] font-semibold text-[#0f172a]">
+                  {selectedTicket.category}
                 </div>
-                <div className="text-[13px] font-semibold text-[#0f172a]">{selectedTicket.category}</div>
               </div>
-
-              <div className="rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] px-3 py-[10px]">
-                <div className="mb-1 text-[10px] font-bold tracking-[.07em] text-[#64748b] uppercase">
-                  ResponsÃ¡vel
-                </div>
+              <div className="rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] p-3">
+                <FormLabel>Responsável</FormLabel>
                 <div className="text-[13px] font-semibold text-[#0f172a]">
                   {usersById[selectedTicket.resp]?.name ?? '-'}
                 </div>
               </div>
-
-              <div className="rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] px-3 py-[10px]">
-                <div className="mb-1 text-[10px] font-bold tracking-[.07em] text-[#64748b] uppercase">
-                  Criado por
-                </div>
+              <div className="rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] p-3">
+                <FormLabel>Início / Entrega</FormLabel>
                 <div className="text-[13px] font-semibold text-[#0f172a]">
-                  {usersById[selectedTicket.createdBy]?.name ?? '-'}
+                  {formatDate(selectedTicket.startDate)} →{' '}
+                  {formatDate(selectedTicket.deadline)}
                 </div>
               </div>
-
-              <div className="rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] px-3 py-[10px]">
-                <div className="mb-1 text-[10px] font-bold tracking-[.07em] text-[#64748b] uppercase">
-                  InÃ­cio / Entrega
-                </div>
-                <div className="text-[13px] font-semibold text-[#0f172a]">
-                  {formatDate(selectedTicket.startDate)} â†’ {formatDate(selectedTicket.deadline)}
-                </div>
-              </div>
-
-              <div className="rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] px-3 py-[10px]">
-                <div className="mb-1 text-[10px] font-bold tracking-[.07em] text-[#64748b] uppercase">
-                  Cliente
-                </div>
+              <div className="rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] p-3">
+                <FormLabel>Cliente</FormLabel>
                 <div className="text-[13px] font-semibold text-[#0f172a]">
                   {selectedTicket.clientName || '-'}
                 </div>
               </div>
-
-              {selectedTicket.protoExt ? (
-                <div className="rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] px-3 py-[10px]">
-                  <div className="mb-1 text-[10px] font-bold tracking-[.07em] text-[#64748b] uppercase">
-                    Protocolo Habilis/Meta
-                  </div>
+              {selectedTicket.protoExt && (
+                <div className="rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] p-3">
+                  <FormLabel>Ext.</FormLabel>
                   <div className="font-mono text-[13px] font-semibold text-[#92400e]">
                     {selectedTicket.protoExt}
                   </div>
                 </div>
-              ) : null}
-
-              {selectedTicket.instance ? (
-                <div className="rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] px-3 py-[10px]">
-                  <div className="mb-1 text-[10px] font-bold tracking-[.07em] text-[#64748b] uppercase">
-                    InstÃ¢ncia
-                  </div>
+              )}
+              {selectedTicket.instance && (
+                <div className="rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] p-3">
+                  <FormLabel>Instância</FormLabel>
                   <div className="text-[13px] font-semibold text-[#0f172a]">
                     {selectedTicket.instance}
                   </div>
                 </div>
-              ) : null}
-
-              {selectedTicket.sprintId ? (
-                <div className="rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] px-3 py-[10px]">
-                  <div className="mb-1 text-[10px] font-bold tracking-[.07em] text-[#64748b] uppercase">
-                    Sprint
-                  </div>
+              )}
+              {selectedTicket.sprintId && (
+                <div className="rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] p-3">
+                  <FormLabel>Sprint</FormLabel>
                   <div className="text-[13px] font-semibold text-[#0f172a]">
                     {sprintsById[selectedTicket.sprintId]?.name ?? '-'}
                   </div>
                 </div>
-              ) : null}
-
-              {selectedTicket.cnpj ? (
-                <div className="rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] px-3 py-[10px]">
-                  <div className="mb-1 text-[10px] font-bold tracking-[.07em] text-[#64748b] uppercase">
-                    CNPJ
-                  </div>
-                  <div className="text-[13px] font-semibold text-[#0f172a]">
-                    {selectedTicket.cnpj}
-                  </div>
-                </div>
-              ) : null}
-
-              {selectedTicket.clientPhone ? (
-                <div className="rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] px-3 py-[10px]">
-                  <div className="mb-1 text-[10px] font-bold tracking-[.07em] text-[#64748b] uppercase">
-                    Tel.
-                  </div>
-                  <div className="text-[13px] font-semibold text-[#0f172a]">
-                    {selectedTicket.clientPhone}
-                  </div>
-                </div>
-              ) : null}
+              )}
             </div>
 
             {selectedTicket.parentId && epicMap[selectedTicket.parentId] ? (
-              <div className="rounded-[8px] border border-[#ddd6fe] bg-[#f5f3ff] px-3 py-[10px]">
-                <div className="mb-1 text-[10px] font-bold tracking-[.07em] text-[#7c3aed] uppercase">
-                  Epic vinculada
-                </div>
+              <div className="rounded-[8px] border border-[#ddd6fe] bg-[#f5f3ff] p-3">
+                <FormLabel>Epic vinculada</FormLabel>
                 <div className="text-[13px] font-semibold text-[#5b21b6]">
                   {epicMap[selectedTicket.parentId]}
                 </div>
               </div>
             ) : null}
 
-            <div className="rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] px-3 py-[10px]">
-              <div className="mb-1 text-[10px] font-bold tracking-[.07em] text-[#64748b] uppercase">
-                DescriÃ§Ã£o
-              </div>
+            <div className="rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] p-3">
+              <FormLabel>Descrição</FormLabel>
               <p className="whitespace-pre-wrap text-[13px] leading-6 text-[#475569]">
-                {selectedTicket.description || 'Sem descriÃ§Ã£o informada.'}
+                {selectedTicket.description || 'Sem descrição informada.'}
               </p>
             </div>
 
-            <div>
-              <div className="mb-2 text-[14px] font-bold text-[#0f172a]">CritÃ©rios</div>
-              <div className="grid gap-[8px] sm:grid-cols-2 lg:grid-cols-5">
-                {[
-                  ['Impacto', selectedTicket.criteria.imp],
-                  ['Risco', selectedTicket.criteria.ris],
-                  ['Freq.', selectedTicket.criteria.fre],
-                  ['EsforÃ§o', selectedTicket.criteria.esf],
-                  ['DÃ©bito', selectedTicket.criteria.deb],
-                ].map(([label, value]) => (
-                  <div
-                    key={label}
-                    className="rounded-[8px] border border-[#d7dfeb] bg-[#f8fafc] px-3 py-4 text-center"
-                  >
-                    <div className="text-[30px] font-extrabold leading-none text-[#2563eb]">
-                      {value}
-                    </div>
-                    <div className="mt-1 text-[12px] text-[#64748b]">{label}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <div className="mb-2 border-b border-[#e2e8f0] pb-2 text-[14px] font-bold text-[#0f172a]">
-                HistÃ³rico
-              </div>
-              {selectedTicket.history.length ? (
-                <div className="space-y-3">
-                  {[...selectedTicket.history].reverse().map((item) => (
-                    <div key={item.id} className="flex gap-3">
-                      <span className="mt-[7px] size-[8px] shrink-0 rounded-full bg-[#2563eb]" />
-                      <div className="min-w-0">
-                        <div className="text-[13px] text-[#0f172a]">
-                          <span className="font-semibold">{item.user}</span> {item.message}
-                        </div>
-                        <div className="text-[12px] text-[#64748b]">{item.createdAt}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="rounded-[10px] border border-dashed border-[#cbd5e1] bg-[#f8fafc] px-4 py-6 text-center text-[13px] text-[#64748b]">
-                  Nenhum histÃ³rico registrado.
-                </div>
-              )}
-
-            </div>
-
-            <div className="rounded-[12px] border border-[#e2e8f0] bg-white p-4">
+            <div className="rounded-[10px] border border-[#e2e8f0] bg-white p-4 shadow-sm">
               <div className="mb-3 inline-flex items-center gap-2 text-[12px] font-bold text-[#0f172a]">
-                <MessageSquareText className="size-4" />
-                ComentÃ¡rios
-                <span className="inline-flex min-w-6 items-center justify-center rounded-full border border-[#bfdbfe] bg-[#eff6ff] px-1.5 py-[2px] text-[10px] font-bold text-[#2563eb]">
-                  {selectedTicket.comments.length}
-                </span>
+                <MessageSquareText className="size-4" /> Comentários
               </div>
-
               {selectedTicket.comments.length ? (
-                <div className="space-y-2">
+                <div className="space-y-3 mb-4">
                   {selectedTicket.comments.map((comment) => (
                     <div
                       key={comment.id}
-                      className="rounded-[10px] border border-[#e2e8f0] bg-[#f8fafc] px-3 py-3"
+                      className="rounded-[8px] border border-[#f1f5f9] bg-[#f8fafc] p-3"
                     >
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div className="text-[13px] font-semibold text-[#0f172a]">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[13px] font-semibold text-[#0f172a]">
                           {comment.author}
-                        </div>
-                        <div className="text-[11px] text-[#64748b]">{comment.createdAt}</div>
+                        </span>
+                        <span className="text-[11px] text-[#64748b]">
+                          {comment.createdAt}
+                        </span>
                       </div>
-                      <div className="mt-1 whitespace-pre-wrap text-[13px] leading-6 text-[#475569]">
+                      <div className="whitespace-pre-wrap text-[13px] leading-6 text-[#475569]">
                         {comment.message}
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="rounded-[10px] border border-dashed border-[#cbd5e1] bg-[#f8fafc] px-4 py-6 text-center text-[13px] text-[#64748b]">
-                  Nenhum comentÃ¡rio registrado.
+                <div className="mb-4 rounded-[8px] border border-dashed border-[#cbd5e1] py-6 text-center text-[13px] text-[#64748b]">
+                  Nenhum comentário registrado.
                 </div>
               )}
-
-              <div className="mt-4 flex items-center gap-3">
-                <div className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-[#2563eb] text-[12px] font-bold text-white">
-                  {getInitials(currentUser?.name ?? 'UsuÃ¡rio')}
-                </div>
+              <div className="flex items-center gap-2">
                 <input
                   value={commentDraft}
-                  onChange={(event) => setCommentDraft(event.target.value)}
-                  placeholder="ComentÃ¡rio..."
-                  className="h-[42px] flex-1 rounded-[8px] border border-[#d7dfeb] bg-[#f8fafc] px-3 text-[13px] text-[#0f172a] outline-none transition-colors focus:border-[#2563eb]"
+                  onChange={(e) => setCommentDraft(e.target.value)}
+                  placeholder="Adicione um comentário..."
+                  className="h-9 flex-1 rounded-[6px] border border-[#e2e8f0] bg-[#f8fafc] px-3 text-[13px] outline-none focus:border-[#2563eb] focus:bg-white"
                 />
                 <button
                   type="button"
                   onClick={handleAddComment}
-                  className="rounded-[8px] bg-[#2563eb] px-4 py-[10px] text-[13px] font-semibold text-white transition-colors hover:bg-[#1d4ed8]"
+                  className="h-9 rounded-[8px] bg-[#2563eb] px-4 text-[13px] font-semibold text-white hover:bg-[#1d4ed8]"
                 >
                   Enviar
                 </button>
@@ -1565,39 +1519,48 @@ export function InstancesLibraryPage() {
       <ModalShell
         open={Boolean(selectedTagTicket)}
         title="Etiquetas"
-        description={
-          selectedTagTicket
-            ? `Gerencie as etiquetas do ticket ${selectedTagTicket.proto}.`
-            : undefined
-        }
-        maxWidthClassName="max-w-[520px]"
+        maxWidthClassName="max-w-[420px]"
         onClose={() => setTagPickerTicketId(null)}
-        footer={<ToolbarButton onClick={() => setTagPickerTicketId(null)}>Fechar</ToolbarButton>}
+        footer={
+          <button
+            type="button"
+            onClick={() => setTagPickerTicketId(null)}
+            className="h-9 rounded-[8px] border border-[#e2e8f0] bg-white px-4 text-[13px] font-semibold text-[#64748b] hover:bg-[#f8fafc]"
+          >
+            Fechar
+          </button>
+        }
       >
         {selectedTagTicket ? (
-          <div className="grid gap-3">
+          <div className="grid gap-2">
             {DEV_TAGS.map((tag) => {
               const active = selectedTagTicket.tags.includes(tag.id);
-
               return (
                 <button
                   key={tag.id}
                   type="button"
                   onClick={() => toggleTag(selectedTagTicket.id, tag.id)}
                   className={cn(
-                    'flex items-center justify-between rounded-[10px] border px-4 py-3 text-left transition-colors',
+                    'flex items-center justify-between rounded-[8px] border p-3 transition-colors',
                     active
                       ? 'border-[#2563eb] bg-[#eff6ff]'
-                      : 'border-[#e2e8f0] bg-[#f8fafc] hover:border-[#bfdbfe]',
+                      : 'border-[#e2e8f0] bg-white hover:border-[#bfdbfe]',
                   )}
                 >
                   <div className="flex items-center gap-3">
-                    <span className="size-3 rounded-full" style={{ backgroundColor: tag.color }} />
-                    <span className="text-[13px] font-semibold text-[#0f172a]">{tag.name}</span>
+                    <span
+                      className="size-3 rounded-full"
+                      style={{ backgroundColor: tag.color }}
+                    />
+                    <span className="text-[13px] font-semibold text-[#0f172a]">
+                      {tag.name}
+                    </span>
                   </div>
-                  <span className="text-[12px] font-semibold text-[#2563eb]">
-                    {active ? 'Selecionada' : 'Adicionar'}
-                  </span>
+                  {active && (
+                    <span className="text-[12px] font-semibold text-[#2563eb]">
+                      Selecionada
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -1608,42 +1571,42 @@ export function InstancesLibraryPage() {
       <ModalShell
         open={Boolean(selectedDeadlineTicket)}
         title="Alterar Prazo"
-        description={
-          selectedDeadlineTicket
-            ? `Atualize o prazo do ticket ${selectedDeadlineTicket.proto}.`
-            : undefined
-        }
-        maxWidthClassName="max-w-[560px]"
+        maxWidthClassName="max-w-[480px]"
         onClose={closeDeadlineModal}
         footer={
-          <>
-            <ToolbarButton onClick={closeDeadlineModal}>Cancelar</ToolbarButton>
+          <div className="flex w-full justify-end gap-2">
             <button
               type="button"
-              onClick={handleSaveDeadline}
-              className="rounded-[8px] bg-[#2563eb] px-4 py-[10px] text-[13px] font-semibold text-white transition-colors hover:bg-[#1d4ed8]"
+              onClick={closeDeadlineModal}
+              className="h-9 rounded-[8px] border border-[#e2e8f0] bg-white px-4 text-[13px] font-semibold text-[#64748b] hover:bg-[#f8fafc]"
             >
-              Salvar prazo
+              Cancelar
             </button>
-          </>
+            <button
+              onClick={handleSaveDeadline}
+              className="h-9 rounded-[8px] bg-[#2563eb] px-4 text-[13px] font-semibold text-white hover:bg-[#1d4ed8]"
+            >
+              Salvar
+            </button>
+          </div>
         }
       >
         <div className="grid gap-4">
-          <div className="flex flex-col gap-[5px]">
+          <div>
             <FormLabel>Nova entrega</FormLabel>
             <input
               type="date"
               value={deadlineDraft}
-              onChange={(event) => setDeadlineDraft(event.target.value)}
-              className="w-full rounded-[7px] border-[1.5px] border-[#e2e8f0] bg-[#f8fafc] px-3 py-[9px] text-[13px] text-[#0f172a] outline-none transition-colors focus:border-[#2563eb]"
+              onChange={(e) => setDeadlineDraft(e.target.value)}
+              className="h-9 w-full rounded-[6px] border border-[#e2e8f0] bg-[#f8fafc] px-3 text-[13px] outline-none focus:border-[#2563eb] focus:bg-white"
             />
           </div>
-          <div className="flex flex-col gap-[5px]">
+          <div>
             <FormLabel>Motivo</FormLabel>
             <textarea
               value={deadlineReason}
-              onChange={(event) => setDeadlineReason(event.target.value)}
-              className="min-h-[120px] w-full resize-y rounded-[7px] border-[1.5px] border-[#e2e8f0] bg-[#f8fafc] px-3 py-[9px] text-[13px] text-[#0f172a] outline-none transition-colors focus:border-[#2563eb] focus:shadow-[0_0_0_3px_rgba(37,99,235,.1)]"
+              onChange={(e) => setDeadlineReason(e.target.value)}
+              className="min-h-[100px] w-full resize-y rounded-[6px] border border-[#e2e8f0] bg-[#f8fafc] p-3 text-[13px] outline-none focus:border-[#2563eb] focus:bg-white"
             />
           </div>
         </div>
@@ -1652,242 +1615,179 @@ export function InstancesLibraryPage() {
       <ModalShell
         open={Boolean(formMode)}
         title={formMode === 'edit' ? 'Editar Task' : 'Nova Task'}
-        description={
-          formMode === 'edit'
-            ? 'Atualize os dados do ticket de desenvolvimento.'
-            : 'Cadastre um novo item no kanban de desenvolvimento.'
-        }
-        maxWidthClassName="max-w-[920px]"
+        maxWidthClassName="max-w-[800px]"
         onClose={closeFormModal}
         footer={
-          <>
-            <ToolbarButton onClick={closeFormModal}>Cancelar</ToolbarButton>
+          <div className="flex w-full justify-end gap-2">
             <button
               type="button"
-              onClick={handleSaveTicket}
-              className="rounded-[8px] bg-[#2563eb] px-4 py-[10px] text-[13px] font-semibold text-white transition-colors hover:bg-[#1d4ed8]"
+              onClick={closeFormModal}
+              className="h-9 rounded-[8px] border border-[#e2e8f0] bg-white px-4 text-[13px] font-semibold text-[#64748b] hover:bg-[#f8fafc]"
             >
-              {formMode === 'edit' ? 'Salvar alteraÃ§Ãµes' : 'Criar ticket'}
+              Cancelar
             </button>
-          </>
+            <button
+              onClick={handleSaveTicket}
+              className="h-9 rounded-[8px] bg-[#2563eb] px-4 text-[13px] font-semibold text-white hover:bg-[#1d4ed8]"
+            >
+              Salvar
+            </button>
+          </div>
         }
       >
-        <div className="grid gap-[14px] md:grid-cols-2">
-          <div className="flex flex-col gap-[5px] md:col-span-2">
-            <FormLabel>TÃ­tulo</FormLabel>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="md:col-span-2">
+            <FormLabel>Título</FormLabel>
             <input
               value={formState.title}
-              onChange={(event) => updateFormField('title', event.target.value)}
-              className="w-full rounded-[7px] border-[1.5px] border-[#e2e8f0] bg-[#f8fafc] px-3 py-[9px] text-[13px] text-[#0f172a] outline-none transition-colors focus:border-[#2563eb] focus:shadow-[0_0_0_3px_rgba(37,99,235,.1)]"
+              onChange={(e) => updateFormField('title', e.target.value)}
+              className="h-9 w-full rounded-[6px] border border-[#e2e8f0] bg-[#f8fafc] px-3 text-[13px] outline-none focus:border-[#2563eb] focus:bg-white"
             />
           </div>
-
-          <div className="flex flex-col gap-[5px]">
+          <div>
             <FormLabel>Categoria</FormLabel>
             <select
               value={formState.category}
-              onChange={(event) => updateFormField('category', event.target.value)}
-              className="w-full rounded-[7px] border-[1.5px] border-[#e2e8f0] bg-[#f8fafc] px-3 py-[9px] text-[13px] text-[#0f172a] outline-none transition-colors focus:border-[#2563eb]"
+              onChange={(e) => updateFormField('category', e.target.value)}
+              className="h-9 w-full rounded-[6px] border border-[#e2e8f0] bg-[#f8fafc] px-3 text-[13px] outline-none focus:border-[#2563eb] focus:bg-white"
             >
-              {DEV_CATEGORIES.map((category) => (
-                <option key={category} value={category}>
-                  {category}
+              {DEV_CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
                 </option>
               ))}
             </select>
           </div>
-
-          <div className="flex flex-col gap-[5px]">
+          <div>
             <FormLabel>Tipo</FormLabel>
             <select
               value={formState.devType}
-              onChange={(event) => updateFormField('devType', event.target.value as DevType)}
-              className="w-full rounded-[7px] border-[1.5px] border-[#e2e8f0] bg-[#f8fafc] px-3 py-[9px] text-[13px] text-[#0f172a] outline-none transition-colors focus:border-[#2563eb]"
+              onChange={(e) =>
+                updateFormField('devType', e.target.value as DevType)
+              }
+              className="h-9 w-full rounded-[6px] border border-[#e2e8f0] bg-[#f8fafc] px-3 text-[13px] outline-none focus:border-[#2563eb] focus:bg-white"
             >
-              {(['Epic', 'Feature', 'Task', 'Bug'] as DevType[]).map((type) => (
-                <option key={type} value={type}>
-                  {type}
+              {['Epic', 'Feature', 'Task', 'Bug'].map((t) => (
+                <option key={t} value={t}>
+                  {t}
                 </option>
               ))}
             </select>
           </div>
-
-          <div className="flex flex-col gap-[5px]">
+          <div>
             <FormLabel>Status</FormLabel>
             <select
               value={formState.devStatus}
-              onChange={(event) => updateFormField('devStatus', event.target.value as DevStatus)}
-              className="w-full rounded-[7px] border-[1.5px] border-[#e2e8f0] bg-[#f8fafc] px-3 py-[9px] text-[13px] text-[#0f172a] outline-none transition-colors focus:border-[#2563eb]"
+              onChange={(e) =>
+                updateFormField('devStatus', e.target.value as DevStatus)
+              }
+              className="h-9 w-full rounded-[6px] border border-[#e2e8f0] bg-[#f8fafc] px-3 text-[13px] outline-none focus:border-[#2563eb] focus:bg-white"
             >
-              {ALL_DEV_STATUSES.map((status) => (
-                <option key={status} value={status}>
-                  {status}
+              {ALL_DEV_STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {s}
                 </option>
               ))}
             </select>
           </div>
-
-          <div className="flex flex-col gap-[5px]">
-            <FormLabel>ResponsÃ¡vel</FormLabel>
+          <div>
+            <FormLabel>Responsável</FormLabel>
             <select
               value={formState.resp}
-              onChange={(event) => updateFormField('resp', event.target.value)}
-              className="w-full rounded-[7px] border-[1.5px] border-[#e2e8f0] bg-[#f8fafc] px-3 py-[9px] text-[13px] text-[#0f172a] outline-none transition-colors focus:border-[#2563eb]"
+              onChange={(e) => updateFormField('resp', e.target.value)}
+              className="h-9 w-full rounded-[6px] border border-[#e2e8f0] bg-[#f8fafc] px-3 text-[13px] outline-none focus:border-[#2563eb] focus:bg-white"
             >
-              {DEV_USERS.map((user) => (
-                <option key={user.id} value={user.id}>
-                  {user.name}
+              {DEV_USERS.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name}
                 </option>
               ))}
             </select>
           </div>
-
-          <div className="flex flex-col gap-[5px]">
+          <div>
             <FormLabel>Sprint</FormLabel>
             <select
               value={formState.sprintId}
-              onChange={(event) => updateFormField('sprintId', event.target.value)}
-              className="w-full rounded-[7px] border-[1.5px] border-[#e2e8f0] bg-[#f8fafc] px-3 py-[9px] text-[13px] text-[#0f172a] outline-none transition-colors focus:border-[#2563eb]"
+              onChange={(e) => updateFormField('sprintId', e.target.value)}
+              className="h-9 w-full rounded-[6px] border border-[#e2e8f0] bg-[#f8fafc] px-3 text-[13px] outline-none focus:border-[#2563eb] focus:bg-white"
             >
               <option value="">Sem sprint</option>
-              {DEV_SPRINTS.map((sprint) => (
-                <option key={sprint.id} value={sprint.id}>
-                  {sprint.name}
+              {DEV_SPRINTS.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
                 </option>
               ))}
             </select>
           </div>
-
-          <div className="flex flex-col gap-[5px]">
-            <FormLabel>Epic pai</FormLabel>
-            <select
-              value={formState.parentId}
-              onChange={(event) => updateFormField('parentId', event.target.value)}
-              className="w-full rounded-[7px] border-[1.5px] border-[#e2e8f0] bg-[#f8fafc] px-3 py-[9px] text-[13px] text-[#0f172a] outline-none transition-colors focus:border-[#2563eb]"
-            >
-              <option value="">Item independente</option>
-              {tickets
-                .filter((ticket) => ticket.devType === 'Epic')
-                .map((ticket) => (
-                  <option key={ticket.id} value={ticket.id}>
-                    {ticket.title}
-                  </option>
-                ))}
-            </select>
-          </div>
-
-          <div className="flex flex-col gap-[5px]">
-            <FormLabel>Cliente</FormLabel>
-            <input
-              value={formState.clientName}
-              onChange={(event) => updateFormField('clientName', event.target.value)}
-              className="w-full rounded-[7px] border-[1.5px] border-[#e2e8f0] bg-[#f8fafc] px-3 py-[9px] text-[13px] text-[#0f172a] outline-none transition-colors focus:border-[#2563eb]"
-            />
-          </div>
-
-          <div className="flex flex-col gap-[5px]">
-            <FormLabel>Protocolo Habilis/Meta</FormLabel>
-            <input
-              value={formState.protoExt}
-              onChange={(event) => updateFormField('protoExt', event.target.value)}
-              className="w-full rounded-[7px] border-[1.5px] border-[#e2e8f0] bg-[#f8fafc] px-3 py-[9px] text-[13px] text-[#0f172a] outline-none transition-colors focus:border-[#2563eb]"
-            />
-          </div>
-
-          <div className="flex flex-col gap-[5px]">
-            <FormLabel>InstÃ¢ncia</FormLabel>
+          <div>
+            <FormLabel>Instância</FormLabel>
             <input
               value={formState.instance}
-              onChange={(event) => updateFormField('instance', event.target.value)}
-              className="w-full rounded-[7px] border-[1.5px] border-[#e2e8f0] bg-[#f8fafc] px-3 py-[9px] text-[13px] text-[#0f172a] outline-none transition-colors focus:border-[#2563eb]"
+              onChange={(e) => updateFormField('instance', e.target.value)}
+              className="h-9 w-full rounded-[6px] border border-[#e2e8f0] bg-[#f8fafc] px-3 text-[13px] outline-none focus:border-[#2563eb] focus:bg-white"
             />
           </div>
-
-          <div className="flex flex-col gap-[5px]">
-            <FormLabel>CNPJ</FormLabel>
-            <input
-              value={formState.cnpj}
-              onChange={(event) => updateFormField('cnpj', event.target.value)}
-              className="w-full rounded-[7px] border-[1.5px] border-[#e2e8f0] bg-[#f8fafc] px-3 py-[9px] text-[13px] text-[#0f172a] outline-none transition-colors focus:border-[#2563eb]"
-            />
-          </div>
-
-          <div className="flex flex-col gap-[5px]">
-            <FormLabel>Telefone</FormLabel>
-            <input
-              value={formState.clientPhone}
-              onChange={(event) => updateFormField('clientPhone', event.target.value)}
-              className="w-full rounded-[7px] border-[1.5px] border-[#e2e8f0] bg-[#f8fafc] px-3 py-[9px] text-[13px] text-[#0f172a] outline-none transition-colors focus:border-[#2563eb]"
-            />
-          </div>
-
-          <div className="flex flex-col gap-[5px]">
-            <FormLabel>InÃ­cio</FormLabel>
+          <div>
+            <FormLabel>Data Início</FormLabel>
             <input
               type="date"
               value={formState.startDate}
-              onChange={(event) => updateFormField('startDate', event.target.value)}
-              className="w-full rounded-[7px] border-[1.5px] border-[#e2e8f0] bg-[#f8fafc] px-3 py-[9px] text-[13px] text-[#0f172a] outline-none transition-colors focus:border-[#2563eb]"
+              onChange={(e) => updateFormField('startDate', e.target.value)}
+              className="h-9 w-full rounded-[6px] border border-[#e2e8f0] bg-[#f8fafc] px-3 text-[13px] outline-none focus:border-[#2563eb] focus:bg-white"
             />
           </div>
-
-          <div className="flex flex-col gap-[5px]">
-            <FormLabel>Entrega</FormLabel>
+          <div>
+            <FormLabel>Data Entrega</FormLabel>
             <input
               type="date"
               value={formState.deadline}
-              onChange={(event) => updateFormField('deadline', event.target.value)}
-              className="w-full rounded-[7px] border-[1.5px] border-[#e2e8f0] bg-[#f8fafc] px-3 py-[9px] text-[13px] text-[#0f172a] outline-none transition-colors focus:border-[#2563eb]"
+              onChange={(e) => updateFormField('deadline', e.target.value)}
+              className="h-9 w-full rounded-[6px] border border-[#e2e8f0] bg-[#f8fafc] px-3 text-[13px] outline-none focus:border-[#2563eb] focus:bg-white"
             />
           </div>
 
-          <div className="rounded-[10px] border border-[#d7dfeb] bg-[#f8fafc] p-4 md:col-span-2">
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <div className="text-[12px] font-bold text-[#0f172a]">CritÃ©rios</div>
-                <div className="text-[12px] text-[#64748b]">
-                  Ajuste os pesos para recalcular o score automaticamente.
-                </div>
+          <div className="md:col-span-2 rounded-[10px] border border-[#d7dfeb] bg-[#f8fafc] p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <div className="text-[12px] font-bold text-[#0f172a]">
+                Critérios
               </div>
-              <div className="rounded-[8px] border border-[#bfdbfe] bg-[#eff6ff] px-4 py-2">
-                <div className="text-[10px] font-bold tracking-[.08em] text-[#2563eb] uppercase">
-                  Score
-                </div>
-                <div className="text-[22px] font-extrabold text-[#2563eb]">{formScore}/15</div>
+              <div className="rounded-[6px] bg-[#eff6ff] border border-[#bfdbfe] px-3 py-1 text-[14px] font-extrabold text-[#2563eb]">
+                {formScore}/15
               </div>
             </div>
-
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="grid grid-cols-5 gap-2">
               {[
-                ['imp', 'Impacto', formState.imp],
+                ['imp', 'Imp.', formState.imp],
                 ['ris', 'Risco', formState.ris],
                 ['fre', 'Freq.', formState.fre],
-                ['esf', 'EsforÃ§o', formState.esf],
-                ['deb', 'DÃ©bito', formState.deb],
+                ['esf', 'Esf.', formState.esf],
+                ['deb', 'Déb.', formState.deb],
               ].map(([key, label, value]) => (
-                <div key={key} className="flex flex-col gap-[5px]">
+                <div key={key}>
                   <FormLabel>{label}</FormLabel>
                   <input
                     type="number"
                     min="0"
                     max="3"
                     value={value}
-                    onChange={(event) =>
-                      updateFormField(key as keyof TicketFormState, event.target.value)
+                    onChange={(e) =>
+                      updateFormField(
+                        key as keyof TicketFormState,
+                        e.target.value,
+                      )
                     }
-                    className="w-full rounded-[7px] border-[1.5px] border-[#e2e8f0] bg-white px-3 py-[9px] text-[13px] text-[#0f172a] outline-none transition-colors focus:border-[#2563eb]"
+                    className="h-9 w-full rounded-[6px] border border-[#e2e8f0] bg-white px-2 text-center text-[13px] outline-none focus:border-[#2563eb]"
                   />
                 </div>
               ))}
             </div>
           </div>
-
-          <div className="flex flex-col gap-[5px] md:col-span-2">
-            <FormLabel>DescriÃ§Ã£o</FormLabel>
+          <div className="md:col-span-2">
+            <FormLabel>Descrição</FormLabel>
             <textarea
               value={formState.description}
-              onChange={(event) => updateFormField('description', event.target.value)}
-              className="min-h-[120px] w-full resize-y rounded-[7px] border-[1.5px] border-[#e2e8f0] bg-[#f8fafc] px-3 py-[9px] text-[13px] text-[#0f172a] outline-none transition-colors focus:border-[#2563eb] focus:shadow-[0_0_0_3px_rgba(37,99,235,.1)]"
+              onChange={(e) => updateFormField('description', e.target.value)}
+              className="min-h-[100px] w-full resize-y rounded-[6px] border border-[#e2e8f0] bg-[#f8fafc] p-3 text-[13px] outline-none focus:border-[#2563eb] focus:bg-white"
             />
           </div>
         </div>
@@ -1903,12 +1803,6 @@ export function InstancesLibraryPage() {
         onChangeTech={handleCommercialChangeTech}
         onChangeLabel={handleCommercialChangeLabel}
       />
-    </>
+    </div>
   );
 }
-
-
-
-
-
-

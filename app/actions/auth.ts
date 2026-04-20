@@ -1,37 +1,72 @@
 "use server";
 
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { AUTH_COOKIE_NAME } from "@/lib/auth";
+import { clearSessionCookies, storeSessionCookies } from "@/lib/server-session";
 
-export async function loginAction(formData: FormData) {
+const API_BASE_URL =
+  process.env.API_BASE_URL ||
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  "http://127.0.0.1:3333/api";
+
+export type LoginFormState = {
+  error?: string;
+};
+
+export async function loginAction(
+  _previousState: LoginFormState,
+  formData: FormData,
+): Promise<LoginFormState> {
   const email = String(formData.get("email") ?? "")
     .trim()
     .toLowerCase();
   const password = String(formData.get("password") ?? "");
 
   if (!email || !password) {
-    redirect("/");
+    return {
+      error: "Informe e-mail e senha.",
+    };
   }
 
-  const cookieStore = await cookies();
+  let response: Response;
 
-  cookieStore.set(AUTH_COOKIE_NAME, email, {
-    httpOnly: true,
-    maxAge: 60 * 60 * 8,
-    path: "/",
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-  });
+  try {
+    response = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email, password }),
+      cache: "no-store",
+    });
+  } catch {
+    return {
+      error: "Nao foi possivel conectar com a API. Confirme se o backend esta rodando em http://127.0.0.1:3333.",
+    };
+  }
+
+  if (!response.ok) {
+    let message = "Falha ao autenticar.";
+
+    try {
+      const payload = await response.json();
+      message = payload?.error?.message || message;
+    } catch {
+      // Keep fallback message.
+    }
+
+    return {
+      error: message,
+    };
+  }
+
+  const payload = await response.json();
+  await storeSessionCookies(payload);
 
   redirect("/dashboard");
 }
 
 export async function logoutAction() {
-  const cookieStore = await cookies();
-
-  cookieStore.delete(AUTH_COOKIE_NAME);
-
+  await clearSessionCookies();
   redirect("/");
 }
