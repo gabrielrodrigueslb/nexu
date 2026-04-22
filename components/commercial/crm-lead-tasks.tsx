@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
+  CalendarX,
   CheckCircle2,
   ClipboardList,
   Clock3,
@@ -10,12 +11,17 @@ import {
   MonitorPlay,
   Phone,
   User,
-  CalendarX,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-import { leads as initialLeads, users } from '@/components/data';
 import type { ActivityType, Lead, LeadTask } from '@/components/types';
+
+import {
+  fetchCommercialLeads,
+  fetchCommercialLookups,
+  mapBackendLeadToDashboardLead,
+  type CommercialLookups,
+} from './backend';
 
 type TaskView = 'todas' | 'pendentes' | 'atrasadas' | 'feitas';
 
@@ -57,7 +63,7 @@ function getTaskTimestamp(date?: string) {
 }
 
 function formatTaskDate(date?: string) {
-  if (!date) return '—';
+  if (!date) return '-';
 
   return new Date(date).toLocaleString('pt-BR', {
     day: '2-digit',
@@ -92,30 +98,53 @@ function KpiCard({
 
 export function CommercialCrmLeadTasks() {
   const router = useRouter();
+  const [lookups, setLookups] = useState<CommercialLookups | null>(null);
+  const [leads, setLeads] = useState<Lead[]>([]);
   const [taskTypeFilter, setTaskTypeFilter] = useState<ActivityType | ''>('');
   const [sellerFilter, setSellerFilter] = useState('');
   const [view, setView] = useState<TaskView>('todas');
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
+    let active = true;
+
+    async function load() {
+      const [nextLookups, leadItems] = await Promise.all([
+        fetchCommercialLookups(),
+        fetchCommercialLeads(),
+      ]);
+
+      if (!active) return;
+
+      setLookups(nextLookups);
+      setLeads(leadItems.map(mapBackendLeadToDashboardLead));
+    }
+
+    void load();
+
     const intervalId = window.setInterval(() => {
       setNow(Date.now());
     }, 60_000);
 
-    return () => window.clearInterval(intervalId);
+    return () => {
+      active = false;
+      window.clearInterval(intervalId);
+    };
   }, []);
 
-  const allTasks = useMemo<FlattenedLeadTask[]>(() => {
-    return initialLeads.flatMap((lead) =>
-      (lead.tasks ?? []).map((task) => ({
-        ...task,
-        leadId: lead.id,
-        leadName: lead.company || 'Sem nome',
-        leadSellerId: lead.sellerId,
-        leadStatus: lead.status,
-      })),
-    );
-  }, []);
+  const allTasks = useMemo<FlattenedLeadTask[]>(
+    () =>
+      leads.flatMap((lead) =>
+        (lead.tasks ?? []).map((task) => ({
+          ...task,
+          leadId: lead.id,
+          leadName: lead.company || 'Sem nome',
+          leadSellerId: lead.sellerId,
+          leadStatus: lead.status,
+        })),
+      ),
+    [leads],
+  );
 
   const total = allTasks.length;
   const completed = allTasks.filter((task) => task.done);
@@ -142,19 +171,8 @@ export function CommercialCrmLeadTasks() {
       items = items.filter((task) => task.leadSellerId === sellerFilter);
     }
 
-    return [...items].sort((left, right) => {
-      const leftOverdue = !left.done && left.date && getTaskTimestamp(left.date) < now;
-      const rightOverdue = !right.done && right.date && getTaskTimestamp(right.date) < now;
-
-      if (leftOverdue && !rightOverdue) return -1;
-      if (!leftOverdue && rightOverdue) return 1;
-
-      const leftTime = getTaskTimestamp(left.date);
-      const rightTime = getTaskTimestamp(right.date);
-
-      return leftTime - rightTime;
-    });
-  }, [allTasks, completed, now, overdue, pending, sellerFilter, taskTypeFilter, view]);
+    return [...items].sort((left, right) => getTaskTimestamp(left.date) - getTaskTimestamp(right.date));
+  }, [allTasks, completed, overdue, pending, sellerFilter, taskTypeFilter, view]);
 
   const hasSecondaryFilter = Boolean(taskTypeFilter || sellerFilter);
 
@@ -191,45 +209,20 @@ export function CommercialCrmLeadTasks() {
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-      {/* Header */}
       <div className="mb-6 flex flex-col gap-1">
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-          Tarefas dos Leads
-        </h1>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Tarefas dos Leads</h1>
         <p className="text-sm text-slate-500">
-          Visão geral e acompanhamento das tarefas cadastradas no CRM.
+          Visão consolidada das tarefas do CRM, sem dados mockados.
         </p>
       </div>
 
-      {/* KPI Cards */}
       <div className="mb-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <KpiCard
-          label="Total"
-          value={total}
-          icon={<ClipboardList className="h-4 w-4" />}
-          colorClassName="text-blue-600"
-        />
-        <KpiCard
-          label="Pendentes"
-          value={pending.length}
-          icon={<Clock3 className="h-4 w-4" />}
-          colorClassName="text-amber-600"
-        />
-        <KpiCard
-          label="Atrasadas"
-          value={overdue.length}
-          icon={<AlertTriangle className="h-4 w-4" />}
-          colorClassName="text-red-600"
-        />
-        <KpiCard
-          label="Concluídas"
-          value={completed.length}
-          icon={<CheckCircle2 className="h-4 w-4" />}
-          colorClassName="text-emerald-600"
-        />
+        <KpiCard label="Total" value={total} icon={<ClipboardList className="h-4 w-4" />} colorClassName="text-blue-600" />
+        <KpiCard label="Pendentes" value={pending.length} icon={<Clock3 className="h-4 w-4" />} colorClassName="text-amber-600" />
+        <KpiCard label="Atrasadas" value={overdue.length} icon={<AlertTriangle className="h-4 w-4" />} colorClassName="text-red-600" />
+        <KpiCard label="Concluídas" value={completed.length} icon={<CheckCircle2 className="h-4 w-4" />} colorClassName="text-emerald-600" />
       </div>
 
-      {/* Controls: Tabs & Filters */}
       <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-wrap gap-2">
           {renderTabButton('todas', 'Todas', total)}
@@ -242,7 +235,7 @@ export function CommercialCrmLeadTasks() {
           <select
             value={taskTypeFilter}
             onChange={(event) => setTaskTypeFilter(event.target.value as ActivityType | '')}
-            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+            className="cursor-pointer rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           >
             <option value="">Todos os tipos</option>
             {Object.entries(TASK_TYPE_META).map(([value, meta]) => (
@@ -255,18 +248,18 @@ export function CommercialCrmLeadTasks() {
           <select
             value={sellerFilter}
             onChange={(event) => setSellerFilter(event.target.value)}
-            className="min-w-45 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+            className="min-w-45 cursor-pointer rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           >
             <option value="">Todos os vendedores</option>
             <option value="sem">- Sem responsável</option>
-            {users.map((user) => (
+            {(lookups?.users || []).map((user) => (
               <option key={user.id} value={user.id}>
                 {user.name}
               </option>
             ))}
           </select>
 
-          {hasSecondaryFilter && (
+          {hasSecondaryFilter ? (
             <button
               type="button"
               onClick={() => {
@@ -277,26 +270,23 @@ export function CommercialCrmLeadTasks() {
             >
               Limpar
             </button>
-          )}
+          ) : null}
 
-          <span className="text-sm text-slate-500 ml-1">
-            {filteredTasks.length} registro(s)
-          </span>
+          <span className="ml-1 text-sm text-slate-500">{filteredTasks.length} registro(s)</span>
         </div>
       </div>
 
-      {/* Data Table */}
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
             <thead className="bg-slate-50">
               <tr>
-                <th className="px-5 py-4 font-semibold uppercase tracking-wider text-slate-500 text-xs">Lead</th>
-                <th className="px-5 py-4 font-semibold uppercase tracking-wider text-slate-500 text-xs">Tipo</th>
-                <th className="px-5 py-4 font-semibold uppercase tracking-wider text-slate-500 text-xs">Data / Hora</th>
-                <th className="px-5 py-4 font-semibold uppercase tracking-wider text-slate-500 text-xs">Status</th>
-                <th className="px-5 py-4 font-semibold uppercase tracking-wider text-slate-500 text-xs">Vendedor</th>
-                <th className="px-5 py-4 font-semibold uppercase tracking-wider text-slate-500 text-xs">Etapa</th>
+                <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-slate-500">Lead</th>
+                <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-slate-500">Tipo</th>
+                <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-slate-500">Data / Hora</th>
+                <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-slate-500">Status</th>
+                <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-slate-500">Vendedor</th>
+                <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-slate-500">Etapa</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 bg-white">
@@ -305,7 +295,7 @@ export function CommercialCrmLeadTasks() {
                   const meta = TASK_TYPE_META[task.type];
                   const TypeIcon = meta.icon;
                   const isOverdue = !task.done && task.date && getTaskTimestamp(task.date) < now;
-                  const seller = users.find((user) => user.id === task.leadSellerId);
+                  const seller = lookups?.users.find((user) => user.id === task.leadSellerId);
 
                   return (
                     <tr
@@ -317,9 +307,7 @@ export function CommercialCrmLeadTasks() {
                     >
                       <td className="px-5 py-4">
                         <div className="font-medium text-slate-900">{task.leadName}</div>
-                        {task.title && (
-                          <div className="mt-1 text-xs text-slate-500">{task.title}</div>
-                        )}
+                        {task.title ? <div className="mt-1 text-xs text-slate-500">{task.title}</div> : null}
                       </td>
 
                       <td className="px-5 py-4">
@@ -329,7 +317,7 @@ export function CommercialCrmLeadTasks() {
                         </span>
                       </td>
 
-                      <td className={`px-5 py-4 whitespace-nowrap ${isOverdue ? 'font-semibold text-red-600' : 'text-slate-700'}`}>
+                      <td className={`whitespace-nowrap px-5 py-4 ${isOverdue ? 'font-semibold text-red-600' : 'text-slate-700'}`}>
                         {formatTaskDate(task.date)}
                       </td>
 
@@ -359,13 +347,11 @@ export function CommercialCrmLeadTasks() {
                             {seller.name.split(' ')[0]}
                           </span>
                         ) : (
-                          <span className="text-slate-400">—</span>
+                          <span className="text-slate-400">-</span>
                         )}
                       </td>
 
-                      <td className="px-5 py-4 text-xs text-slate-500">
-                        {task.leadStatus}
-                      </td>
+                      <td className="px-5 py-4 text-xs text-slate-500">{task.leadStatus}</td>
                     </tr>
                   );
                 })

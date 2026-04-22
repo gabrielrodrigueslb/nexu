@@ -142,7 +142,7 @@ export function SupportDateFilter({
     <div className="mb-4 flex flex-wrap items-center gap-[10px] rounded-[10px] border border-[#e2e8f0] bg-white px-4 py-3 justify-between">
       <span className="inline-flex items-center gap-2 text-[13px] font-bold text-[#64748b]">
         <CalendarDays className="size-4" />
-        Periodo (finalizados)
+        Período (finalizados)
       </span>
       <span className='flex gap-2 items-center'>
 <label className="text-[12px] text-[#64748b]">De:</label>
@@ -170,7 +170,7 @@ export function SupportDateFilter({
             Limpar
           </button>
           <span className="text-[11px] font-semibold text-[#2563eb]">
-            {completedCount} ticket(s) no periodo
+            {completedCount} ticket(s) no período
           </span>
         </>
       ) : null}
@@ -213,7 +213,7 @@ export function SupportKpis({
       style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}
     >
       <KpiCard
-        title="Em Implantacao"
+        title="Em Implantação"
         value={activeCount}
         tone="accent"
         icon={<Rocket className="size-5 text-[#2563eb]" />}
@@ -233,7 +233,7 @@ export function SupportKpis({
         onClick={() => onOpenList('active')}
       />
       <KpiCard
-        title={`Finalizados${hasFilter ? ' (periodo)' : ''}`}
+        title={`Finalizados${hasFilter ? ' (período)' : ''}`}
         value={completedCount}
         tone="success"
         icon={<CircleCheckBig className="size-5 text-[#059669]" />}
@@ -270,9 +270,11 @@ export function SupportKpis({
             </span>
           )
         }
+        clickHint={overdue ? 'Clique para ver atrasados' : undefined}
+        onClick={overdue ? () => onOpenList('overdue') : undefined}
       />
       <KpiCard
-        title="Tarefas Concluidas"
+        title="Tarefas Concluídas"
         value={doneCount}
         tone="purple"
         icon={<Wrench className="size-5 text-[#7c3aed]" />}
@@ -284,7 +286,7 @@ export function SupportKpis({
                 style={{ width: `${pctGeral}%` }}
               />
             </div>
-            <span>{pctGeral}% concluido</span>
+            <span>{pctGeral}% concluído</span>
           </div>
         }
       />
@@ -331,7 +333,7 @@ export function TicketListModal({
                   <div className="flex flex-wrap gap-2 text-[11px] text-[#64748b]">
                     <span>{ticket.csStatus}</span>
                     <span>{ticket.produto}</span>
-                    <span>{techNameById[ticket.respTec] ?? 'Sem responsavel'}</span>
+                    <span>{techNameById[ticket.respTec] ?? 'Sem responsável'}</span>
                     <span>{formatDate(ticket.createdAt)}</span>
                     {ticket.updatedAt ? <span>{formatDate(ticket.updatedAt)}</span> : null}
                   </div>
@@ -374,20 +376,20 @@ export function TimeCompletionPanel({
     <Panel className="mb-4 p-[18px]">
       <Title
         icon={<Clock3 className="size-4" />}
-        suffix={hasFilter ? <span className="text-[12px] text-[#64748b]">(periodo selecionado)</span> : undefined}
+        suffix={hasFilter ? <span className="text-[12px] text-[#64748b]">(período selecionado)</span> : undefined}
       >
-        Tempo Medio de Conclusao
+        Tempo Médio de Conclusão
       </Title>
       {!withTimeCount ? (
         <div className="py-5 text-center text-[13px] text-[#64748b]">
-          Nenhum ticket finalizado{hasFilter ? ' no periodo' : ''} com dados suficientes.
+          Nenhum ticket finalizado{hasFilter ? ' no período' : ''} com dados suficientes.
         </div>
       ) : (
         <>
           <div className="mb-4 grid gap-3 md:grid-cols-3">
             <div className="rounded-[10px] bg-[#f8fafc] p-[14px] text-center">
               <div className="text-[28px] font-extrabold text-[#2563eb]">{Math.round(avgDays)}d</div>
-              <div className="mt-[3px] text-[12px] font-semibold text-[#64748b]">Media geral</div>
+              <div className="mt-[3px] text-[12px] font-semibold text-[#64748b]">Média geral</div>
               <div className="mt-[6px] flex items-center justify-center gap-2 text-[11px] text-[#64748b]">
                 {avgNovos !== null ? <span className="inline-flex items-center gap-1"><Plus className="size-3" />{avgNovos}d</span> : null}
                 {avgUps !== null ? <span className="inline-flex items-center gap-1"><TrendingUp className="size-3" />{avgUps}d</span> : null}
@@ -398,7 +400,7 @@ export function TimeCompletionPanel({
               <div className="text-[28px] font-extrabold text-[#059669]">{Math.round(minDays)}d</div>
               <div className="mt-[3px] inline-flex items-center gap-1 text-[12px] font-semibold text-[#059669]">
                 <Trophy className="size-3.5" />
-                Mais rapido
+                Mais rápido
               </div>
               {fastest ? (
                 <>
@@ -430,7 +432,7 @@ export function TimeCompletionPanel({
             </div>
           </div>
           <div className="mb-[10px] text-[11px] font-bold uppercase tracking-[.07em] text-[#64748b]">
-            Distribuicao por faixa de tempo
+            Distribuição por faixa de tempo
           </div>
           {buckets.map((bucket) => {
             const pct = percentage(bucket.n, withTimeCount);
@@ -497,7 +499,7 @@ export function ServicesCard({
 }) {
   return (
     <Panel className="p-[18px]">
-      <Title icon={<Package2 className="size-4" />}>Servicos em Andamento</Title>
+      <Title icon={<Package2 className="size-4" />}>Servi?os em Andamento</Title>
       {rows.length ? (
         rows.map((row) => (
           <div key={row.nome} className="mb-3">
@@ -552,11 +554,11 @@ export function TypeComparisonCard({
             Clientes Novos
           </div>
           <div className="flex justify-between border-b border-[#e2e8f0] py-[6px] text-[13px]">
-            <span>Em Implantacao</span>
+            <span>Em Implantação</span>
             <TypePill kind="novo" value={novosAtivos} />
           </div>
           <div className="flex justify-between border-b border-[#e2e8f0] py-[6px] text-[13px]">
-            <span>Finalizados{hasFilter ? ' (periodo)' : ''}</span>
+            <span>Finalizados{hasFilter ? ' (período)' : ''}</span>
             <TypePill kind="novo" value={novosConcl} />
           </div>
           <div className="flex justify-between py-[8px] text-[14px] font-bold text-[#0f172a]">
@@ -564,20 +566,20 @@ export function TypeComparisonCard({
             <span>{novosAtivos + novosConcl}</span>
           </div>
           {avgNovos !== null ? (
-            <div className="text-[11px] text-[#64748b]">Tempo medio: {avgNovos} dias</div>
+            <div className="text-[11px] text-[#64748b]">Tempo médio: {avgNovos} dias</div>
           ) : null}
         </div>
         <div>
           <div className="mb-[10px] inline-flex items-center gap-1 text-[12px] font-bold uppercase tracking-[.06em] text-[#7c3aed]">
             <TrendingUp className="size-3.5" />
-            Upsell / Inclusao
+            Upsell / Inclusão
           </div>
           <div className="flex justify-between border-b border-[#e2e8f0] py-[6px] text-[13px]">
-            <span>Em Implantacao</span>
+            <span>Em Implantação</span>
             <TypePill kind="inclusao" value={upsellAtivos} />
           </div>
           <div className="flex justify-between border-b border-[#e2e8f0] py-[6px] text-[13px]">
-            <span>Finalizados{hasFilter ? ' (periodo)' : ''}</span>
+            <span>Finalizados{hasFilter ? ' (período)' : ''}</span>
             <TypePill kind="inclusao" value={upsellConcl} />
           </div>
           <div className="flex justify-between py-[8px] text-[14px] font-bold text-[#0f172a]">
@@ -585,7 +587,7 @@ export function TypeComparisonCard({
             <span>{upsellAtivos + upsellConcl}</span>
           </div>
           {avgUps !== null ? (
-            <div className="text-[11px] text-[#64748b]">Tempo medio: {avgUps} dias</div>
+            <div className="text-[11px] text-[#64748b]">Tempo médio: {avgUps} dias</div>
           ) : null}
         </div>
       </div>
@@ -611,7 +613,7 @@ export function TechOwnersCard({
 }) {
   return (
     <Panel className="p-[18px]">
-      <Title icon={<Wrench className="size-4" />}>Responsaveis Tecnicos</Title>
+      <Title icon={<Wrench className="size-4" />}>Responsáveis Técnicos</Title>
       {rows.length ? (
         rows.map((row) => (
           <div key={row.id} className="flex items-start gap-3 border-b border-[#e2e8f0] py-[10px] last:border-b-0">
@@ -624,7 +626,7 @@ export function TechOwnersCard({
                 <span>{row.activeCount} ativo(s)</span>
                 <span className="inline-flex items-center gap-1"><Plus className="size-3" />{row.novos}</span>
                 <span className="inline-flex items-center gap-1"><TrendingUp className="size-3" />{row.ups}</span>
-                {row.avg !== null ? <span>media {row.avg}d</span> : null}
+                {row.avg !== null ? <span>média {row.avg}d</span> : null}
               </div>
               {row.taskCount ? (
                 <>
@@ -650,7 +652,7 @@ export function TechOwnersCard({
         ))
       ) : (
         <div className="py-5 text-center text-[13px] text-[#64748b]">
-          Atribua responsaveis tecnicos nos tickets.
+          Atribua responsáveis técnicos nos tickets.
         </div>
       )}
     </Panel>

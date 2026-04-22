@@ -22,6 +22,11 @@ export function useSupportDashboard(dateFrom: string, dateTo: string) {
     const activeTasks = activeTickets.flatMap((ticket) => ticket.tasks);
     const pendTasks = activeTasks.filter((task) => !task.done);
     const doneTasks = activeTasks.filter((task) => task.done);
+    const overdueTickets = activeTickets.filter((ticket) =>
+      ticket.tasks.some(
+        (task) => !task.done && task.endDate && new Date(task.endDate).getTime() < TODAY,
+      ),
+    );
     const overdue = pendTasks.filter(
       (task) => task.endDate && new Date(task.endDate).getTime() < TODAY,
     ).length;
@@ -132,6 +137,7 @@ export function useSupportDashboard(dateFrom: string, dateTo: string) {
     return {
       activeTickets,
       filteredCompletedTickets,
+      overdueTickets,
       pendTasks,
       doneTasks,
       overdue,
@@ -158,9 +164,12 @@ export function useSupportDashboard(dateFrom: string, dateTo: string) {
 }
 
 export function getSupportTicketsByKind(
-  kind: 'active' | 'done',
+  kind: 'active' | 'done' | 'overdue',
   activeTickets: SupportTicket[],
   filteredCompletedTickets: SupportTicket[],
+  overdueTickets: SupportTicket[],
 ) {
-  return kind === 'active' ? activeTickets : filteredCompletedTickets;
+  if (kind === 'active') return activeTickets;
+  if (kind === 'overdue') return overdueTickets;
+  return filteredCompletedTickets;
 }

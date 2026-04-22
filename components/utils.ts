@@ -8,8 +8,9 @@ export function formatMoney(value: number) {
 }
 
 export function inRange(date: string, from: string, to: string) {
-  if (from && date < from) return false;
-  if (to && date > to) return false;
+  const normalized = date.slice(0, 10);
+  if (from && normalized < from) return false;
+  if (to && normalized > to) return false;
   return true;
 }
 

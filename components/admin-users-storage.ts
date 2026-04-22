@@ -60,7 +60,7 @@ export function getRoleMeta(role: UserRole) {
   }
 
   return {
-    label: "Basico",
+    label: "Básico",
     className: "border-[#bfdbfe] bg-[#eff6ff] text-[#2563eb]",
   };
 }
@@ -78,7 +78,7 @@ export function useAdminUsers() {
       const payload = await apiRequest("/api/backend/users?page=1&limit=100");
       setUsers(payload.items || []);
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "Falha ao carregar usuarios.");
+      setError(nextError instanceof Error ? nextError.message : "Falha ao carregar usuários.");
     } finally {
       setIsLoading(false);
     }

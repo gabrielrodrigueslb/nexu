@@ -1,19 +1,15 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { appFieldClassName } from '@/components/app-ui-kit';
 import { ModalShell } from '@/components/modal-shell';
 import { CRM_COLS } from '@/components/types';
 import { formatMoney } from '@/components/utils';
-import {
-  getActiveCatalogNames,
-  syncCatalogRows,
-  useAdminIntegrations,
-  useAdminProducts,
-} from '@/components/admin-catalogs';
+import { syncCatalogRows } from '@/components/admin-catalogs';
 
 import { openProposalPdfWindow } from './proposal-generator';
+import { formatBackendDate } from './backend';
 import {
   cloneLeadRecord,
   COMMERCIAL_TASK_TYPES,
@@ -124,7 +120,7 @@ function PriceRowsEditor({
   return (
     <>
       <div className="mb-[6px] text-[12px] text-[#64748b]">
-        Selecione os itens e informe setup e recorrencia individuais:
+        Selecione os itens e informe setup e recorrência individuais:
       </div>
       <div className="mb-[14px]">
         {rows.map((row) => (
@@ -335,10 +331,14 @@ function TaskEditor({
 
 function CommentsEditor({
   comments,
-  onChange,
+  canComment,
+  isSubmitting,
+  onSubmit,
 }: {
   comments: CommercialComment[];
-  onChange: (comments: CommercialComment[]) => void;
+  canComment: boolean;
+  isSubmitting?: boolean;
+  onSubmit: (message: string) => void | Promise<void>;
 }) {
   const [draft, setDraft] = useState('');
 
@@ -377,24 +377,22 @@ function CommentsEditor({
         />
         <button
           type="button"
-          onClick={() => {
+          disabled={!canComment || isSubmitting}
+          onClick={async () => {
             if (!draft.trim()) return;
-            onChange([
-              ...comments,
-              {
-                id: `comment-${Date.now()}`,
-                author: 'Equipe Comercial',
-                message: draft.trim(),
-                createdAt: new Date().toLocaleString('pt-BR'),
-              },
-            ]);
+            await onSubmit(draft.trim());
             setDraft('');
           }}
-          className="self-end rounded-[8px] bg-[#2563eb] px-[12px] py-[6px] text-[12px] font-semibold text-white"
+          className="self-end rounded-[8px] bg-[#2563eb] px-[12px] py-[6px] text-[12px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
         >
-          Comentar
+          {isSubmitting ? 'Enviando...' : 'Comentar'}
         </button>
       </div>
+      {!canComment ? (
+        <div className="text-[11px] text-[#64748b]">
+          Salve o lead primeiro para comentar com autoria real do usuário.
+        </div>
+      ) : null}
     </>
   );
 }
@@ -406,10 +404,14 @@ export function LeadModal({
   sellerOptions,
   originOptions,
   sdrOptions,
+  productOptions,
+  integrationOptions,
   indicatorOptions = [],
   representativeOptions = [],
+  isSubmittingComment = false,
   onClose,
   onSave,
+  onSubmitComment,
   onMarkWon,
   onRequestLoss,
 }: {
@@ -419,17 +421,22 @@ export function LeadModal({
   sellerOptions: Array<{ id: string; name: string }>;
   originOptions: Array<{ id: string; name: string }>;
   sdrOptions: Array<{ id: string; name: string }>;
+  productOptions: Array<{ id: string; name: string }>;
+  integrationOptions: Array<{ id: string; name: string }>;
   indicatorOptions?: Array<{ id: string; name: string }>;
   representativeOptions?: Array<{ id: string; name: string; percent?: number }>;
+  isSubmittingComment?: boolean;
   onClose: () => void;
   onSave: (lead: CommercialLeadRecord) => void;
+  onSubmitComment: (message: string) => void | Promise<void>;
   onMarkWon: (lead: CommercialLeadRecord) => void;
   onRequestLoss: (lead: CommercialLeadRecord) => void;
 }) {
-  const { items: productItems } = useAdminProducts();
-  const { items: integrationItems } = useAdminIntegrations();
-  const productCatalog = getActiveCatalogNames(productItems);
-  const integrationCatalog = getActiveCatalogNames(integrationItems);
+  const productCatalog = useMemo(() => productOptions.map((item) => item.name), [productOptions]);
+  const integrationCatalog = useMemo(
+    () => integrationOptions.map((item) => item.name),
+    [integrationOptions],
+  );
   const [draft, setDraft] = useState<CommercialLeadRecord | null>(() =>
     lead
       ? {
@@ -471,6 +478,50 @@ export function LeadModal({
           tasks: [],
         },
   );
+
+  useEffect(() => {
+    setDraft(
+      lead
+        ? {
+            ...cloneLeadRecord(lead),
+            products: syncPriceRowsWithCatalog(cloneLeadRecord(lead).products, productCatalog),
+            integrations: syncPriceRowsWithCatalog(
+              cloneLeadRecord(lead).integrations,
+              integrationCatalog,
+            ),
+          }
+        : {
+            id: '',
+            company: '',
+            cnpj: '',
+            contact: '',
+            phone: '',
+            createdAt: todayIsoDate(),
+            status: initialStatus ?? 'Leads',
+            value: 0,
+            paymentMethod: '',
+            installment: '',
+            sellerId: '',
+            sdrId: '',
+            originId: '',
+            consultant: '',
+            validUntil: '',
+            isLite: false,
+            agents: 0,
+            supervisors: 0,
+            admins: 0,
+            observations: '',
+            representativeId: '',
+            representativeCommission: 0,
+            indicatorId: '',
+            passThroughAmount: 0,
+            products: createEmptyPriceRows(productCatalog),
+            integrations: createEmptyPriceRows(integrationCatalog),
+            comments: [],
+            tasks: [],
+          },
+    );
+  }, [initialStatus, integrationCatalog, lead, productCatalog]);
 
   const totals = useMemo(
     () =>
@@ -572,7 +623,7 @@ export function LeadModal({
             onClick={handleGenerateProposal}
             className="rounded-[8px] border-[1.5px] border-[#00B37E] bg-white px-3 py-[6px] text-[12px] font-semibold text-[#00B37E]"
           >
-            Orcamento PDF
+            Orçamento PDF
           </button>
           {lead?.id && draft.status !== 'Ganho' && draft.status !== 'Perdido' ? (
             <>
@@ -663,10 +714,10 @@ export function LeadModal({
               className={appFieldClassName}
             >
               <option value="">Selecione...</option>
-              <option value="Boleto Bancario">Boleto Bancario</option>
+              <option value="Boleto Bancario">Boleto Bancário</option>
               <option value="Pix">Pix</option>
-              <option value="Cartao de Credito">Cartao de Credito</option>
-              <option value="Transferencia">Transferencia</option>
+              <option value="Cartao de Credito">Cartão de Crédito</option>
+              <option value="Transferencia">Transferência</option>
             </select>
           </div>
           <div>
@@ -677,7 +728,7 @@ export function LeadModal({
               className={appFieldClassName}
             >
               <option value="">Selecione...</option>
-              <option value="A vista">A vista</option>
+              <option value="A vista">À vista</option>
               <option value="2x">2x</option>
               <option value="3x">3x</option>
               <option value="6x">6x</option>
@@ -724,7 +775,7 @@ export function LeadModal({
           </div>
         </div>
 
-        {sectionTitle('Responsaveis')}
+        {sectionTitle('Responsáveis')}
         <div className="mb-[10px] grid gap-[14px] md:grid-cols-2">
           <div>
             {label('SDR (captacao)')}
@@ -742,7 +793,7 @@ export function LeadModal({
             </select>
           </div>
           <div>
-            {label('Vendedor responsavel')}
+            {label('Vendedor responsável')}
             <select
               value={draft.sellerId ?? ''}
               onChange={(event) => updateDraft({ sellerId: event.target.value })}
@@ -827,7 +878,7 @@ export function LeadModal({
         {sectionTitle('Proposta Comercial')}
         <div className="mb-[10px] grid gap-[14px] md:grid-cols-2">
           <div>
-            {label('Consultora Responsavel')}
+            {label('Consultora Responsável')}
             <input
               value={draft.consultant ?? ''}
               onChange={(event) => updateDraft({ consultant: event.target.value })}
@@ -904,15 +955,15 @@ export function LeadModal({
           rows={draft.products}
           onChange={(products) => updateDraft({ products })}
           totalsLabelSetup="Setup Produtos"
-          totalsLabelRecurring="Recorrencia Produtos"
+          totalsLabelRecurring="Recorrência Produtos"
         />
 
-        {sectionTitle('Integracoes & Valores')}
+        {sectionTitle('Integrações & Valores')}
         <PriceRowsEditor
           rows={draft.integrations}
           onChange={(integrations) => updateDraft({ integrations })}
-          totalsLabelSetup="Setup Integracoes"
-          totalsLabelRecurring="Recorrencia Integracoes"
+          totalsLabelSetup="Setup Integrações"
+          totalsLabelRecurring="Recorrência Integrações"
         />
 
         <div className="mb-[14px] flex flex-wrap items-center gap-6 rounded-[8px] bg-[#0f172a] px-4 py-3 text-white">
@@ -926,7 +977,7 @@ export function LeadModal({
           </div>
           <div>
             <div className="mb-[2px] text-[11px] font-semibold text-[#94a3b8]">
-              Total Recorrencia
+              Total Recorrência
             </div>
             <div className="text-[18px] font-extrabold">
               {formatMoney(totals?.totalRecurring ?? 0)}
@@ -943,7 +994,7 @@ export function LeadModal({
         </div>
 
         <div className="mb-[10px]">
-          {label('Observacoes')}
+          {label('Observações')}
           <textarea
             value={draft.observations ?? ''}
             onChange={(event) => updateDraft({ observations: event.target.value })}
@@ -953,16 +1004,18 @@ export function LeadModal({
           />
         </div>
 
-        {sectionTitle('Comentarios')}
+        {sectionTitle('Comentários')}
         <CommentsEditor
           comments={draft.comments}
-          onChange={(comments) => updateDraft({ comments })}
+          canComment={Boolean(lead?.id)}
+          isSubmitting={isSubmittingComment}
+          onSubmit={onSubmitComment}
         />
 
         {draft.status === 'Ganho' ? (
           <div className="mt-4 flex items-center gap-[6px] border-t border-[#86efac] bg-[#ecfdf5] px-6 py-[10px] text-[13px] font-semibold text-[#166534]">
             Lead ganho
-            {draft.wonAt ? ` em ${draft.wonAt}` : ''}
+            {draft.wonAt ? ` em ${formatBackendDate(draft.wonAt)}` : ''}
             {draft.generatedTicketId ? (
               <strong className="font-mono text-[#2563eb]">{draft.generatedTicketId}</strong>
             ) : null}

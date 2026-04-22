@@ -43,7 +43,7 @@ export function CrmLeadCard({
       </div>
 
       <div className="mb-[6px] text-[11px] leading-[1.4] text-[#64748b]">
-        {lead.contact || '—'}
+        {lead.contact || '-'}
         {lead.cnpj ? (
           <span className="block text-[10px] text-[#64748b]">{lead.cnpj}</span>
         ) : null}

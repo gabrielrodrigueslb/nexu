@@ -141,7 +141,7 @@ function renderLicenses(data: ProposalData) {
 
   return `
     <div class="section">
-      ${renderSectionTitle('users', 'Licencas de usuario')}
+      ${renderSectionTitle('users', 'Licenças de usuário')}
       <table class="items-table">
         <thead>
           <tr>
@@ -161,7 +161,7 @@ function renderObservations(observations?: string) {
 
   return `
     <div class="section">
-      ${renderSectionTitle('note', 'Observacoes')}
+      ${renderSectionTitle('note', 'Observações')}
       <div class="obs-box">
         <div class="obs-title">Detalhes adicionais</div>
         <div class="obs-text">${escapeHtml(observations).replace(/\n/g, '<br />')}</div>
@@ -174,7 +174,7 @@ function renderConsultant(data: ProposalData) {
   const name = data.consultant?.trim() || data.sellerName?.trim();
   if (!name) return '';
 
-  const role = data.consultant?.trim() ? 'Consultoria comercial' : 'Responsavel comercial';
+  const role = data.consultant?.trim() ? 'Consultoria comercial' : 'Responsável comercial';
 
   return `
     <div class="consultant-bar">
@@ -510,7 +510,7 @@ export function buildProposalHtml(data: ProposalData) {
         <div class="total-card setup">
           <div class="total-label">Setup</div>
           <div class="total-val">${formatCurrency(data.totalSetup)}</div>
-          <div class="total-sub">Cobranca inicial</div>
+          <div class="total-sub">Cobrança inicial</div>
         </div>
         <div class="total-card recur">
           <div class="total-label">Mensalidade</div>

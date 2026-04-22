@@ -67,7 +67,7 @@ const NAV: NavSection[] = [
         label: "Financeiro",
         moduleKey: "FINANCEIRO",
         children: [
-          { type: "link", label: "Cobranca e Contrato", href: "/financeiro/cobranca-contrato", moduleKey: "FINANCEIRO" },
+          { type: "link", label: "Cobrança e Contrato", href: "/financeiro/cobranca-contrato", moduleKey: "FINANCEIRO" },
           { type: "link", label: "Fluxo", href: "/financeiro/fluxo", moduleKey: "FINANCEIRO" },
         ],
       },
@@ -77,7 +77,7 @@ const NAV: NavSection[] = [
         label: "Implantacao",
         moduleKey: "IMPLANTACAO",
         children: [
-          { type: "link", label: "Kanban Implantacao", href: "/implantacao/kanban-implantacao", moduleKey: "IMPLANTACAO" },
+          { type: "link", label: "Kanban Implantação", href: "/implantacao/kanban-implantacao", moduleKey: "IMPLANTACAO" },
           { type: "link", label: "Tarefas Implantadores", href: "/implantacao/tarefas-implantadores", moduleKey: "IMPLANTACAO" },
         ],
       },
@@ -104,14 +104,14 @@ const NAV: NavSection[] = [
     label: "Biblioteca",
     items: [
       { type: "link", label: "Biblioteca Dev", href: "/biblioteca-dev", moduleKey: "DESENVOLVIMENTO" },
-      { type: "link", label: "Instancias", href: "/instancias", moduleKey: "DESENVOLVIMENTO" },
+      { type: "link", label: "Instâncias", href: "/instancias", moduleKey: "DESENVOLVIMENTO" },
     ],
   },
   {
     label: "Admin",
     items: [
-      { type: "link", label: "Usuarios", href: "/usuarios", moduleKey: "USUARIOS", accessLevel: "manage" },
-      { type: "link", label: "Integracoes", href: "/integracoes", moduleKey: "CADASTROS", accessLevel: "view" },
+      { type: "link", label: "Usuários", href: "/usuarios", moduleKey: "USUARIOS", accessLevel: "manage" },
+      { type: "link", label: "Integrações", href: "/integracoes", moduleKey: "CADASTROS", accessLevel: "view" },
       { type: "link", label: "Produtos", href: "/produtos", moduleKey: "CADASTROS", accessLevel: "view" },
       { type: "link", label: "Etiquetas", href: "/etiquetas", moduleKey: "CADASTROS", accessLevel: "view" },
       { type: "link", label: "Origens CRM", href: "/origens-crm", moduleKey: "CADASTROS", accessLevel: "view" },

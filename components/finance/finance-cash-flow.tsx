@@ -138,7 +138,7 @@ const FLOW_TABS: Array<{ key: FlowTab; label: string }> = [
 
 const PAGE_HEADER_TITLE = 'Fluxo de Caixa';
 const PAGE_HEADER_SUBTITLE =
-  'Visao financeira de caixa, despesas, receitas e inadimplencia';
+  'Visão financeira de caixa, despesas, receitas e inadimplência';
 
 const GROUP_OPTIONS: Array<{ value: GroupBy; label: string }> = [
   { value: '', label: 'Sem agrupamento' },
@@ -266,7 +266,7 @@ function createMockFlowData(): SavedFlowData {
       categoria: 'Mensalidade',
       centroCusto: 'SaaS',
       conta: 'Banco Inter',
-      obs: 'Renegociacao em andamento',
+      obs: 'Renegociação em andamento',
     },
     {
       cliente: 'Aster Labs',
@@ -312,7 +312,7 @@ function createMockFlowData(): SavedFlowData {
         saldoFinal: 11780,
       },
       {
-        nome: 'Aplicacao CDI',
+        nome: 'Aplicação CDI',
         saldoInicial: 38000,
         chequeEspecial: 0,
         saldoFinal: 38000,
@@ -562,11 +562,11 @@ function computeCaixaFromImports(
   const weekdays = [
     'domingo',
     'segunda-feira',
-    'terca-feira',
+    'terça-feira',
     'quarta-feira',
     'quinta-feira',
     'sexta-feira',
-    'sabado',
+    'sábado',
   ];
 
   const dateMap = new Map<string, CashFlowDay>();
@@ -1181,7 +1181,7 @@ export function FinanceCashFlow() {
 
       setNotice({
         tone: 'error',
-        text: `Nao foi possivel importar o arquivo. ${message}`,
+        text: `Não foi possível importar o arquivo. ${message}`,
       });
     } finally {
       event.target.value = '';
@@ -1246,7 +1246,7 @@ export function FinanceCashFlow() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-            <div className="text-sm font-semibold text-slate-500">Periodo:</div>
+            <div className="text-sm font-semibold text-slate-500">Período:</div>
             <input
               type="date"
               value={dateFrom}
@@ -1269,7 +1269,7 @@ export function FinanceCashFlow() {
                 className="inline-flex items-center gap-2 rounded-[10px] border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-[#dc2626] transition-colors hover:bg-[#fef2f2]"
               >
                 <X className="h-4 w-4" />
-                Limpar periodo
+                Limpar período
               </button>
             ) : null}
             <label className="inline-flex cursor-pointer items-center gap-2 rounded-[12px] border border-[#2563eb] bg-[#2563eb] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1d4ed8]">
@@ -1574,7 +1574,7 @@ export function FinanceCashFlow() {
                   </div>
                 ) : (
                   <div className="px-5 py-10 text-center text-sm text-slate-500">
-                    Nenhum dia no periodo selecionado.
+                    Nenhum dia no período selecionado.
                   </div>
                 )}
               </div>
@@ -2033,4 +2033,3 @@ function LedgerTable({
     </div>
   );
 }
-

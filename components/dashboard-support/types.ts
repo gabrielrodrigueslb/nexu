@@ -26,7 +26,7 @@ export type SupportTech = {
   name: string;
 };
 
-export type TicketListKind = 'active' | 'done';
+export type TicketListKind = 'active' | 'done' | 'overdue';
 
 export type TimeBucket = {
   lbl: string;

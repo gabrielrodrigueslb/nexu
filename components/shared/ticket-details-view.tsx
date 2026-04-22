@@ -153,7 +153,7 @@ function ValueTable({ title, icon, rows }: TicketDetailsTable) {
                 Setup
               </th>
               <th className="px-3 py-2 text-right text-[10px] font-bold tracking-[.06em] text-[#64748b] uppercase">
-                Recorrencia
+                Recorrência
               </th>
             </tr>
           </thead>
@@ -213,7 +213,7 @@ export function TicketDetailsView({
   journeyTitle = 'Jornada do ticket',
   infoTitle = 'Dados do cliente',
   tasksTitle = 'Tarefas',
-  historyTitle = 'Historico',
+  historyTitle = 'Histórico',
 }: {
   open: boolean;
   onClose: () => void;
@@ -377,7 +377,7 @@ export function TicketDetailsView({
           </div>
           <div>
             <div className="mb-[2px] text-[11px] font-semibold text-[#94a3b8]">
-              Total Recorrencia
+              Total Recorrência
             </div>
             <div className="text-[18px] font-extrabold">{recurringTotal}</div>
           </div>
@@ -570,7 +570,7 @@ export function TicketDetailsView({
           <div className="rounded-[12px] border border-[#e2e8f0] bg-white p-4">
             <div className="mb-3 inline-flex items-center gap-2 text-[12px] font-bold text-[#0f172a]">
               <MessageSquareText className="size-4" />
-              {comments.title ?? 'Comentarios'}
+              {comments.title ?? 'Comentários'}
               <span className="inline-flex min-w-6 items-center justify-center rounded-full border border-[#bfdbfe] bg-[#eff6ff] px-1.5 py-[2px] text-[10px] font-bold text-[#2563eb]">
                 {comments.items.length}
               </span>
@@ -645,7 +645,7 @@ export function TicketDetailsView({
             {techAssignment ? (
               <div className={statusChips ? 'mt-4' : ''}>
                 <div className="mb-2 text-[11px] font-bold tracking-[.06em] text-[#64748b] uppercase">
-                  {techAssignment.label ?? 'Resp. tecnico'}
+                  {techAssignment.label ?? 'Resp. técnico'}
                 </div>
                 {techAssignment.control}
               </div>

@@ -2,6 +2,7 @@ import { Trophy } from 'lucide-react';
 
 import { formatMoney } from '@/components/utils';
 
+import { formatBackendDate } from './backend';
 import type { CommercialLeadRecord } from './types';
 
 type CrmWonLeadsProps = {
@@ -33,7 +34,7 @@ export function CrmWonLeads({ leads, getSellerName, onOpenLead }: CrmWonLeadsPro
                   {lead.company || '-'}
                 </div>
                 <div className="text-[11px] text-[#64748b]">
-                  {lead.wonAt || '-'}
+                  {formatBackendDate(lead.wonAt)}
                   {lead.generatedTicketId ? (
                     <>
                       {' '}

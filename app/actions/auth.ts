@@ -41,7 +41,7 @@ export async function loginAction(
     });
   } catch {
     return {
-      error: "Nao foi possivel conectar com a API. Confirme se o backend esta rodando em http://127.0.0.1:3333.",
+      error: "Não foi possível conectar com a API. Confirme se o backend está rodando em http://127.0.0.1:3333.",
     };
   }
 

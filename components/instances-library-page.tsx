@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 
 import { ModalShell } from '@/components/modal-shell';
+import { useCurrentAdminUser } from '@/components/admin-users-storage';
 import {
   ALL_DEV_STATUSES,
   DEV_CATEGORIES,
@@ -406,6 +407,7 @@ function FormLabel({ children }: { children: React.ReactNode }) {
 }
 
 export function InstancesLibraryPage() {
+  const { currentUser: sessionUser } = useCurrentAdminUser();
   const [tickets, setTickets] = useState<DevTicket[]>(() =>
     normalizeInitialTickets(INITIAL_DEV_TICKETS),
   );
@@ -457,8 +459,9 @@ export function InstancesLibraryPage() {
     commercialTickets.find(
       (ticket) => ticket.id === selectedCommercialTicketId,
     ) ?? null;
-  const currentUser =
-    DEV_USERS.find((user) => user.id === CURRENT_USER_ID) ?? DEV_USERS[0];
+  const currentUser = sessionUser
+    ? { id: sessionUser.id, name: sessionUser.name }
+    : DEV_USERS.find((user) => user.id === CURRENT_USER_ID) ?? DEV_USERS[0];
   const selectedDeadlineTicket =
     tickets.find((ticket) => ticket.id === deadlineTicketId) ?? null;
   const selectedTagTicket =
@@ -836,6 +839,7 @@ export function InstancesLibraryPage() {
   }
   function handleCommercialAddComment(ticketId: string, message: string) {
     const today = new Date().toISOString().slice(0, 10);
+    const commentAuthor = currentUser?.name?.trim() || 'Usuário';
     setCommercialTickets((current) =>
       current.map((ticket) =>
         ticket.id === ticketId
@@ -846,8 +850,7 @@ export function InstancesLibraryPage() {
                 ...ticket.comments,
                 {
                   id: `${ticket.id}-comment-${today}-${ticket.comments.length + 1}`,
-                  author:
-                    ticket.respSolicitacao || getTechNameById(ticket.respTec),
+                  author: commentAuthor,
                   message,
                   createdAt: today,
                 },
@@ -890,7 +893,7 @@ export function InstancesLibraryPage() {
                 {
                   id: `${ticket.id}-hist-tech-${today}`,
                   actor: ticket.respSolicitacao || getTechNameById(techId),
-                  message: `Resp. tecnico atribuido: ${getTechNameById(techId)}.`,
+                  message: `Resp. técnico atribuído: ${getTechNameById(techId)}.`,
                   createdAt: today,
                 },
               ],
@@ -910,7 +913,7 @@ export function InstancesLibraryPage() {
           ? {
               ...ticket,
               csStatus: label,
-              status: label === 'Concluido' ? 'done' : 'active',
+              status: label === 'Concluído' ? 'done' : 'active',
               updatedAt: today,
               history: [
                 ...ticket.history,

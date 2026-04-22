@@ -48,7 +48,7 @@ function buildBillingTickets(): BillingTicketRecord[] {
         contact: linkedLead?.contact ?? '-',
         plan: linkedLead?.isLite ? 'Lite' : 'Profissional',
         paymentMethod: linkedLead?.paymentMethod ?? 'Boleto',
-        sellerName: seller?.name ?? 'Sem responsavel',
+        sellerName: seller?.name ?? 'Sem responsável',
         leadId: linkedLead?.id,
       };
     })
@@ -109,10 +109,10 @@ function downloadCsv(rows: BillingTicketRecord[]) {
 }
 
 function statusLabel(status: TicketStatus) {
-  if (status === 'pendente_financeiro') return 'Ag. Cobranca';
-  if (status === 'pagamento_confirmado') return 'Cobranca gerada';
-  if (status === 'em_implantacao') return 'Em implantacao';
-  if (status === 'concluido') return 'Concluido';
+  if (status === 'pendente_financeiro') return 'Ag. Cobrança';
+  if (status === 'pagamento_confirmado') return 'Cobrança gerada';
+  if (status === 'em_implantacao') return 'Em implantação';
+  if (status === 'concluido') return 'Concluído';
   return 'Cancelado';
 }
 
@@ -202,10 +202,10 @@ export function FinanceBillingContract() {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <div className="text-[19px] font-extrabold tracking-[-0.4px] text-[#0f172a]">
-              Cobranca e Contrato
+              Cobrança e Contrato
             </div>
             <div className="mt-[2px] text-[13px] text-[#64748b]">
-              Tickets aguardando cobranca
+              Tickets aguardando cobrança
             </div>
           </div>
 
@@ -241,7 +241,7 @@ export function FinanceBillingContract() {
             Setup: {formatMoney(totalSetup)}
           </span>
           <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5">
-            Recorrencia: {formatMoney(totalRecurring)}
+            Recorrência: {formatMoney(totalRecurring)}
           </span>
         </div>
       </section>
@@ -263,7 +263,7 @@ export function FinanceBillingContract() {
             onChange={(event) => setSellerFilter(event.target.value)}
             className="rounded-[10px] border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none transition-colors focus:border-emerald-500"
           >
-            <option value="">Todos os responsaveis</option>
+            <option value="">Todos os responsáveis</option>
             {sellerOptions.map((user) => (
               <option key={user.id} value={user.id}>
                 {user.name}
@@ -334,16 +334,16 @@ export function FinanceBillingContract() {
                       Setup
                     </th>
                     <th className="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">
-                      Recorrencia
+                      Recorrência
                     </th>
                     <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">
-                      Responsavel
+                      Responsável
                     </th>
                     <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">
                       Criado em
                     </th>
                     <th className="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">
-                      Acao
+                      Ação
                     </th>
                   </tr>
                 </thead>
@@ -395,7 +395,7 @@ export function FinanceBillingContract() {
                           className="inline-flex items-center gap-2 rounded-[10px] bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-emerald-700"
                         >
                           <CheckCircle2 className="h-3.5 w-3.5" />
-                          Cobranca Gerada
+                          Cobrança Gerada
                         </button>
                       </td>
                     </tr>
@@ -448,7 +448,7 @@ export function FinanceBillingContract() {
                   <strong className="font-semibold text-slate-900">
                     {formatMoney(ticket.setupAmount)}
                   </strong>{' '}
-                  · Recorrencia:{' '}
+                  · Recorrência:{' '}
                   <strong className="font-semibold text-slate-900">
                     {formatMoney(ticket.recurringAmount)}
                   </strong>
@@ -478,7 +478,7 @@ export function FinanceBillingContract() {
                     className="inline-flex items-center gap-2 rounded-[10px] bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
                   >
                     <CheckCircle2 className="h-4 w-4" />
-                    Cobranca Gerada
+                    Cobrança Gerada
                   </button>
                 </div>
               </article>
@@ -510,7 +510,7 @@ export function FinanceBillingContract() {
                   className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
                 >
                   <CheckCircle2 className="h-4 w-4" />
-                  Confirmar cobranca
+                  Confirmar cobrança
                 </button>
               ) : null}
             </>
@@ -562,7 +562,7 @@ export function FinanceBillingContract() {
 
               <div className="rounded-2xl border border-slate-200 bg-white p-4">
                 <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
-                  Condicoes comerciais
+                  Condições comerciais
                 </div>
                 <div className="mt-3 flex items-center gap-2 text-sm text-slate-600">
                   <CreditCard className="h-4 w-4 text-slate-400" />
@@ -591,7 +591,7 @@ export function FinanceBillingContract() {
 
               <div className="rounded-2xl border border-slate-200 bg-emerald-50 p-4">
                 <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-emerald-700">
-                  Recorrencia
+                  Recorrência
                 </div>
                 <div className="mt-2 text-2xl font-bold text-emerald-700">
                   {formatMoney(selectedTicket.recurringAmount)}

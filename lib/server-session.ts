@@ -126,15 +126,10 @@ export async function getValidAccessToken() {
 export async function getCurrentSession(): Promise<SessionData | null> {
   const cookieStore = await cookies();
   const storedSession = parseSessionCookie(cookieStore.get(SESSION_COOKIE_NAME)?.value);
-
-  if (storedSession) {
-    return storedSession;
-  }
-
   const accessToken = cookieStore.get(ACCESS_TOKEN_COOKIE_NAME)?.value;
 
   if (!accessToken) {
-    return null;
+    return storedSession;
   }
 
   let response: Response;
@@ -146,7 +141,7 @@ export async function getCurrentSession(): Promise<SessionData | null> {
   }
 
   if (!response.ok) {
-    return null;
+    return storedSession;
   }
 
   return (await response.json()) as SessionData;
@@ -156,7 +151,7 @@ export async function proxyAuthenticatedRequest(request: Request, path: string) 
   let accessToken = await getValidAccessToken();
 
   if (!accessToken) {
-    return new Response(JSON.stringify({ error: { message: "Nao autenticado" } }), {
+    return new Response(JSON.stringify({ error: { message: "Não autenticado" } }), {
       status: 401,
       headers: {
         "Content-Type": "application/json",
@@ -190,7 +185,7 @@ export async function proxyAuthenticatedRequest(request: Request, path: string) 
       accessToken,
     );
   } catch {
-    return new Response(JSON.stringify({ error: { message: "API indisponivel no momento" } }), {
+    return new Response(JSON.stringify({ error: { message: "API indisponível no momento" } }), {
       status: 503,
       headers: {
         "Content-Type": "application/json",
@@ -202,7 +197,7 @@ export async function proxyAuthenticatedRequest(request: Request, path: string) 
     accessToken = await refreshSessionFromBackend();
 
     if (!accessToken) {
-      return new Response(JSON.stringify({ error: { message: "Nao autenticado" } }), {
+      return new Response(JSON.stringify({ error: { message: "Não autenticado" } }), {
         status: 401,
         headers: {
           "Content-Type": "application/json",
@@ -221,7 +216,7 @@ export async function proxyAuthenticatedRequest(request: Request, path: string) 
         accessToken,
       );
     } catch {
-      return new Response(JSON.stringify({ error: { message: "API indisponivel no momento" } }), {
+      return new Response(JSON.stringify({ error: { message: "API indisponível no momento" } }), {
         status: 503,
         headers: {
           "Content-Type": "application/json",

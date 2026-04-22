@@ -1,29 +1,16 @@
 import { useMemo } from 'react';
 
-import { origins, sdrs, users } from './data';
-import { ACT_COLS, CRM_COLS } from './types';
-import type { ActivityType, Lead, Ticket } from './types';
+import { ACT_COLS, CRM_COLS, type ActivityType, type Lead, type Ticket, type User } from './types';
 import { inRange, sumBy } from './utils';
 
-const NOW = new Date('2026-03-21T12:00:00').getTime();
+const NOW = new Date().getTime();
 
-export function useCrmData(
-  leads: Lead[],
-  tickets: Ticket[],
-  dateFrom: string,
-  dateTo: string,
-) {
+export function useCrmData(leads: Lead[], tickets: Ticket[], dateFrom: string, dateTo: string) {
   return useMemo(() => {
-    const filteredLeads = leads.filter((lead) =>
-      inRange(lead.createdAt, dateFrom, dateTo),
-    );
-    const filteredTickets = tickets.filter((ticket) =>
-      inRange(ticket.createdAt, dateFrom, dateTo),
-    );
+    const filteredLeads = leads.filter((lead) => inRange(lead.createdAt, dateFrom, dateTo));
+    const filteredTickets = tickets.filter((ticket) => inRange(ticket.createdAt, dateFrom, dateTo));
 
-    const ativos = filteredLeads.filter(
-      (lead) => lead.status !== 'Ganho' && lead.status !== 'Perdido',
-    );
+    const ativos = filteredLeads.filter((lead) => lead.status !== 'Ganho' && lead.status !== 'Perdido');
     const ganhos = filteredLeads.filter((lead) => lead.status === 'Ganho');
     const perdidos = filteredLeads.filter((lead) => lead.status === 'Perdido');
 
@@ -35,26 +22,13 @@ export function useCrmData(
         ? Math.round((ganhos.length / (ganhos.length + perdidos.length)) * 100)
         : 0;
 
-    const ticketValue = (ticket: Ticket) =>
-      ticket.setupAmount + ticket.recurringAmount;
-    const tkPendFin = filteredTickets.filter(
-      (ticket) => ticket.status === 'pendente_financeiro',
-    );
-    const tkPagConf = filteredTickets.filter(
-      (ticket) => ticket.status === 'pagamento_confirmado',
-    );
-    const tkImpl = filteredTickets.filter(
-      (ticket) => ticket.status === 'em_implantacao',
-    );
-    const tkConc = filteredTickets.filter(
-      (ticket) => ticket.status === 'concluido',
-    );
-    const tkCancel = filteredTickets.filter(
-      (ticket) => ticket.status === 'cancelado',
-    );
-    const tkAtivos = filteredTickets.filter(
-      (ticket) => ticket.status !== 'cancelado',
-    );
+    const ticketValue = (ticket: Ticket) => ticket.setupAmount + ticket.recurringAmount;
+    const tkPendFin = filteredTickets.filter((ticket) => ticket.status === 'pendente_financeiro');
+    const tkPagConf = filteredTickets.filter((ticket) => ticket.status === 'pagamento_confirmado');
+    const tkImpl = filteredTickets.filter((ticket) => ticket.status === 'em_implantacao');
+    const tkConc = filteredTickets.filter((ticket) => ticket.status === 'concluido');
+    const tkCancel = filteredTickets.filter((ticket) => ticket.status === 'cancelado');
+    const tkAtivos = filteredTickets.filter((ticket) => ticket.status !== 'cancelado');
 
     const tkSetupTotal = sumBy(tkAtivos, (ticket) => ticket.setupAmount);
     const tkRecurTotal = sumBy(tkAtivos, (ticket) => ticket.recurringAmount);
@@ -73,17 +47,13 @@ export function useCrmData(
 
     const tPend = allTasks.filter((task) => !task.done);
     const tFeitas = allTasks.filter((task) => task.done);
-    const tAtrasadas = tPend.filter(
-      (task) =>
-        new Date(task.date).getTime() < NOW && task.date !== '2026-03-21',
-    );
-    const tHoje = tPend.filter((task) => task.date === '2026-03-21');
+    const tAtrasadas = tPend.filter((task) => task.date && new Date(task.date).getTime() < NOW);
+    const today = new Date().toISOString().slice(0, 10);
+    const tHoje = tPend.filter((task) => task.date === today);
     const leadsSemResp = ativos.filter((lead) => !lead.sellerId).length;
     const funnelMax = Math.max(
       1,
-      ...CRM_COLS.map(
-        (status) => ativos.filter((lead) => lead.status === status).length,
-      ),
+      ...CRM_COLS.map((status) => ativos.filter((lead) => lead.status === status).length),
     );
 
     return {
@@ -120,17 +90,13 @@ export function useCrmData(
   }, [dateFrom, dateTo, leads, tickets]);
 }
 
-export function useOriginStats(filteredLeads: Lead[]) {
+export function useOriginStats(filteredLeads: Lead[], origins: Array<{ id: string; name: string }>) {
   return useMemo(() => {
     const rows = origins
       .map((origin) => {
-        const originLeads = filteredLeads.filter(
-          (lead) => lead.originId === origin.id,
-        );
+        const originLeads = filteredLeads.filter((lead) => lead.originId === origin.id);
         const wins = originLeads.filter((lead) => lead.status === 'Ganho');
-        const open = originLeads.filter(
-          (lead) => lead.status !== 'Ganho' && lead.status !== 'Perdido',
-        );
+        const open = originLeads.filter((lead) => lead.status !== 'Ganho' && lead.status !== 'Perdido');
 
         return {
           name: origin.name,
@@ -146,9 +112,7 @@ export function useOriginStats(filteredLeads: Lead[]) {
     const withoutOrigin = filteredLeads.filter((lead) => !lead.originId);
     if (withoutOrigin.length) {
       const wins = withoutOrigin.filter((lead) => lead.status === 'Ganho');
-      const open = withoutOrigin.filter(
-        (lead) => lead.status !== 'Ganho' && lead.status !== 'Perdido',
-      );
+      const open = withoutOrigin.filter((lead) => lead.status !== 'Ganho' && lead.status !== 'Perdido');
 
       rows.push({
         name: 'Sem origem',
@@ -161,10 +125,10 @@ export function useOriginStats(filteredLeads: Lead[]) {
     }
 
     return rows.sort((left, right) => right.total - left.total);
-  }, [filteredLeads]);
+  }, [filteredLeads, origins]);
 }
 
-export function useSdrStats(filteredLeads: Lead[]) {
+export function useSdrStats(filteredLeads: Lead[], sdrs: Array<{ id: string; name: string }>) {
   return useMemo(() => {
     const leadsWithoutSdr = filteredLeads.filter((lead) => !lead.sdrId);
 
@@ -172,18 +136,13 @@ export function useSdrStats(filteredLeads: Lead[]) {
       .map((sdr) => {
         const sdrLeads = filteredLeads.filter((lead) => lead.sdrId === sdr.id);
         const wins = sdrLeads.filter((lead) => lead.status === 'Ganho');
-        const open = sdrLeads.filter(
-          (lead) => lead.status !== 'Ganho' && lead.status !== 'Perdido',
-        );
+        const open = sdrLeads.filter((lead) => lead.status !== 'Ganho' && lead.status !== 'Perdido');
         const lost = sdrLeads.filter((lead) => lead.status === 'Perdido');
-        const bySeller = sdrLeads.reduce<Record<string, number>>(
-          (accumulator, lead) => {
-            const key = lead.sellerId ?? 'sem';
-            accumulator[key] = (accumulator[key] ?? 0) + 1;
-            return accumulator;
-          },
-          {},
-        );
+        const bySeller = sdrLeads.reduce<Record<string, number>>((accumulator, lead) => {
+          const key = lead.sellerId ?? 'sem';
+          accumulator[key] = (accumulator[key] ?? 0) + 1;
+          return accumulator;
+        }, {});
 
         return {
           sdr,
@@ -201,15 +160,12 @@ export function useSdrStats(filteredLeads: Lead[]) {
       .sort((left, right) => right.total - left.total);
 
     return { rows, leadsWithoutSdr };
-  }, [filteredLeads]);
+  }, [filteredLeads, sdrs]);
 }
 
-export function useVendorStats(filteredLeads: Lead[], filteredTickets: Ticket[]) {
+export function useVendorStats(filteredLeads: Lead[], filteredTickets: Ticket[], users: User[]) {
   return useMemo(() => {
-    const sellerTaskMap: Record<
-      string,
-      Record<ActivityType, { total: number; done: number }>
-    > = {};
+    const sellerTaskMap: Record<string, Record<ActivityType, { total: number; done: number }>> = {};
 
     filteredLeads.forEach((lead) => {
       if (!lead.sellerId) return;
@@ -230,17 +186,12 @@ export function useVendorStats(filteredLeads: Lead[], filteredTickets: Ticket[])
 
     return users
       .map((user) => {
-        const sellerLeads = filteredLeads.filter(
-          (lead) => lead.sellerId === user.id,
-        );
+        const sellerLeads = filteredLeads.filter((lead) => lead.sellerId === user.id);
         const wins = sellerLeads.filter((lead) => lead.status === 'Ganho');
         const lost = sellerLeads.filter((lead) => lead.status === 'Perdido');
-        const open = sellerLeads.filter(
-          (lead) => lead.status !== 'Ganho' && lead.status !== 'Perdido',
-        );
+        const open = sellerLeads.filter((lead) => lead.status !== 'Ganho' && lead.status !== 'Perdido');
         const sellerTickets = filteredTickets.filter(
-          (ticket) =>
-            ticket.createdBy === user.id || ticket.assignee === user.id,
+          (ticket) => ticket.createdBy === user.id || ticket.assignee === user.id,
         );
 
         return {
@@ -254,20 +205,18 @@ export function useVendorStats(filteredLeads: Lead[], filteredTickets: Ticket[])
           revenue: sumBy(wins, (lead) => lead.value),
           pipeline: sumBy(open, (lead) => lead.value),
           ticketSetup: sumBy(sellerTickets, (ticket) => ticket.setupAmount),
-          ticketRecurring: sumBy(
-            sellerTickets,
-            (ticket) => ticket.recurringAmount,
-          ),
-          allTaskStats: sellerTaskMap[user.id] ?? {
-            reuniao: { total: 0, done: 0 },
-            demo: { total: 0, done: 0 },
-            visita: { total: 0, done: 0 },
-          },
+          ticketRecurring: sumBy(sellerTickets, (ticket) => ticket.recurringAmount),
+          allTaskStats:
+            sellerTaskMap[user.id] ?? {
+              reuniao: { total: 0, done: 0 },
+              demo: { total: 0, done: 0 },
+              visita: { total: 0, done: 0 },
+            },
         };
       })
       .filter((row) => row.leads > 0 || row.ticketSetup > 0)
       .sort((left, right) => right.revenue - left.revenue);
-  }, [filteredLeads, filteredTickets]);
+  }, [filteredLeads, filteredTickets, users]);
 }
 
 export function useActivityTotals(vendorStats: ReturnType<typeof useVendorStats>) {
@@ -275,19 +224,13 @@ export function useActivityTotals(vendorStats: ReturnType<typeof useVendorStats>
     const actTotalGlobal = ACT_COLS.reduce(
       (total, type) =>
         total +
-        vendorStats.reduce(
-          (sellerTotal, seller) => sellerTotal + seller.allTaskStats[type].total,
-          0,
-        ),
+        vendorStats.reduce((sellerTotal, seller) => sellerTotal + seller.allTaskStats[type].total, 0),
       0,
     );
     const actDoneGlobal = ACT_COLS.reduce(
       (total, type) =>
         total +
-        vendorStats.reduce(
-          (sellerTotal, seller) => sellerTotal + seller.allTaskStats[type].done,
-          0,
-        ),
+        vendorStats.reduce((sellerTotal, seller) => sellerTotal + seller.allTaskStats[type].done, 0),
       0,
     );
 

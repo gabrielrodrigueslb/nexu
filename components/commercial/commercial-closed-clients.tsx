@@ -30,6 +30,7 @@ import {
   useAdminIntegrations,
   useAdminProducts,
 } from '@/components/admin-catalogs';
+import { useCurrentAdminUser } from '@/components/admin-users-storage';
 import { ModalShell } from '@/components/modal-shell';
 import { TicketDetailsView } from '@/components/shared/ticket-details-view';
 import type { TicketStatus } from '@/components/types';
@@ -106,18 +107,18 @@ type TicketFilterValue =
   | TicketStatus
   | ClosedClientTicketType;
 
-const PLAN_OPTIONS = ['Lite', 'Basico', 'Profissional', 'Unico'];
-const PAYMENT_OPTIONS = ['Boleto Bancario', 'Pix', 'Cartao de Credito', 'Transferencia'];
-const INSTALLMENT_OPTIONS = ['A vista', '2x', '3x', '4x', '5x', '6x', '10x', '12x'];
+const PLAN_OPTIONS = ['Lite', 'Básico', 'Profissional', 'Único'];
+const PAYMENT_OPTIONS = ['Boleto Bancário', 'Pix', 'Cartão de Crédito', 'Transferência'];
+const INSTALLMENT_OPTIONS = ['À vista', '2x', '3x', '4x', '5x', '6x', '10x', '12x'];
 const COMMERCIAL_LABEL_OPTIONS = [
   'Novo Ticket',
   'Reuniao Agendada',
   'Site',
   'Portfolio',
-  'Implantacao',
+  'Implantação',
   'Reuniao de Alinhamento',
   'Migracao de API',
-  'Em configuracao',
+  'Em configuração',
   'Bercario',
 ] as const;
 
@@ -148,7 +149,7 @@ const STATUS_META: Record<
     step: 2,
   },
   concluido: {
-    label: 'Concluido',
+    label: 'Concluído',
     badge: 'border-[#a7f3d0] bg-[#ecfdf5] text-[#059669]',
     icon: CheckCircle2,
     step: 3,
@@ -173,7 +174,7 @@ const TYPE_META: Record<ClosedClientTicketType, { label: string; badge: string }
 };
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const JOURNEY_STEPS = ['Cadastro', 'Pagamento', 'Implantacao', 'Concluido'];
+const JOURNEY_STEPS = ['Cadastro', 'Pagamento', 'Implantação', 'Concluído'];
 
 function syncPriceRowsWithCatalog(rows: CommercialPriceRow[], catalogNames: string[]) {
   return syncCatalogRows(rows, catalogNames, (name) => ({
@@ -346,7 +347,7 @@ function TicketValueTable({
                   Setup
                 </th>
                 <th className="px-3 py-2 text-right text-[10px] font-bold uppercase text-[#64748b]">
-                  Recorrencia
+                  Recorrência
                 </th>
               </tr>
             </thead>
@@ -402,7 +403,7 @@ function buildSeedTickets(productCatalog: string[], integrationCatalog: string[]
         ? [
             {
               id: makeId('task'),
-              label: 'Configuracao inicial da plataforma',
+              label: 'Configuração inicial da plataforma',
               done: ticket.status === 'concluido',
               assigneeId: ticket.assignee,
               dueDate: ticket.createdAt,
@@ -430,8 +431,8 @@ function buildSeedTickets(productCatalog: string[], integrationCatalog: string[]
       website: linkedLead ? `https://www.${slugify(linkedLead.company)}.com.br` : '',
       instance: linkedLead ? slugify(linkedLead.company) : slugify(ticket.id),
       plan,
-      paymentMethod: linkedLead?.paymentMethod ?? 'Boleto Bancario',
-      installment: 'A vista',
+      paymentMethod: linkedLead?.paymentMethod ?? 'Boleto Bancário',
+      installment: 'À vista',
       assigneeId: ticket.assignee,
       technicalAssigneeId:
         ticket.status === 'em_implantacao' || ticket.status === 'concluido'
@@ -448,7 +449,7 @@ function buildSeedTickets(productCatalog: string[], integrationCatalog: string[]
       updatedAt: linkedLead?.wonAt ?? ticket.createdAt,
       notes:
         ticket.status === 'cancelado'
-          ? 'Ticket cancelado apos revisao comercial.'
+          ? 'Ticket cancelado após revisão comercial.'
           : 'Cliente fechado aguardando acompanhamento operacional.',
       products: defaultProducts,
       integrations: defaultIntegrations,
@@ -499,7 +500,7 @@ function emptyDraft(productCatalog: string[], integrationCatalog: string[]): Clo
     instance: '',
     plan: '',
     paymentMethod: '',
-    installment: 'A vista',
+    installment: 'À vista',
     assigneeId: undefined,
     technicalAssigneeId: undefined,
     status: 'pendente_financeiro',
@@ -544,10 +545,10 @@ function exportTicketsCsv(tickets: ClosedClientTicketRecord[]) {
     'CNPJ',
     'Tipo',
     'Status',
-    'Responsavel',
+    'Responsável',
     'Plano',
     'Setup',
-    'Recorrencia',
+    'Recorrência',
     'Criado em',
   ];
   const rows = tickets.map((ticket) => [
@@ -580,11 +581,11 @@ function statusOptions(): Array<{ value: TicketFilterValue; label: string }> {
     { value: 'all', label: 'Todos ativos' },
     { value: 'pendente_financeiro', label: 'Ag. Pagamento' },
     { value: 'pagamento_confirmado', label: 'Pagamento confirmado' },
-    { value: 'em_implantacao', label: 'Em implantacao' },
+    { value: 'em_implantacao', label: 'Em implantação' },
     { value: 'cancelado', label: 'Cancelados' },
     { value: 'novo', label: 'Novos' },
     { value: 'inclusao', label: 'Upsell' },
-    { value: 'historico', label: 'Historico' },
+    { value: 'historico', label: 'Histórico' },
   ];
 }
 
@@ -674,7 +675,7 @@ function PriceRowsEditor({
                   ),
                 )
               }
-              placeholder="Recorrencia"
+              placeholder="Recorrência"
               className="rounded-[8px] border border-[#e2e8f0] bg-white px-3 py-[7px] text-[13px] text-[#0f172a] outline-none disabled:cursor-not-allowed disabled:bg-[#f1f5f9]"
             />
           </div>
@@ -692,7 +693,7 @@ function PriceRowsEditor({
         </div>
         <div className="rounded-[10px] border border-[#ddd6fe] bg-[#f5f3ff] p-3">
           <div className="text-[10px] font-bold tracking-[.06em] text-[#7c3aed] uppercase">
-            Total Recorrencia
+            Total Recorrência
           </div>
           <div className="mt-1 text-[18px] font-extrabold text-[#7c3aed]">
             {formatMoney(totals.recurring)}
@@ -810,14 +811,14 @@ function TicketFormModal({
 
           <div>
             <label className="mb-[5px] block text-[11px] font-bold tracking-[.06em] text-[#64748b] uppercase">
-              Responsavel pela solicitacao
+              Responsável pela solicitação
             </label>
             <select
               value={draft.assigneeId ?? ''}
               onChange={(event) => update('assigneeId', event.target.value || undefined)}
               className="w-full rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] px-3 py-[9px] text-[13px] text-[#0f172a] outline-none"
             >
-              <option value="">- Sem responsavel -</option>
+              <option value="">- Sem responsável -</option>
               {users.map((user) => (
                 <option key={user.id} value={user.id}>
                   {user.name}
@@ -914,7 +915,7 @@ function TicketFormModal({
 
           <div>
             <label className="mb-[5px] block text-[11px] font-bold tracking-[.06em] text-[#64748b] uppercase">
-              Instancia
+              Instância
             </label>
             <input
               value={draft.instance}
@@ -986,13 +987,13 @@ function TicketFormModal({
 
         <PriceRowsEditor
           title="Produtos e valores"
-          subtitle="Selecione os produtos e informe setup e recorrencia."
+          subtitle="Selecione os produtos e informe setup e recorrência."
           rows={draft.products}
           onChange={(rows) => update('products', rows)}
         />
 
         <PriceRowsEditor
-          title="Integracoes e valores"
+          title="Integrações e valores"
           subtitle="Selecione as integracoes contratadas."
           rows={draft.integrations}
           onChange={(rows) => update('integrations', rows)}
@@ -1000,7 +1001,7 @@ function TicketFormModal({
 
         <div>
           <label className="mb-[5px] block text-[11px] font-bold tracking-[.06em] text-[#64748b] uppercase">
-            Observacoes
+            Observações
           </label>
           <textarea
             value={draft.notes}
@@ -1060,9 +1061,9 @@ function TicketDetailsModal({
     ticket.status === 'pendente_financeiro'
       ? 'Marcar cobranca gerada'
       : ticket.status === 'pagamento_confirmado'
-        ? 'Enviar para implantacao'
-        : 'Concluir implantacao';
-  const journeyLabels = ['Cadastro', 'Pagamento', 'Implantacao', 'Concluido'];
+        ? 'Enviar para implantação'
+        : 'Concluir implantação';
+  const journeyLabels = ['Cadastro', 'Pagamento', 'Implantação', 'Concluído'];
   const journeySteps =
     ticket.status === 'concluido'
       ? journeyLabels.map((label) => ({ label, state: 'done' as const }))
@@ -1122,20 +1123,20 @@ function TicketDetailsModal({
           className="inline-flex items-center gap-1.5 rounded-full border border-[#e2e8f0] bg-white px-3 py-1.5 text-[11px] font-medium text-[#475569]"
         >
           <User className="size-3.5 text-[#64748b]" />
-          Resp. solicitacao: {assigneeName}
+          Resp. solicitação: {assigneeName}
         </span>,
         <span
           key="tech"
           className="inline-flex items-center gap-2 rounded-full border border-[#e2e8f0] bg-white px-3 py-1.5 text-[11px] font-medium text-[#475569]"
         >
           <Hammer className="size-3.5 text-[#64748b]" />
-          <span>Resp. tecnico:</span>
+          <span>Resp. técnico:</span>
           <select
             value={ticket.technicalAssigneeId ?? ''}
             onChange={(event) => onChangeTechnicalAssignee(event.target.value)}
             className="min-w-[150px] bg-transparent text-[11px] font-semibold text-[#0f172a] outline-none"
           >
-            <option value="">Sem responsavel</option>
+            <option value="">Sem responsável</option>
             {users.map((user) => (
               <option key={user.id} value={user.id}>
                 {user.name}
@@ -1181,7 +1182,7 @@ function TicketDetailsModal({
         { label: 'CNPJ', value: ticket.cnpj || '-' },
         { label: 'Contato', value: ticket.contact || '-' },
         { label: 'Telefone', value: ticket.phone || '-' },
-        { label: 'Instancia', value: ticket.instance || '-' },
+        { label: 'Instância', value: ticket.instance || '-' },
         {
           label: 'E-mail',
           value: ticket.email || '-',
@@ -1195,13 +1196,13 @@ function TicketDetailsModal({
         { label: 'Plano', value: ticket.plan || '-' },
         { label: 'Pagamento', value: ticket.paymentMethod || '-' },
         { label: 'Parcelamento', value: ticket.installment || '-', fullWidth: true },
-        { label: 'Responsavel', value: assigneeName },
-        { label: 'Resp. tecnico', value: technicalName },
+        { label: 'Responsável', value: assigneeName },
+        { label: 'Resp. técnico', value: technicalName },
         { label: 'Criado em', value: formatDate(ticket.createdAt) },
         { label: 'Atualizado em', value: formatDate(ticket.updatedAt) },
       ]}
       notes={ticket.notes}
-      notesLabel="Observacao"
+      notesLabel="Observação"
       tasks={ticket.tasks.map((task) => ({
         id: task.id,
         label: task.label,
@@ -1224,7 +1225,7 @@ function TicketDetailsModal({
           })),
         },
         {
-          title: 'Integracoes',
+          title: 'Integrações',
           icon: <ExternalLink className="size-4 text-[#7c3aed]" />,
           rows: visibleIntegrations.map((row) => ({
             id: row.id,
@@ -1249,7 +1250,7 @@ function TicketDetailsModal({
         createdAt: formatDate(item.createdAt),
       }))}
       comments={{
-        title: 'Comentarios',
+        title: 'Comentários',
         emptyText: 'Nenhum comentario.',
         inputPlaceholder: 'Comentario...',
         submitLabel: 'Enviar',
@@ -1327,6 +1328,7 @@ function TicketDetailsModal({
 }
 
 export function CommercialClosedClients() {
+  const { currentUser } = useCurrentAdminUser();
   const { items: productItems } = useAdminProducts();
   const { items: integrationItems } = useAdminIntegrations();
   const productCatalog = getActiveCatalogNames(productItems);
@@ -1431,7 +1433,7 @@ export function CommercialClosedClients() {
             ? [
                 {
                   id: makeId('task'),
-                  label: 'Configuracao inicial da plataforma',
+                  label: 'Configuração inicial da plataforma',
                   done: false,
                   assigneeId: ticket.technicalAssigneeId ?? ticket.assigneeId,
                   dueDate: todayIsoDate(),
@@ -1501,6 +1503,7 @@ export function CommercialClosedClients() {
   }
 
   function handleAddComment(ticketId: string, message: string) {
+    const commentAuthor = currentUser?.name?.trim() || 'Usuário';
     setTickets((current) =>
       current.map((ticket) =>
         ticket.id === ticketId
@@ -1511,7 +1514,7 @@ export function CommercialClosedClients() {
                 ...ticket.comments,
                 {
                   id: makeId('comment'),
-                  author: resolveCommercialActor(ticket),
+                  author: commentAuthor,
                   message,
                   createdAt: todayIsoDate(),
                 },
@@ -1555,8 +1558,8 @@ export function CommercialClosedClients() {
                 {
                   id: makeId('log'),
                   actor: resolveCommercialActor(ticket),
-                  message: `Resp. tecnico atribuido: ${
-                    resolveUserName(technicalAssigneeId) ?? 'Sem responsavel'
+                  message: `Resp. técnico atribuído: ${
+                    resolveUserName(technicalAssigneeId) ?? 'Sem responsável'
                   }`,
                   createdAt: todayIsoDate(),
                 },
@@ -1782,7 +1785,7 @@ export function CommercialClosedClients() {
                   Setup: <strong className="text-[#0f172a]">{formatMoney(sumSetupValue(ticket))}</strong>
                 </span>
                 <span>
-                  Recorrencia:{' '}
+                  Recorrência:{' '}
                   <strong className="text-[#0f172a]">{formatMoney(sumRecurringValue(ticket))}</strong>
                 </span>
               </div>

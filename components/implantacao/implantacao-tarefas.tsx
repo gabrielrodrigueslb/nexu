@@ -13,6 +13,9 @@ import { MetricCard, Panel } from '@/components/ui';
 
 import { ImplantacaoTicketModal } from './implantacao-ticket-modal';
 import {
+  useCurrentAdminUser,
+} from '@/components/admin-users-storage';
+import {
   getInitials,
   getTechNameById,
   IMPLANTACAO_COLUMNS,
@@ -31,6 +34,7 @@ type TaskRow = ImplantacaoTask & {
 };
 
 export function ImplantacaoTarefas() {
+  const { currentUser } = useCurrentAdminUser();
   const [tickets, setTickets] = useImplantacaoTickets();
   const [statusFilter, setStatusFilter] = useState<'all' | 'pend' | 'feita'>('all');
   const [techFilter, setTechFilter] = useState('');
@@ -124,6 +128,7 @@ export function ImplantacaoTarefas() {
 
   function handleAddComment(ticketId: string, message: string) {
     const today = new Date().toISOString().slice(0, 10);
+    const commentAuthor = currentUser?.name?.trim() || 'Usuário';
     setTickets((current) =>
       current.map((ticket) =>
         ticket.id === ticketId
@@ -134,7 +139,7 @@ export function ImplantacaoTarefas() {
                 ...ticket.comments,
                 {
                   id: `${ticket.id}-comment-${Date.now()}`,
-                  author: ticket.respSolicitacao || getTechNameById(ticket.respTec),
+                  author: commentAuthor,
                   message,
                   createdAt: today,
                 },
@@ -179,7 +184,7 @@ export function ImplantacaoTarefas() {
                 {
                   id: `${ticket.id}-hist-tech-${Date.now()}`,
                   actor: ticket.respSolicitacao || getTechNameById(techId),
-                  message: `Resp. tecnico atribuido: ${getTechNameById(techId)}.`,
+                  message: `Resp. técnico atribuído: ${getTechNameById(techId)}.`,
                   createdAt: today,
                 },
               ],
@@ -277,7 +282,7 @@ export function ImplantacaoTarefas() {
         />
         <MetricCard
           icon={<CheckSquare className="size-5 text-[#059669]" />}
-          title="Concluidas"
+          title="Concluídas"
           value={String(doneRows.length)}
           tone="success"
         />
@@ -339,7 +344,7 @@ export function ImplantacaoTarefas() {
                           Ticket
                         </th>
                         <th className="px-3 py-3 text-left text-[10px] font-bold tracking-[.06em] text-[#2563eb] uppercase">
-                          Instancia
+                          Instância
                         </th>
                         <th className="px-3 py-3 text-center text-[10px] font-bold tracking-[.06em] text-[#64748b] uppercase">
                           Etapa

@@ -154,7 +154,7 @@ export function AdminUsersPage() {
       .filter(([, accessLevel]) => accessLevel !== 'none')
       .map(([moduleKey, accessLevel]) => ({ moduleKey, accessLevel }));
     if (!draft.name.trim() || !normalizedEmail) {
-      setErrorMessage('Nome e e-mail sao obrigatorios.');
+      setErrorMessage('Nome e e-mail são obrigatórios.');
       return;
     }
     if (!editingUserId && draft.password.trim().length < 10) {
@@ -191,7 +191,7 @@ export function AdminUsersPage() {
       setErrorMessage(
         nextError instanceof Error
           ? nextError.message
-          : 'Falha ao salvar usuario.',
+          : 'Falha ao salvar usuário.',
       );
     } finally {
       setIsSaving(false);

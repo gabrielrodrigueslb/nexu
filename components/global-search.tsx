@@ -21,7 +21,7 @@ type SearchGroup =
   | 'Leads CRM'
   | 'Tickets Comerciais'
   | 'Desenvolvimento'
-  | 'Implantacao';
+  | 'Implantação';
 
 type SearchResult = {
   key: string;
@@ -38,7 +38,7 @@ const GROUP_ORDER: SearchGroup[] = [
   'Leads CRM',
   'Tickets Comerciais',
   'Desenvolvimento',
-  'Implantacao',
+  'Implantação',
 ];
 
 const GROUP_META: Record<
@@ -51,15 +51,15 @@ const GROUP_META: Record<
   },
   'Tickets Comerciais': {
     icon: <BriefcaseBusiness className="size-4 text-[#7c3aed]" />,
-    description: 'Tickets fechados, setup e recorrencia',
+    description: 'Tickets fechados, setup e recorrência',
   },
   Desenvolvimento: {
     icon: <Bug className="size-4 text-[#d97706]" />,
-    description: 'Demandas, sprints e responsaveis',
+    description: 'Demandas, sprints e responsáveis',
   },
-  Implantacao: {
+  Implantação: {
     icon: <Headset className="size-4 text-[#059669]" />,
-    description: 'Tickets de implantacao, produto e tecnico',
+    description: 'Tickets de implantação, produto e técnico',
   },
 };
 
@@ -69,6 +69,30 @@ function normalizeText(value: string) {
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .trim();
+}
+
+function formatCommercialStatus(status: string) {
+  const labels: Record<string, string> = {
+    aguardando_pagamento: 'Aguardando pagamento',
+    pagamento_confirmado: 'Pagamento confirmado',
+    em_implantacao: 'Em implantação',
+    concluido: 'Concluído',
+    cancelado: 'Cancelado',
+  };
+
+  return labels[status] ?? status;
+}
+
+function formatDevStatus(status: string) {
+  return status === 'Concluido' ? 'Concluído' : status;
+}
+
+function formatSupportStatus(status: string) {
+  return status === 'done' ? 'Concluído' : 'Ativo';
+}
+
+function formatSupportType(tipo: string) {
+  return tipo === 'novo' ? 'Novo' : 'Inclusão';
 }
 
 function buildIndex(): SearchResult[] {
@@ -90,7 +114,15 @@ function buildIndex(): SearchResult[] {
         `Valor: ${formatMoney(lead.value)}`,
       ],
       pills: [
-        { label: lead.status, tone: lead.status === 'Ganho' ? 'success' : lead.status === 'Perdido' ? 'error' : 'accent' },
+        {
+          label: lead.status,
+          tone:
+            lead.status === 'Ganho'
+              ? 'success'
+              : lead.status === 'Perdido'
+                ? 'error'
+                : 'accent',
+        },
         { label: lead.id, tone: 'neutral' },
       ],
       searchable: [
@@ -107,24 +139,27 @@ function buildIndex(): SearchResult[] {
   });
 
   const commercialResults: SearchResult[] = commercialTickets.map((ticket) => {
-    const createdBy = users.find((user) => user.id === ticket.createdBy)?.name ?? 'Nao informado';
-    const assignee = users.find((user) => user.id === ticket.assignee)?.name ?? 'Nao informado';
+    const createdBy =
+      users.find((user) => user.id === ticket.createdBy)?.name ?? 'Não informado';
+    const assignee =
+      users.find((user) => user.id === ticket.assignee)?.name ?? 'Não informado';
+    const statusLabel = formatCommercialStatus(ticket.status);
 
     return {
       key: `ticket-${ticket.id}`,
       group: 'Tickets Comerciais',
       title: `Ticket ${ticket.id}`,
-      subtitle: `Status: ${ticket.status}`,
+      subtitle: `Status: ${statusLabel}`,
       details: [
         `Criado por: ${createdBy}`,
-        `Responsavel: ${assignee}`,
+        `Responsável: ${assignee}`,
         `Setup: ${formatMoney(ticket.setupAmount)}`,
-        `Recorrencia: ${formatMoney(ticket.recurringAmount)}`,
+        `Recorrência: ${formatMoney(ticket.recurringAmount)}`,
         `Criado em: ${ticket.createdAt}`,
       ],
       pills: [
         {
-          label: ticket.status,
+          label: statusLabel,
           tone:
             ticket.status === 'concluido'
               ? 'success'
@@ -136,7 +171,7 @@ function buildIndex(): SearchResult[] {
         },
         { label: ticket.id, tone: 'neutral' },
       ],
-      searchable: [ticket.id, ticket.status, createdBy, assignee, ticket.createdAt],
+      searchable: [ticket.id, statusLabel, createdBy, assignee, ticket.createdAt],
       score: 0,
     };
   });
@@ -144,7 +179,8 @@ function buildIndex(): SearchResult[] {
   const devResults: SearchResult[] = devTickets.map((ticket) => {
     const sprint = sprints.find((item) => item.id === ticket.sprintId)?.name;
     const responsible =
-      devUsers.find((user) => user.id === ticket.resp)?.name ?? 'Nao informado';
+      devUsers.find((user) => user.id === ticket.resp)?.name ?? 'Não informado';
+    const statusLabel = formatDevStatus(ticket.devStatus);
 
     return {
       key: `dev-${ticket.id}`,
@@ -152,15 +188,15 @@ function buildIndex(): SearchResult[] {
       title: ticket.title,
       subtitle: `#${ticket.id} · ${ticket.devType} · ${ticket.category}`,
       details: [
-        `Status: ${ticket.devStatus}`,
-        `Responsavel: ${responsible}`,
+        `Status: ${statusLabel}`,
+        `Responsável: ${responsible}`,
         sprint ? `Sprint: ${sprint}` : 'Sem sprint',
         `Pontos: ${ticket.totalPts}`,
         ticket.deadline ? `Prazo: ${ticket.deadline}` : 'Sem prazo',
       ],
       pills: [
         {
-          label: ticket.devStatus,
+          label: statusLabel,
           tone:
             ticket.devStatus === 'Concluido'
               ? 'success'
@@ -172,7 +208,12 @@ function buildIndex(): SearchResult[] {
         },
         {
           label: ticket.devType,
-          tone: ticket.devType === 'Bug' ? 'error' : ticket.devType === 'Feature' ? 'accent' : 'neutral',
+          tone:
+            ticket.devType === 'Bug'
+              ? 'error'
+              : ticket.devType === 'Feature'
+                ? 'accent'
+                : 'neutral',
         },
       ],
       searchable: [
@@ -180,7 +221,7 @@ function buildIndex(): SearchResult[] {
         ticket.title,
         ticket.devType,
         ticket.category,
-        ticket.devStatus,
+        statusLabel,
         responsible,
         sprint ?? '',
         ticket.complexity,
@@ -191,23 +232,25 @@ function buildIndex(): SearchResult[] {
 
   const supportResults: SearchResult[] = supportTickets.map((ticket) => {
     const technician =
-      techs.find((tech) => tech.id === ticket.respTec)?.name ?? 'Nao informado';
+      techs.find((tech) => tech.id === ticket.respTec)?.name ?? 'Não informado';
+    const statusLabel = formatSupportStatus(ticket.status);
+    const typeLabel = formatSupportType(ticket.tipo);
 
     return {
       key: `support-${ticket.id}`,
-      group: 'Implantacao',
+      group: 'Implantação',
       title: ticket.nome,
-      subtitle: `${ticket.id} · ${ticket.produto}`,
+      subtitle: `${ticket.id} · ${typeLabel} · ${ticket.produto}`,
       details: [
         `Etapa: ${ticket.csStatus}`,
-        `Tecnico: ${technician}`,
-        `Status: ${ticket.status === 'done' ? 'Concluido' : 'Ativo'}`,
+        `Técnico: ${technician}`,
+        `Status: ${statusLabel}`,
         `Tarefas: ${ticket.tasks.length}`,
         `Criado em: ${ticket.createdAt}`,
       ],
       pills: [
         { label: ticket.csStatus, tone: ticket.status === 'done' ? 'success' : 'accent' },
-        { label: ticket.tipo === 'novo' ? 'Novo' : 'Inclusao', tone: 'neutral' },
+        { label: typeLabel, tone: 'neutral' },
       ],
       searchable: [
         ticket.id,
@@ -215,8 +258,8 @@ function buildIndex(): SearchResult[] {
         ticket.produto,
         technician,
         ticket.csStatus,
-        ticket.tipo,
-        ticket.status,
+        typeLabel,
+        statusLabel,
         ...ticket.tasks.map((task) => task.title),
       ],
       score: 0,
@@ -301,7 +344,7 @@ export function GlobalSearch() {
         <input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Buscar por CNPJ, nome, ID, sprint, responsavel..."
+          placeholder="Buscar por CNPJ, nome, ID, sprint, responsável..."
           className="w-full border-none bg-transparent text-[13px] text-[#0f172a] outline-none placeholder:text-[#64748b]"
         />
       </div>
@@ -310,12 +353,12 @@ export function GlobalSearch() {
         <div className="grid gap-4 lg:grid-cols-[1.3fr_1fr]">
           <Panel className="p-5">
             <div className="mb-2 text-[14px] font-bold text-[#0f172a]">
-              Pesquise em todos os modulos
+              Pesquise em todos os módulos
             </div>
             <div className="text-[13px] leading-6 text-[#64748b]">
               A busca cruza leads do CRM, tickets comerciais, demandas de desenvolvimento e
-              tickets de implantacao. Voce pode procurar por nome da empresa, ID, status,
-              sprint, produto, responsavel ou titulos de tarefas.
+              tickets de implantação. Você pode procurar por nome da empresa, ID, status,
+              sprint, produto, responsável ou títulos de tarefas.
             </div>
           </Panel>
 
@@ -397,7 +440,7 @@ export function GlobalSearch() {
           </div>
           <div className="mx-auto max-w-[520px] text-[13px] leading-6 text-[#64748b]">
             Tente buscar por nome da empresa, ID do lead, status do ticket, nome do
-            responsavel, sprint ou produto.
+            responsável, sprint ou produto.
           </div>
         </Panel>
       )}

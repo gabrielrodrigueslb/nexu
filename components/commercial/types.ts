@@ -59,7 +59,7 @@ export const COMMERCIAL_TASK_TYPES: Array<{
   label: string;
   icon: string;
 }> = [
-  { id: 'reuniao', label: 'Reuniao', icon: 'handshake' },
+  { id: 'reuniao', label: 'Reunião', icon: 'handshake' },
   { id: 'ligacao', label: 'Ligacao', icon: 'phone' },
   { id: 'whatsapp', label: 'WhatsApp', icon: 'message-circle' },
   { id: 'email', label: 'E-mail', icon: 'mail' },

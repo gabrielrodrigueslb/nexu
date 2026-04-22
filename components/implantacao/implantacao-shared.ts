@@ -6,7 +6,7 @@ import { supportTickets, techs } from '@/components/dashboard-support/data';
 import type { SupportTask, SupportTicket, SupportTicketType } from '@/components/dashboard-support/types';
 
 export const IMPLANTACAO_STORAGE_KEY = 'nx_implantacao_kanban';
-export const IMPLANTACAO_COLUMNS = ['Briefing', 'Configuracao', 'Treinamento', 'Go-live'] as const;
+export const IMPLANTACAO_COLUMNS = ['Briefing', 'Configuração', 'Treinamento', 'Go-live'] as const;
 
 export type ImplantacaoColumn = (typeof IMPLANTACAO_COLUMNS)[number];
 
@@ -48,7 +48,7 @@ export type ImplantacaoTicket = {
   nome: string;
   tipo: SupportTicketType;
   status: 'active' | 'done';
-  csStatus: ImplantacaoColumn | 'Concluido';
+  csStatus: ImplantacaoColumn | 'Concluído';
   produto: string;
   respTec: string;
   createdAt: string;
@@ -144,13 +144,13 @@ function historyForTicket(ticket: SupportTicket, respName: string): ImplantacaoH
   const items: ImplantacaoHistoryItem[] = [
     {
       id: `${ticket.id}-hist-1`,
-      message: `Ticket aprovado para implantacao. ${ticket.tasks.length} tarefa(s) criada(s) automaticamente.`,
+      message: `Ticket aprovado para implantação. ${ticket.tasks.length} tarefa(s) criada(s) automaticamente.`,
       actor: respName,
       createdAt: ticket.createdAt,
     },
     {
       id: `${ticket.id}-hist-2`,
-      message: `Resp. tecnico atribuido: ${respName}.`,
+      message: `Resp. técnico atribuído: ${respName}.`,
       actor: respName,
       createdAt: ticket.createdAt,
     },
@@ -185,7 +185,7 @@ function historyForTicket(ticket: SupportTicket, respName: string): ImplantacaoH
 function buildSeedTickets(): ImplantacaoTicket[] {
   return supportTickets.map((ticket, index) => {
     const slug = slugify(ticket.nome);
-    const techName = techs.find((tech) => tech.id === ticket.respTec)?.name ?? 'Sem responsavel';
+    const techName = techs.find((tech) => tech.id === ticket.respTec)?.name ?? 'Sem responsável';
     const products = productsForTicket(ticket, index);
     const integrations = integrationsForTicket(ticket);
 
@@ -197,10 +197,8 @@ function buildSeedTickets(): ImplantacaoTicket[] {
       status: ticket.status,
       csStatus:
         ticket.status === 'done'
-          ? 'Concluido'
-          : IMPLANTACAO_COLUMNS.includes(ticket.csStatus as ImplantacaoColumn)
-            ? (ticket.csStatus as ImplantacaoColumn)
-            : 'Briefing',
+          ? 'Concluído'
+          : normalizeCsStatus(ticket.csStatus),
       produto: ticket.produto,
       respTec: ticket.respTec,
       createdAt: ticket.createdAt,
@@ -210,8 +208,8 @@ function buildSeedTickets(): ImplantacaoTicket[] {
       email: `${slug}@cliente.com.br`,
       site: `https://${slug}.com.br`,
       instancia: `${slug}.com`,
-      plano: ticket.tipo === 'inclusao' ? 'Profissional' : 'Basico',
-      formaPagamento: index % 2 === 0 ? 'A vista' : 'Boleto Bancario',
+      plano: ticket.tipo === 'inclusao' ? 'Profissional' : 'Básico',
+      formaPagamento: index % 2 === 0 ? 'À vista' : 'Boleto Bancário',
       respSolicitacao: techName,
       observacao: `Lead ganho: ${ticket.nome}. Implantacao em acompanhamento na etapa ${ticket.csStatus}.`,
       tasks: ticket.tasks.map((task, taskIndex) => ({
@@ -262,10 +260,10 @@ function normalizeStoredTickets(raw: unknown): ImplantacaoTicket[] {
       ...stored,
       csStatus:
         stored.status === 'done'
-          ? 'Concluido'
-          : IMPLANTACAO_COLUMNS.includes(stored.csStatus as ImplantacaoColumn)
-            ? (stored.csStatus as ImplantacaoColumn)
-            : ticket.csStatus,
+          ? 'Concluído'
+          : normalizeCsStatus(
+              typeof stored.csStatus === 'string' ? stored.csStatus : ticket.csStatus,
+            ),
       tasks: Array.isArray(stored.tasks)
         ? stored.tasks.map((task) =>
             normalizeTask(task as ImplantacaoTask, stored.respTec ?? ticket.respTec),
@@ -313,7 +311,7 @@ export function getTicketProgress(ticket: ImplantacaoTicket) {
 }
 
 export function getTechNameById(id?: string) {
-  return techs.find((tech) => tech.id === id)?.name ?? 'Sem responsavel';
+  return techs.find((tech) => tech.id === id)?.name ?? 'Sem responsável';
 }
 
 export function inDateRange(value: string | undefined, from: string, to: string) {
@@ -345,4 +343,12 @@ export function sumSetup(ticket: ImplantacaoTicket) {
 
 export function sumRecurring(ticket: ImplantacaoTicket) {
   return ticket.products.reduce((sum, item) => sum + item.recurring, 0) + ticket.integrations.reduce((sum, item) => sum + item.recurring, 0);
+}
+function normalizeCsStatus(value: string | undefined): ImplantacaoTicket['csStatus'] {
+  if (value === 'Configuracao') return 'Configuração';
+  if (value === 'Concluido') return 'Concluído';
+  if (value && IMPLANTACAO_COLUMNS.includes(value as ImplantacaoColumn)) {
+    return value as ImplantacaoColumn;
+  }
+  return 'Briefing';
 }

@@ -28,7 +28,7 @@ function buildJourneySteps(ticket: ImplantacaoTicket) {
     return [
       { label: 'Cadastro', state: 'done' as const },
       { label: 'Pagamento', state: 'done' as const },
-      { label: 'Aprovacao', state: 'done' as const },
+      { label: 'Aprovação', state: 'done' as const },
       { label: 'Implantado', state: 'done' as const },
     ];
   }
@@ -37,7 +37,7 @@ function buildJourneySteps(ticket: ImplantacaoTicket) {
     return [
       { label: 'Cadastro', state: 'done' as const },
       { label: 'Pagamento', state: 'done' as const },
-      { label: 'Aprovacao', state: 'done' as const },
+      { label: 'Aprovação', state: 'done' as const },
       { label: 'Implantado', state: 'active' as const },
     ];
   }
@@ -45,7 +45,7 @@ function buildJourneySteps(ticket: ImplantacaoTicket) {
   return [
     { label: 'Cadastro', state: 'done' as const },
     { label: 'Pagamento', state: 'done' as const },
-    { label: 'Aprovacao', state: 'active' as const },
+    { label: 'Aprovação', state: 'active' as const },
     { label: 'Implantado', state: 'pending' as const },
   ];
 }
@@ -71,21 +71,21 @@ export function ImplantacaoTicketModal({
 }) {
   if (!ticket) return null;
 
-  const labelOptions: ImplantacaoTicket['csStatus'][] = [...IMPLANTACAO_COLUMNS, 'Concluido'];
+  const labelOptions: ImplantacaoTicket['csStatus'][] = [...IMPLANTACAO_COLUMNS, 'Concluído'];
 
   return (
     <TicketDetailsView
       open={open}
       onClose={onClose}
       title={ticket.nome}
-      description={`${ticket.cnpj || '-'} - ${ticket.status === 'done' ? 'Concluido' : 'Em Implantacao'}`}
+      description={`${ticket.cnpj || '-'} - ${ticket.status === 'done' ? 'Conclu\u00EDdo' : 'Em Implanta\u00E7\u00E3o'}`}
       protocol={ticket.proto}
       badges={[
         <span
           key="status"
           className="inline-flex rounded-full border border-[#ddd6fe] bg-[#f5f3ff] px-[10px] py-[4px] text-[11px] font-bold text-[#7c3aed]"
         >
-          {ticket.status === 'done' ? 'Concluido' : 'Em Implantacao'}
+          {ticket.status === 'done' ? 'Conclu\u00EDdo' : 'Em Implanta\u00E7\u00E3o'}
         </span>,
         <span
           key="type"
@@ -113,14 +113,14 @@ export function ImplantacaoTicketModal({
           className="inline-flex items-center gap-1.5 rounded-full border border-[#e2e8f0] bg-white px-3 py-1.5 text-[11px] font-medium text-[#475569]"
         >
           <UserRound className="size-3.5 text-[#64748b]" />
-          Resp. solicitacao: {ticket.respSolicitacao}
+          Resp. solicitação: {ticket.respSolicitacao}
         </span>,
         <span
           key="tech"
           className="inline-flex items-center gap-2 rounded-full border border-[#e2e8f0] bg-white px-3 py-1.5 text-[11px] font-medium text-[#475569]"
         >
           <Wrench className="size-3.5 text-[#64748b]" />
-          <span>Resp. tecnico:</span>
+          <span>Resp. técnico:</span>
           <select
             value={ticket.respTec}
             onChange={(event) => onChangeTech(ticket.id, event.target.value)}
@@ -173,7 +173,7 @@ export function ImplantacaoTicketModal({
         { label: 'Nome', value: ticket.nome },
         { label: 'CNPJ', value: ticket.cnpj || '-' },
         { label: 'Telefone', value: ticket.telefone || '-' },
-        { label: 'Instancia', value: ticket.instancia || '-' },
+        { label: 'Instância', value: ticket.instancia || '-' },
         {
           label: 'E-mail',
           value: ticket.email || '-',
@@ -185,7 +185,7 @@ export function ImplantacaoTicketModal({
           icon: <ExternalLink className="size-4 text-[#64748b]" />,
         },
         { label: 'Plano', value: ticket.plano || '-' },
-        { label: 'Resp. solicitacao', value: ticket.respSolicitacao || '-' },
+        { label: 'Resp. solicitação', value: ticket.respSolicitacao || '-' },
         { label: 'Pagamento', value: ticket.formaPagamento || '-', fullWidth: true },
         { label: 'Etapa', value: ticket.csStatus || '-' },
       ]}
@@ -200,7 +200,7 @@ export function ImplantacaoTicketModal({
         group: ticket.products.some((item) => item.name === task.title)
           ? 'Produtos'
           : ticket.integrations.some((item) => item.name === task.title)
-            ? 'Integracoes'
+            ? 'Integrações'
             : 'Tarefas',
       }))}
       onToggleTask={(taskId) => onToggleTask(ticket.id, taskId)}
@@ -211,7 +211,7 @@ export function ImplantacaoTicketModal({
           rows: ticket.products,
         },
         {
-          title: 'Integracoes',
+          title: 'Integrações',
           icon: <ExternalLink className="size-4 text-[#7c3aed]" />,
           rows: ticket.integrations,
         },
@@ -231,9 +231,9 @@ export function ImplantacaoTicketModal({
         createdAt: formatDatePt(item.createdAt),
       }))}
       comments={{
-        title: 'Comentarios',
-        emptyText: 'Nenhum comentario.',
-        inputPlaceholder: 'Comentario...',
+        title: 'Comentários',
+        emptyText: 'Nenhum comentário.',
+        inputPlaceholder: 'Comentário...',
         submitLabel: 'Enviar',
         items: ticket.comments.map((item) => ({
           id: item.id,

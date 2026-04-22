@@ -34,7 +34,7 @@ export function DashboardDevOverview() {
     modalKind === 'open'
       ? 'Tickets Abertos'
       : modalKind === 'done'
-        ? 'Concluidos'
+        ? 'Concluídos'
         : 'Em Atraso';
 
   return (
@@ -44,7 +44,7 @@ export function DashboardDevOverview() {
           Dashboard Desenvolvimento
         </div>
         <div className="mt-[2px] text-[13px] text-[#64748b]">
-          Visao Scrum Master - metricas, vencimentos e pontuacao da equipe
+          Visão Scrum Master - métricas, vencimentos e pontuação da equipe
         </div>
       </div>
 

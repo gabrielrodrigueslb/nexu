@@ -43,6 +43,7 @@ export type Lead = {
   paymentMethod?: string;
   isLite?: boolean;
   wonAt?: string;
+  lostAt?: string;
   generatedTicketId?: string;
   tasks: LeadTask[];
 };

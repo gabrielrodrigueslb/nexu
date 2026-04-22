@@ -21,6 +21,9 @@ import { cn } from '@/lib/utils';
 
 import { ImplantacaoTicketModal } from './implantacao-ticket-modal';
 import {
+  useCurrentAdminUser,
+} from '@/components/admin-users-storage';
+import {
   formatDatePt,
   getTechNameById,
   getTicketProgress,
@@ -40,7 +43,7 @@ function downloadCsv(rows: ImplantacaoTicket[]) {
     'Status',
     'Etapa CS',
     'Produto',
-    'Responsavel Tecnico',
+    'Responsável Técnico',
     'Criado em',
     'Atualizado em',
     'Progresso',
@@ -200,7 +203,7 @@ function CompletedTicketCard({
         <div className="inline-flex items-center gap-1.5">
           <Wrench className="size-3.5" />
           <span>
-            Resp. tecnico <span className="font-semibold text-[#2563eb]">{techName}</span>
+            Resp. técnico <span className="font-semibold text-[#2563eb]">{techName}</span>
           </span>
         </div>
       </div>
@@ -209,6 +212,7 @@ function CompletedTicketCard({
 }
 
 export function ImplantacaoKanban() {
+  const { currentUser } = useCurrentAdminUser();
   const [tickets, setTickets] = useImplantacaoTickets();
   const [columnFilter, setColumnFilter] = useState<ColumnFilter>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | SupportTicketType>('all');
@@ -336,6 +340,7 @@ export function ImplantacaoKanban() {
 
   function handleAddComment(ticketId: string, message: string) {
     const today = new Date().toISOString().slice(0, 10);
+    const commentAuthor = currentUser?.name?.trim() || 'Usuário';
     setTickets((current) =>
       current.map((ticket) =>
         ticket.id === ticketId
@@ -346,7 +351,7 @@ export function ImplantacaoKanban() {
                 ...ticket.comments,
                 {
                   id: `${ticket.id}-comment-${Date.now()}`,
-                  author: ticket.respSolicitacao || getTechNameById(ticket.respTec),
+                  author: commentAuthor,
                   message,
                   createdAt: today,
                 },
@@ -391,7 +396,7 @@ export function ImplantacaoKanban() {
                 {
                   id: `${ticket.id}-hist-tech-${Date.now()}`,
                   actor: ticket.respSolicitacao || getTechNameById(techId),
-                  message: `Resp. tecnico atribuido: ${getTechNameById(techId)}.`,
+                  message: `Resp. técnico atribuído: ${getTechNameById(techId)}.`,
                   createdAt: today,
                 },
               ],
@@ -430,13 +435,13 @@ export function ImplantacaoKanban() {
       <div className="mb-[18px] flex items-start justify-between gap-3">
         <div>
           <div className="text-[19px] font-extrabold tracking-[-0.4px] text-[#0f172a]">
-            Implantacao / CS
+            Implantação / CS
           </div>
           <div className="mt-0.5 text-[13px] text-[#64748b]">
-            Kanban operacional de implantacoes em andamento e finalizadas
+            Kanban operacional de implantações em andamento e finalizadas
           </div>
           <div className="mt-1 text-[11px] font-semibold text-[#2563eb]">
-            {activeCount} ativo(s) | {doneCount} finalizado(s) no periodo
+            {activeCount} ativo(s) | {doneCount} finalizado(s) no período
           </div>
         </div>
 
@@ -504,7 +509,7 @@ export function ImplantacaoKanban() {
         <div className="flex flex-wrap items-center gap-[10px]">
           <span className="inline-flex items-center gap-2 text-[13px] font-bold text-[#64748b]">
             <CalendarDays className="size-4" />
-            Periodo (por data de criacao)
+            Período (por data de criação)
           </span>
           <label className="text-[12px] text-[#64748b]">De:</label>
           <input
@@ -513,7 +518,7 @@ export function ImplantacaoKanban() {
             onChange={(event) => setDateFrom(event.target.value)}
             className="rounded-[6px] border border-[#e2e8f0] bg-[#f1f5f9] px-2 py-[5px] text-[12px] text-[#0f172a] outline-none"
           />
-          <label className="text-[12px] text-[#64748b]">Ate:</label>
+          <label className="text-[12px] text-[#64748b]">Até:</label>
           <input
             type="date"
             value={dateTo}

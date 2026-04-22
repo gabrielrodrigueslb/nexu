@@ -2,8 +2,9 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { CalendarDays, Copy, MessageSquareText, Plus } from 'lucide-react';
+import { CalendarDays, Copy, MessageSquareText, Plus, ClipboardList, Send } from 'lucide-react';
 
+import { useCurrentAdminUser } from '@/components/admin-users-storage';
 import { ModalShell } from '@/components/modal-shell';
 import {
   ALL_DEV_STATUSES,
@@ -208,7 +209,7 @@ function Badge({ children, className }: { children: React.ReactNode; className?:
 }
 
 function FormLabel({ children }: { children: React.ReactNode }) {
-  return <label className="text-[11px] font-bold tracking-[.06em] text-[#64748b] uppercase">{children}</label>;
+  return <label className="mb-1 block text-[11px] font-bold tracking-[.06em] text-[#64748b] uppercase">{children}</label>;
 }
 
 export function DevKanbanPage() {
@@ -476,28 +477,28 @@ export function DevKanbanPage() {
         </div>
       )}
 
+      {/* MODAL DE VIEW DE TASK PADRONIZADA */}
       <ModalShell
         open={Boolean(selectedTicket)}
         title={selectedTicket?.title ?? 'Detalhes do ticket'}
         description={selectedTicket ? `${selectedTicket.proto} · ${selectedTicket.devType} · ${selectedTicket.devStatus}` : undefined}
-        maxWidthClassName="max-w-[800px]"
+        maxWidthClassName="max-w-[920px]"
         onClose={() => { setSelectedTicketId(null); setCommentDraft(''); }}
         footer={
           selectedTicket ? (
-            <div className="flex w-full items-center justify-between gap-2">
+            <div className="flex w-full items-center justify-between gap-4">
               <div className="flex flex-wrap items-center gap-2">
-                 <button type="button" onClick={() => setSelectedTicketId(null)} className="h-9 rounded-[8px] border border-[#e2e8f0] bg-white px-4 text-[13px] font-semibold text-[#64748b] hover:bg-[#f8fafc]">Fechar</button>
-                 <button type="button" onClick={() => setTagPickerTicketId(selectedTicket.id)} className="h-9 rounded-[8px] border border-[#e2e8f0] bg-white px-4 text-[13px] font-semibold text-[#0f172a] hover:bg-[#f8fafc]">Etiquetas</button>
-                 <button type="button" onClick={() => openDeadlineModal(selectedTicket.id)} className="h-9 rounded-[8px] border border-[#e2e8f0] bg-white px-4 text-[13px] font-semibold text-[#0f172a] hover:bg-[#f8fafc]">Alterar Prazo</button>
-                 <button type="button" onClick={handleDeleteSelectedTicket} className="h-9 rounded-[8px] border border-[#fecaca] bg-white px-4 text-[13px] font-semibold text-[#dc2626] hover:bg-[#fef2f2]">Excluir</button>
+                 <button type="button" onClick={() => { openEditModal(selectedTicket); setSelectedTicketId(null); }} className="h-9 rounded-[8px] border border-[#e2e8f0] bg-white px-4 text-[13px] font-semibold text-[#0f172a] hover:bg-[#f8fafc] transition-colors">Editar</button>
+                 <button type="button" onClick={() => setTagPickerTicketId(selectedTicket.id)} className="h-9 rounded-[8px] border border-[#e2e8f0] bg-white px-4 text-[13px] font-semibold text-[#0f172a] hover:bg-[#f8fafc] transition-colors">Etiquetas</button>
+                 <button type="button" onClick={() => openDeadlineModal(selectedTicket.id)} className="h-9 rounded-[8px] border border-[#e2e8f0] bg-white px-4 text-[13px] font-semibold text-[#0f172a] hover:bg-[#f8fafc] transition-colors">Alterar Prazo</button>
+                 <button type="button" onClick={handleDeleteSelectedTicket} className="h-9 rounded-[8px] border border-[#fecaca] bg-white px-4 text-[13px] font-semibold text-[#dc2626] hover:bg-[#fef2f2] transition-colors">Excluir</button>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                 <button type="button" onClick={() => { openEditModal(selectedTicket); setSelectedTicketId(null); }} className="h-9 rounded-[8px] border border-[#e2e8f0] bg-white px-4 text-[13px] font-semibold text-[#0f172a] hover:bg-[#f8fafc]">Editar</button>
                  <select value={selectedTicket.devStatus} onChange={(event) => moveTicket(selectedTicket.id, event.target.value as DevStatus)} className="h-9 rounded-[6px] border border-[#e2e8f0] bg-white px-3 text-[13px] font-semibold outline-none focus:border-[#2563eb]">
                   {ALL_DEV_STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}
                  </select>
                  {selectedTicket.devStatus !== 'Concluído' && (
-                  <button type="button" onClick={handleConcludeSelectedTicket} className="h-9 rounded-[8px] bg-[#059669] px-4 text-[13px] font-semibold text-white hover:bg-[#047857]">Concluir</button>
+                  <button type="button" onClick={handleConcludeSelectedTicket} className="h-9 rounded-[8px] bg-[#10b981] px-4 text-[13px] font-semibold text-white hover:bg-[#059669] transition-colors">Concluir Task</button>
                  )}
               </div>
             </div>
@@ -505,7 +506,7 @@ export function DevKanbanPage() {
         }
       >
         {selectedTicket && (
-          <div className="grid gap-4">
+          <div className="grid gap-5">
             {selectedTicket.tags.length > 0 && (
               <div className="flex flex-wrap gap-1">
                 {selectedTicket.tags.map((tagId) => tagsById[tagId] && (
@@ -514,12 +515,16 @@ export function DevKanbanPage() {
               </div>
             )}
 
-            <div className="rounded-[10px] border border-[#e2e8f0] bg-[#f8fafc] p-4">
-              <div className="flex flex-wrap items-center justify-between gap-4">
+            {/* Cabeçalho do Card */}
+            <div className="flex flex-col gap-4 rounded-[10px] border border-[#e2e8f0] bg-white p-5 shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <span className="text-[10px] font-bold tracking-[.06em] text-[#64748b] uppercase">Protocolo</span>
-                  <span className="font-mono text-[16px] font-extrabold text-[#2563eb]">{selectedTicket.proto}</span>
-                  <button type="button" onClick={() => navigator.clipboard?.writeText(selectedTicket.proto)} className="flex h-8 w-8 items-center justify-center rounded-[6px] border border-[#e2e8f0] bg-white text-[#64748b] hover:bg-[#f1f5f9]"><Copy className="size-4" /></button>
+                  <div className="flex h-8 items-center justify-center rounded-[6px] bg-[#f1f5f9] px-3 font-mono text-[13px] font-extrabold tracking-wide text-[#0f172a]">
+                    {selectedTicket.proto}
+                  </div>
+                  <button type="button" onClick={() => navigator.clipboard?.writeText(selectedTicket.proto)} className="inline-flex h-8 w-8 items-center justify-center rounded-[6px] border border-[#e2e8f0] bg-white text-[#64748b] transition-colors hover:bg-[#f8fafc] hover:text-[#0f172a]" title="Copiar Protocolo">
+                    <Copy className="size-4" />
+                  </button>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge className={getTypeBadgeClass(selectedTicket.devType)}>{selectedTicket.devType}</Badge>
@@ -529,77 +534,143 @@ export function DevKanbanPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              <div className="rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] p-3">
-                <div className="mb-1 text-[10px] font-bold tracking-[.06em] text-[#64748b] uppercase">Score</div>
-                <div className={cn('text-[18px] font-extrabold', getPriority(selectedTicket.score).scoreClassName)}>{selectedTicket.score} <span className="text-[12px] font-medium text-[#64748b]">/15</span></div>
+            {/* Informações */}
+            <div className="rounded-[10px] border border-[#e2e8f0] bg-white p-5 shadow-sm">
+              <div className="mb-4 text-[13px] font-bold tracking-[.06em] text-[#0f172a] uppercase">
+                Dados da Task
               </div>
-              <div className="rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] p-3">
-                <div className="mb-1 text-[10px] font-bold tracking-[.06em] text-[#64748b] uppercase">Categoria</div>
-                <div className="text-[13px] font-semibold text-[#0f172a]">{selectedTicket.category}</div>
-              </div>
-              <div className="rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] p-3">
-                <div className="mb-1 text-[10px] font-bold tracking-[.06em] text-[#64748b] uppercase">Responsável</div>
-                <div className="text-[13px] font-semibold text-[#0f172a]">{usersById[selectedTicket.resp]?.name ?? '-'}</div>
-              </div>
-              <div className="rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] p-3">
-                <div className="mb-1 text-[10px] font-bold tracking-[.06em] text-[#64748b] uppercase">Período</div>
-                <div className="text-[13px] font-semibold text-[#0f172a]">{formatDate(selectedTicket.startDate)} → {formatDate(selectedTicket.deadline)}</div>
-              </div>
-              <div className="rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] p-3">
-                <div className="mb-1 text-[10px] font-bold tracking-[.06em] text-[#64748b] uppercase">Cliente</div>
-                <div className="text-[13px] font-semibold text-[#0f172a]">{selectedTicket.clientName || '-'}</div>
-              </div>
-              <div className="rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] p-3">
-                <div className="mb-1 text-[10px] font-bold tracking-[.06em] text-[#64748b] uppercase">Sprint</div>
-                <div className="text-[13px] font-semibold text-[#0f172a]">{sprintsById[selectedTicket.sprintId ?? '']?.name ?? '-'}</div>
-              </div>
-            </div>
-
-            <div className="rounded-[10px] border border-[#e2e8f0] bg-white p-4 shadow-sm">
-              <div className="mb-2 text-[10px] font-bold tracking-[.06em] text-[#64748b] uppercase">Descrição</div>
-              <p className="whitespace-pre-wrap text-[13px] leading-6 text-[#475569]">{selectedTicket.description || 'Sem descrição informada.'}</p>
-            </div>
-
-            <div>
-              <h3 className="mb-3 border-b border-[#e2e8f0] pb-2 text-[14px] font-bold text-[#0f172a]">Histórico</h3>
-              {selectedTicket.history.length > 0 ? (
-                 <div className="space-y-3">
-                  {[...selectedTicket.history].reverse().map((item) => (
-                    <div key={item.id} className="flex gap-3">
-                      <span className="mt-[7px] h-2 w-2 shrink-0 rounded-full bg-[#2563eb]" />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[13px] text-[#0f172a]"><span className="font-semibold">{item.user}</span> {item.message}</p>
-                        <p className="text-[12px] text-[#64748b]">{item.createdAt}</p>
-                      </div>
-                    </div>
-                  ))}
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <div className="rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] p-3">
+                  <div className="mb-1 text-[10px] font-bold tracking-[.06em] text-[#64748b] uppercase">Score</div>
+                  <div className={cn('text-[15px] font-extrabold', getPriority(selectedTicket.score).scoreClassName)}>{selectedTicket.score} <span className="text-[12px] font-medium text-[#64748b]">/15</span></div>
                 </div>
-              ) : <p className="text-[13px] text-[#64748b]">Nenhum histórico registrado.</p>}
+                <div className="rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] p-3">
+                  <div className="mb-1 text-[10px] font-bold tracking-[.06em] text-[#64748b] uppercase">Categoria</div>
+                  <div className="text-[13px] font-semibold text-[#0f172a]">{selectedTicket.category}</div>
+                </div>
+                <div className="rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] p-3">
+                  <div className="mb-1 text-[10px] font-bold tracking-[.06em] text-[#64748b] uppercase">Responsável</div>
+                  <div className="text-[13px] font-semibold text-[#0f172a]">{usersById[selectedTicket.resp]?.name ?? '-'}</div>
+                </div>
+                <div className="rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] p-3">
+                  <div className="mb-1 text-[10px] font-bold tracking-[.06em] text-[#64748b] uppercase">Período</div>
+                  <div className="text-[13px] font-semibold text-[#0f172a]">{formatDate(selectedTicket.startDate)} → {formatDate(selectedTicket.deadline)}</div>
+                </div>
+                <div className="rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] p-3">
+                  <div className="mb-1 text-[10px] font-bold tracking-[.06em] text-[#64748b] uppercase">Cliente</div>
+                  <div className="text-[13px] font-semibold text-[#0f172a]">{selectedTicket.clientName || '-'}</div>
+                </div>
+                <div className="rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] p-3">
+                  <div className="mb-1 text-[10px] font-bold tracking-[.06em] text-[#64748b] uppercase">Sprint</div>
+                  <div className="text-[13px] font-semibold text-[#0f172a]">{sprintsById[selectedTicket.sprintId ?? '']?.name ?? '-'}</div>
+                </div>
+              </div>
+
+              {/* Descrição */}
+              <div className="mt-3 rounded-[8px] border border-[#f1f5f9] bg-[#f8fafc] p-4">
+                <div className="mb-2 text-[10px] font-bold tracking-[.06em] text-[#64748b] uppercase">Descrição</div>
+                <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-[#475569]">{selectedTicket.description || 'Sem descrição informada.'}</p>
+              </div>
             </div>
 
-             <div className="rounded-[10px] border border-[#e2e8f0] bg-white p-4 shadow-sm">
-              <div className="mb-4 flex items-center gap-2">
-                <MessageSquareText className="size-4 text-[#64748b]" />
-                <h3 className="text-[13px] font-bold text-[#0f172a]">Comentários</h3>
-                <span className="flex h-[20px] min-w-[20px] items-center justify-center rounded-full bg-[#eff6ff] px-1.5 text-[10px] font-bold text-[#2563eb]">{selectedTicket.comments.length}</span>
+            {selectedTicket.parentId && epicMap[selectedTicket.parentId] && (
+              <div className="rounded-[10px] border border-[#ddd6fe] bg-[#f5f3ff] p-4 shadow-sm">
+                <div className="text-[10px] font-bold tracking-[.06em] text-[#7c3aed] uppercase">Epic vinculada</div>
+                <div className="mt-1 text-[13px] font-bold text-[#5b21b6]">{epicMap[selectedTicket.parentId]}</div>
               </div>
-              {selectedTicket.comments.length > 0 ? (
-                <div className="space-y-3 mb-4">
-                  {selectedTicket.comments.map((comment) => (
-                    <div key={comment.id} className="rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] p-3">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-[13px] font-semibold text-[#0f172a]">{comment.author}</span>
-                        <span className="text-[11px] text-[#64748b]">{comment.createdAt}</span>
-                      </div>
-                      <p className="text-[13px] text-[#475569] whitespace-pre-wrap leading-6">{comment.message}</p>
-                    </div>
-                  ))}
+            )}
+
+            {/* Grid 2 Colunas para Histórico e Comentários */}
+            <div className="grid gap-5 md:grid-cols-2">
+              
+              {/* Histórico */}
+              <div className="rounded-[10px] border border-[#e2e8f0] bg-white p-5 shadow-sm">
+                <div className="mb-4 inline-flex items-center gap-2 text-[13px] font-bold text-[#0f172a] uppercase tracking-[.04em]">
+                  <ClipboardList className="size-4" />
+                  Histórico
                 </div>
-              ) : <div className="mb-4 rounded-[8px] border border-dashed border-[#cbd5e1] bg-[#f8fafc] py-4 text-center text-[13px] text-[#64748b]">Nenhum comentário.</div>}
-              <div className="flex items-center gap-3">
-                <input value={commentDraft} onChange={(e) => setCommentDraft(e.target.value)} placeholder="Escreva um comentário..." className="h-9 flex-1 rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] px-3 text-[13px] outline-none focus:border-[#2563eb]" />
-                <button type="button" onClick={handleAddComment} className="h-9 rounded-[8px] bg-[#2563eb] px-4 text-[13px] font-semibold text-white hover:bg-[#1d4ed8]">Enviar</button>
+                {selectedTicket.history.length > 0 ? (
+                  <div className="space-y-3">
+                    {[...selectedTicket.history].reverse().map((item) => (
+                      <div key={item.id} className="relative flex gap-3 pb-3 last:pb-0">
+                        <div className="absolute left-[5px] top-3 bottom-0 w-px bg-[#e2e8f0] last:hidden" />
+                        <div className="relative mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-[#10b981] ring-4 ring-white" />
+                        <div className="min-w-0 flex-1 rounded-[8px] border border-[#f1f5f9] bg-[#f8fafc] p-3">
+                          <div className="text-[13px] text-[#0f172a]">
+                            <span className="font-semibold">{item.user}</span> <span className="text-[#475569]">{item.message}</span>
+                          </div>
+                          <div className="mt-1.5 inline-flex items-center gap-1.5 text-[11px] font-medium text-[#64748b]">
+                            <CalendarDays className="size-3.5" />
+                            {item.createdAt}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-[8px] border border-dashed border-[#cbd5e1] bg-[#f8fafc] px-4 py-8 text-center text-[13px] text-[#64748b]">
+                    Sem histórico registrado.
+                  </div>
+                )}
+              </div>
+
+              {/* Comentários */}
+              <div className="flex flex-col rounded-[10px] border border-[#e2e8f0] bg-white p-5 shadow-sm">
+                <div className="mb-4 flex items-center justify-between gap-2">
+                  <div className="inline-flex items-center gap-2 text-[13px] font-bold text-[#0f172a] uppercase tracking-[.04em]">
+                    <MessageSquareText className="size-4" />
+                    Comentários
+                  </div>
+                  <span className="inline-flex min-w-6 items-center justify-center rounded-full bg-[#eff6ff] px-1.5 py-0.5 text-[10px] font-bold text-[#2563eb]">
+                    {selectedTicket.comments.length}
+                  </span>
+                </div>
+
+                <div className="flex-1 space-y-3 overflow-y-auto max-h-[400px] pr-1">
+                  {selectedTicket.comments.length > 0 ? (
+                    selectedTicket.comments.map((comment) => (
+                      <div key={comment.id} className="rounded-[8px] border border-[#f1f5f9] bg-[#f8fafc] p-3">
+                        <div className="flex items-start gap-3">
+                          <div className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#2563eb] text-[10px] font-bold text-white">
+                            {getInitials(comment.author)}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+                              <div className="text-[12px] font-bold text-[#0f172a]">{comment.author}</div>
+                              <div className="text-[11px] font-medium text-[#64748b]">{comment.createdAt}</div>
+                            </div>
+                            <div className="whitespace-pre-wrap text-[13px] leading-relaxed text-[#475569]">
+                              {comment.message}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="rounded-[8px] border border-dashed border-[#cbd5e1] bg-[#f8fafc] px-4 py-8 text-center text-[13px] text-[#64748b]">
+                      Nenhum comentário.
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-4 pt-4 border-t border-[#e2e8f0]">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                    <textarea
+                      value={commentDraft}
+                      onChange={(e) => setCommentDraft(e.target.value)}
+                      placeholder="Escreva um comentário..."
+                      className="min-h-[44px] flex-1 resize-none rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-[13px] text-[#0f172a] outline-none transition-colors focus:border-[#2563eb] focus:bg-white focus:ring-1 focus:ring-[#2563eb]"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddComment}
+                      className="inline-flex h-[44px] items-center justify-center gap-2 whitespace-nowrap rounded-[8px] bg-[#2563eb] px-4 text-[13px] font-semibold text-white shadow-sm transition-colors hover:bg-[#1d4ed8]"
+                    >
+                      <Send className="size-4" />
+                      Enviar
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Copy, MessageSquareText, Download, Plus } from 'lucide-react';
 
+import { useCurrentAdminUser } from '@/components/admin-users-storage';
 import { ModalShell } from '@/components/modal-shell';
 import {
   ALL_DEV_STATUSES,
@@ -257,6 +258,7 @@ function FormLabel({ children }: { children: React.ReactNode }) {
 }
 
 export function DevLibraryPage() {
+  const { currentUser: sessionUser } = useCurrentAdminUser();
   const [tickets, setTickets] = useState<DevTicket[]>(() => normalizeInitialTickets(INITIAL_DEV_TICKETS));
   const [typeFilter, setTypeFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
@@ -288,7 +290,9 @@ export function DevLibraryPage() {
   }, {});
 
   const selectedTicket = tickets.find((ticket) => ticket.id === selectedTicketId) ?? null;
-  const currentUser = DEV_USERS.find((user) => user.id === CURRENT_USER_ID) ?? DEV_USERS[0];
+  const currentUser = sessionUser
+    ? { id: sessionUser.id, name: sessionUser.name }
+    : DEV_USERS.find((user) => user.id === CURRENT_USER_ID) ?? DEV_USERS[0];
   const selectedDeadlineTicket = tickets.find((ticket) => ticket.id === deadlineTicketId) ?? null;
   const selectedTagTicket = tickets.find((ticket) => ticket.id === tagPickerTicketId) ?? null;
   const tagsById = DEV_TAGS.reduce<Record<string, DevTag>>((acc, tag) => {
@@ -460,7 +464,7 @@ export function DevLibraryPage() {
 
   function handleExport() {
     const rows = [
-      ['Protocolo', 'Tipo', 'Titulo', 'Categoria', 'Status', 'Responsavel', 'Score', 'Sprint'],
+      ['Protocolo', 'Tipo', 'Título', 'Categoria', 'Status', 'Responsável', 'Score', 'Sprint'],
       ...visibleTickets.map((ticket) => [
         ticket.proto,
         ticket.devType,

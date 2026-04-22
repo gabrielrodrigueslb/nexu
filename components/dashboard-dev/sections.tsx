@@ -122,7 +122,7 @@ export function DevDateFilter({
     <div className="mb-4 flex flex-wrap items-center gap-[10px] rounded-[10px] border border-[#e2e8f0] bg-white px-4 py-3 justify-between">
       <span className="inline-flex items-center gap-2 text-[13px] font-bold text-[#64748b]">
         <CalendarDays className="size-4" />
-        Periodo (concluidos)
+        Período (concluídos)
       </span>
       <span className='flex gap-2 items-center'>
 <label className="text-[12px] text-[#64748b]">De:</label>
@@ -132,7 +132,7 @@ export function DevDateFilter({
         onChange={(event) => onChange({ ...dateRange, from: event.target.value })}
         className="rounded-[6px] border border-[#e2e8f0] bg-[#f1f5f9] px-2 py-[5px] text-[12px] text-[#0f172a] outline-none"
       />
-      <label className="text-[12px] text-[#64748b]">Ate:</label>
+      <label className="text-[12px] text-[#64748b]">Até:</label>
       <input
         type="date"
         value={dateRange.to}
@@ -150,7 +150,7 @@ export function DevDateFilter({
             Limpar
           </button>
           <span className="text-[11px] font-semibold text-[#2563eb]">
-            {completedCount} concluido(s) no periodo
+            {completedCount} concluído(s) no período
           </span>
         </>
       ) : null}
@@ -189,7 +189,7 @@ export function DevKpis({
         onClick={() => onOpenList('open')}
       />
       <ListButtonCard
-        title="Concluidos"
+        title="Concluídos"
         value={completedCount}
         tone="success"
         icon={<CircleCheckBig className="size-5 text-[#059669]" />}
@@ -205,7 +205,7 @@ export function DevKpis({
         onClick={() => onOpenList('overdue')}
       />
       <ListButtonCard
-        title="Cycle Time Medio"
+        title="Cycle Time Médio"
         value={avgCycle !== null ? `${avgCycle}d` : '--'}
         tone="purple"
         icon={<Clock3 className="size-5 text-[#7c3aed]" />}
@@ -374,20 +374,20 @@ export function ResolutionTimeCard({
     <Panel className="mb-4 p-[18px]">
       <Title
         icon={<Clock3 className="size-4" />}
-        suffix={hasFilter ? <span className="text-[12px] text-[#64748b]">(periodo)</span> : undefined}
+        suffix={hasFilter ? <span className="text-[12px] text-[#64748b]">(período)</span> : undefined}
       >
-        Tempo Medio de Resolucao
+        Tempo Médio de Resolução
       </Title>
       {!resolvedCount ? (
         <div className="py-5 text-center text-[13px] text-[#64748b]">
-          Nenhum ticket concluido{hasFilter ? ' no periodo' : ''} para calcular.
+          Nenhum ticket concluído{hasFilter ? ' no período' : ''} para calcular.
         </div>
       ) : (
         <>
           <div className="mb-4 grid gap-3 md:grid-cols-3">
             <div className="rounded-[10px] bg-[#f8fafc] p-[14px] text-center">
               <div className="text-[28px] font-extrabold text-[#2563eb]">{Math.round(resAvg)}d</div>
-              <div className="mt-[3px] text-[12px] font-semibold text-[#64748b]">Media geral</div>
+              <div className="mt-[3px] text-[12px] font-semibold text-[#64748b]">Média geral</div>
               <div className="mt-[6px] text-[11px] text-[#64748b]">{resolvedCount} ticket(s) analisado(s)</div>
               <div className="mt-1 flex flex-wrap items-center justify-center gap-2 text-[11px] text-[#64748b]">
                 {resByType.Feature !== null ? <span>Feature: {resByType.Feature}d</span> : null}
@@ -399,7 +399,7 @@ export function ResolutionTimeCard({
               <div className="text-[28px] font-extrabold text-[#059669]">{Math.round(resMin)}d</div>
               <div className="mt-[3px] inline-flex items-center gap-1 text-[12px] font-semibold text-[#059669]">
                 <Trophy className="size-3.5" />
-                Mais rapido
+                Mais rápido
               </div>
               {resFastest ? (
                 <>
@@ -431,7 +431,7 @@ export function ResolutionTimeCard({
             </div>
           </div>
           <div className="mb-[10px] text-[11px] font-bold uppercase tracking-[.07em] text-[#64748b]">
-            Distribuicao por faixa de tempo
+            Distribuição por faixa de tempo
           </div>
           {resBkData.map((bucket) => {
             const pct = percentage(bucket.n, resolvedCount);
@@ -461,7 +461,7 @@ export function DeadlineManagementCard({
 }) {
   return (
     <Panel className="mb-4 p-[18px]">
-      <Title icon={<CalendarDays className="size-4" />}>Gestao de Vencimentos</Title>
+      <Title icon={<CalendarDays className="size-4" />}>Gest?o de Vencimentos</Title>
       {!overdueT.length && !nearT.length ? (
         <div className="py-3 text-center text-[13px] text-[#059669]">
           Nenhum ticket atrasado ou proximo do prazo
@@ -505,7 +505,7 @@ function DeadlineTable({
         <thead>
           <tr className="border-b-2 border-[#e2e8f0]">
             <th className="px-[6px] py-[6px] text-left font-semibold text-[#64748b]">Ticket</th>
-            <th className="px-[6px] py-[6px] text-center font-semibold text-[#64748b]">Responsavel</th>
+            <th className="px-[6px] py-[6px] text-center font-semibold text-[#64748b]">Responsável</th>
             <th className="px-[6px] py-[6px] text-center font-semibold text-[#64748b]">Prazo</th>
             <th className="px-[6px] py-[6px] text-center font-semibold text-[#64748b]">
               {mode === 'overdue' ? 'Atraso' : 'Restam'}
@@ -680,9 +680,9 @@ export function LeaderboardCard({
 }) {
   return (
     <Panel className="mb-4 p-[18px]">
-      <Title icon={<Trophy className="size-4" />}>Ranking da Equipe - Sistema de Pontuacao</Title>
+      <Title icon={<Trophy className="size-4" />}>Ranking da Equipe - Sistema de Pontuação</Title>
       <div className="mb-3 text-[11px] text-[#64748b]">
-        Base: Simples +1 - Media +2 - Complexa +3 - Bug Critico +2 | Bonus: Prazo +5 - Doc +3 - Incidente +3 - Elogio +3 | Penalidades: Bug Prod -2 - Reaberta -2 - Sem Doc -2 - Atraso -4
+        Base: Simples +1 - Média +2 - Complexa +3 - Bug Crítico +2 | Bônus: Prazo +5 - Doc +3 - Incidente +3 - Elogio +3 | Penalidades: Bug Prod -2 - Reaberta -2 - Sem Doc -2 - Atraso -4
       </div>
       {leaderboard.length ? (
         leaderboard.map((item, index) => {
@@ -724,7 +724,7 @@ export function LeaderboardCard({
                   <span>{item.mine} entregues</span>
                   <span>{item.inDev} em dev</span>
                   {item.base > 0 ? <span className="text-[#059669]">Base: +{item.base}</span> : null}
-                  {item.bonus > 0 ? <span className="text-[#059669]">Bonus: +{item.bonus}</span> : null}
+                  {item.bonus > 0 ? <span className="text-[#059669]">Bônus: +{item.bonus}</span> : null}
                   {item.penalties < 0 ? <span className="text-[#dc2626]">Penalidades: {item.penalties}</span> : null}
                   {item.overdue ? <span className="text-[#dc2626]">{item.overdue} atrasado(s)</span> : null}
                   {item.bugs ? <span className="text-[#dc2626]">{item.bugs} bug(s) prod</span> : null}
@@ -735,7 +735,7 @@ export function LeaderboardCard({
         })
       ) : (
         <div className="py-5 text-center text-[13px] text-[#64748b]">
-          Nenhum responsavel atribuido em tickets concluidos.
+          Nenhum responsável atribuído em tickets concluídos.
         </div>
       )}
     </Panel>
@@ -757,7 +757,7 @@ export function SprintHistoryCard({
 
   return (
     <Panel className="p-[18px]">
-      <Title icon={<SquareTerminal className="size-4" />}>Historico de Sprints</Title>
+      <Title icon={<SquareTerminal className="size-4" />}>Hist?rico de Sprints</Title>
       {rows.map((row) => (
         <div key={row.sprint.id} className="flex items-center gap-3 border-b border-[#e2e8f0] py-2 last:border-b-0">
           <div className="flex-1">

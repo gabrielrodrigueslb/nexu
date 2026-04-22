@@ -15,7 +15,7 @@ const navItems = [
   {
     href: "/dashboard",
     label: "Dashboard",
-    description: "Visao geral do negocio",
+    description: "Visão geral do negócio",
     icon: LayoutDashboard,
   },
   {

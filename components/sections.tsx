@@ -2,8 +2,7 @@ import { BellRing, Clock3 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
-import { taskColors, taskLabels, users } from './data';
-import type { GoalsState } from './types';
+import type { GoalsState, User } from './types';
 import { ACT_COLS, CRM_COLS } from './types';
 import type {
   useCrmData,
@@ -21,6 +20,18 @@ import {
   SmallPill,
   rankIcon,
 } from './ui';
+
+const taskLabels: Record<string, string> = {
+  reuniao: 'Reunião',
+  demo: 'Demo',
+  visita: 'Visita',
+};
+
+const taskColors: Record<string, string> = {
+  reuniao: '#2563eb',
+  demo: '#7c3aed',
+  visita: '#d97706',
+};
 
 type CrmData = ReturnType<typeof useCrmData>;
 type OriginStats = ReturnType<typeof useOriginStats>;
@@ -83,7 +94,7 @@ export function FunnelPanel({ data }: { data: CrmData }) {
           </strong>
         </span>
         <span className="text-[12px] text-[#64748b]">
-          Sem responsavel:{' '}
+          Sem responsável:{' '}
           <strong
             className={
               data.leadsSemResp > 0 ? 'text-[#d97706]' : 'text-[#059669]'
@@ -93,7 +104,7 @@ export function FunnelPanel({ data }: { data: CrmData }) {
           </strong>
         </span>
         <span className="text-[12px] text-[#64748b]">
-          Conversao:{' '}
+          Conversão:{' '}
           <strong style={{ color: statusToneColor(data.txConv) }}>
             {data.txConv}%
           </strong>
@@ -157,12 +168,12 @@ export function TicketJourneyPanel({
         </div>
         <div className="rounded-[8px] bg-[#f5f3ff] p-2 text-center">
           <div className="text-[10px] font-bold tracking-[.04em] text-[#7c3aed] uppercase">
-            Recorrencia
+            Recorrência
           </div>
           <div className="mt-[2px] text-[17px] font-extrabold text-[#7c3aed]">
             {formatMoney(data.tkRecurTotal)}
           </div>
-          <div className="text-[10px] text-[#64748b]">por mes, ativos</div>
+          <div className="text-[10px] text-[#64748b]">por mês, ativos</div>
         </div>
       </div>
     </Panel>
@@ -272,12 +283,14 @@ export function OriginsTable({ originStats }: { originStats: OriginStats }) {
 
 export function SdrTable({
   sdrStats,
+  users,
   goals,
   totalLeads,
   onChangeLeadsGoal,
   onChangeSdrGoal,
 }: {
   sdrStats: SdrStats;
+  users: User[];
   goals: GoalsState;
   totalLeads: number;
   onChangeLeadsGoal: (value: number) => void;
@@ -289,7 +302,7 @@ export function SdrTable({
     <Panel className="overflow-hidden">
       <div className="border-b border-[#e2e8f0] px-[18px] py-[14px] flex items-center justify-between">
         <div className="mb-[2px] text-[13px] font-bold text-[#0f172a]">
-          Leads por SDR - Captacao & Distribuicao
+          Leads por SDR - Captação & Distribuição
         </div>
         <div className="max-w-[340px]">
           <GoalBar
@@ -413,7 +426,7 @@ export function SdrTable({
         </div>
       ) : (
         <div className="px-5 py-5 text-center text-[13px] text-[#64748b]">
-          Nenhum SDR com leads no periodo.
+          Nenhum SDR com leads no período.
         </div>
       )}
     </Panel>
@@ -436,7 +449,7 @@ export function VendorTable({
   if (!vendorStats.length) {
     return (
       <Panel className="p-5 text-center text-[13px] text-[#64748b]">
-        Nenhum lead no periodo selecionado.
+        Nenhum lead no período selecionado.
       </Panel>
     );
   }
@@ -650,7 +663,7 @@ export function ActivitiesTable({
             <div className="mt-1 flex justify-between text-[11px]">
               <span className="text-[#64748b]">
                 {actTotalGlobal} realizadas
-                {actDoneGlobal > 0 ? ` / ${actDoneGlobal} concluidas` : ''}
+                {actDoneGlobal > 0 ? ` / ${actDoneGlobal} concluídas` : ''}
               </span>
               <span
                 className="font-bold"
@@ -658,7 +671,7 @@ export function ActivitiesTable({
               >
                 {goals.activitiesMeta > 0
                   ? `${activitiesMetaProgress}% da meta (${goals.activitiesMeta})`
-                  : 'Meta nao definida'}
+                  : 'Meta não definida'}
               </span>
             </div>
           </div>
@@ -846,9 +859,11 @@ type AlertTask = {
 export function TaskAlerts({
   tAtrasadas,
   tHoje,
+  users,
 }: {
   tAtrasadas: AlertTask[];
   tHoje: AlertTask[];
+  users: User[];
 }) {
   if (!tAtrasadas.length && !tHoje.length) return null;
 
@@ -870,9 +885,7 @@ export function TaskAlerts({
                 ? users.find((user) => user.id === task.sellerId)
                 : null;
               const daysLate = Math.ceil(
-                (new Date('2026-03-21T12:00:00').getTime() -
-                  new Date(task.date).getTime()) /
-                  86400000,
+                (Date.now() - new Date(task.date).getTime()) / 86400000,
               );
 
               return (

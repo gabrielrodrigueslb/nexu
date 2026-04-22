@@ -94,6 +94,7 @@ export function DashboardSupportOverview() {
           modalKind,
           data.activeTickets,
           data.filteredCompletedTickets,
+          data.overdueTickets,
         );
 
   return (
@@ -103,7 +104,7 @@ export function DashboardSupportOverview() {
           Dashboard Suporte
         </div>
         <div className="mt-[2px] text-[13px] text-[#64748b]">
-          Visao completa das implantacoes
+          Visão completa das implantações
         </div>
       </div>
 
@@ -166,7 +167,13 @@ export function DashboardSupportOverview() {
 
       <TicketListModal
         open={modalKind !== null}
-        title={modalKind === 'done' ? 'Finalizados' : 'Em Implantacao'}
+        title={
+          modalKind === 'done'
+            ? 'Finalizados'
+            : modalKind === 'overdue'
+              ? 'Em Atraso'
+              : 'Em Implantação'
+        }
         tickets={modalTickets}
         techNameById={techNameById}
         onClose={() => setModalKind(null)}

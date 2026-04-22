@@ -28,7 +28,7 @@ function getInitials(label: string) {
 function roleLabel(role: string) {
   if (role === 'admin') return 'Administrador';
   if (role === 'leader') return 'Lider';
-  return 'Basico';
+  return 'Básico';
 }
 
 export function ProfilePage() {
@@ -48,7 +48,7 @@ export function ProfilePage() {
 
   async function handleSave() {
     if (!currentUser) {
-      setErrorMessage('Sessao nao encontrada.');
+      setErrorMessage('Sessão não encontrada.');
       setMessage('');
       return;
     }
@@ -66,7 +66,7 @@ export function ProfilePage() {
     }
 
     if (newPassword !== confirmPassword) {
-      setErrorMessage('Senhas nao coincidem.');
+      setErrorMessage('Senhas não coincidem.');
       setMessage('');
       return;
     }
@@ -101,7 +101,7 @@ export function ProfilePage() {
   }
 
   if (!currentUser) {
-    return <AppAlert tone="danger">Sessao indisponivel.</AppAlert>;
+    return <AppAlert tone="danger">Sessão indisponível.</AppAlert>;
   }
 
   return (
