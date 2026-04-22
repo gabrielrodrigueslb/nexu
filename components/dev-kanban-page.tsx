@@ -1,19 +1,26 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { CalendarDays, Copy, MessageSquareText, Plus, ClipboardList, Send } from 'lucide-react';
 
-import { useCurrentAdminUser } from '@/components/admin-users-storage';
+import {
+  createDevComment,
+  createDevTicket,
+  deleteDevTicket,
+  fetchDevLookups,
+  fetchDevTickets,
+  updateDevTicket,
+  type DevApiSprint,
+  type DevApiTicket,
+  type DevApiUser,
+} from '@/components/dev/api';
 import { ModalShell } from '@/components/modal-shell';
 import {
   ALL_DEV_STATUSES,
   DEV_CATEGORIES,
   DEV_COLUMNS,
   DEV_FILTER_TYPES,
-  DEV_SPRINTS,
-  DEV_USERS,
-  INITIAL_DEV_TICKETS,
   type DevStatus,
   type DevTicket as BaseDevTicket,
   type DevType,
@@ -83,17 +90,12 @@ const DEV_TAGS: DevTag[] = [
   { id: 'tag-ux', name: 'UX', color: '#0f766e' },
 ];
 
-const CURRENT_USER_ID = DEV_USERS[0]?.id ?? '';
-let nextGeneratedTicketId = Math.max(...INITIAL_DEV_TICKETS.map((ticket) => ticket.id), 0) + 1;
-let nextGeneratedHistoryId = 1;
-let nextGeneratedCommentId = 1;
-
 const EMPTY_FORM: TicketFormState = {
   title: '',
   category: DEV_CATEGORIES[0],
   devType: 'Task',
   devStatus: 'Backlog',
-  resp: DEV_USERS[0]?.id ?? '',
+  resp: '',
   sprintId: '',
   parentId: '',
   clientName: '',
@@ -130,30 +132,60 @@ function defaultCriteriaForScore(score: number): DevCriteria {
   return { imp: 1, ris: 1, fre: 0, esf: 1, deb: 0 };
 }
 
-function normalizeInitialTickets(tickets: BaseDevTicket[]): DevTicket[] {
-  return tickets.map((ticket, index) => {
-    const criteria = defaultCriteriaForScore(ticket.score);
-    const primaryTag = ticket.category === 'Habilis' ? 'tag-habilis' : ticket.category === 'Meta' ? 'tag-meta' : ticket.devType === 'Bug' ? 'tag-hotfix' : ticket.category === 'UX / Interface' ? 'tag-ux' : 'tag-prioridade';
+function formatDateTimeFromApi(value: string) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return formatDateTime(parsed);
+}
 
-    return {
-      ...ticket,
-      createdBy: DEV_USERS[index % DEV_USERS.length]?.id ?? CURRENT_USER_ID,
-      protoExt: ticket.category === 'Habilis' || ticket.category === 'Meta' ? `EXT-${String(240 + index).padStart(3, '0')}` : undefined,
-      instance: ticket.clientName ? ticket.clientName.toUpperCase() : undefined,
-      cnpj: index % 2 === 0 ? `00.000.000/000${(index % 9) + 1}-0${index % 9}` : undefined,
-      clientPhone: index % 2 === 0 ? '(11) 99999-0000' : undefined,
-      tags: [primaryTag],
-      criteria,
-      history: [
-        {
-          id: `history-${ticket.id}-created`,
-          user: DEV_USERS[index % DEV_USERS.length]?.name ?? 'Sistema',
-          message: 'Ticket criado',
-          createdAt: formatDateTime(new Date(`${ticket.createdAt}T10:37:00`)),
-        },
-      ],
-    };
-  });
+function toDateOnly(value?: string | null) {
+  if (!value) return undefined;
+  return value.slice(0, 10);
+}
+
+function mapApiTicket(ticket: DevApiTicket): DevTicket {
+  return {
+    id: ticket.id,
+    proto: ticket.proto,
+    title: ticket.title,
+    category: ticket.category,
+    devType: ticket.devType,
+    devStatus: ticket.devStatus,
+    resp: ticket.resp,
+    score: ticket.score,
+    createdAt: toDateOnly(ticket.createdAt) || '',
+    startDate: toDateOnly(ticket.startDate),
+    deadline: toDateOnly(ticket.deadline),
+    sprintId: ticket.sprintId || undefined,
+    parentId: ticket.parentId || undefined,
+    clientName: ticket.clientName || undefined,
+    description: ticket.description,
+    comments: (ticket.comments || []).map((comment) => ({
+      id: comment.id,
+      author: comment.author,
+      message: comment.message,
+      createdAt: formatDateTimeFromApi(comment.createdAt),
+    })),
+    createdBy: ticket.createdBy,
+    protoExt: ticket.protoExt || undefined,
+    instance: ticket.instance || undefined,
+    cnpj: ticket.cnpj || undefined,
+    clientPhone: ticket.clientPhone || undefined,
+    tags: ticket.tags || [],
+    criteria: {
+      imp: ticket.criteria?.imp ?? defaultCriteriaForScore(ticket.score).imp,
+      ris: ticket.criteria?.ris ?? defaultCriteriaForScore(ticket.score).ris,
+      fre: ticket.criteria?.fre ?? defaultCriteriaForScore(ticket.score).fre,
+      esf: ticket.criteria?.esf ?? defaultCriteriaForScore(ticket.score).esf,
+      deb: ticket.criteria?.deb ?? defaultCriteriaForScore(ticket.score).deb,
+    },
+    history: (ticket.history || []).map((item) => ({
+      id: item.id,
+      user: item.user,
+      message: item.message,
+      createdAt: item.createdAt,
+    })),
+  };
 }
 
 function formatDate(date: string | undefined) {
@@ -170,9 +202,9 @@ function buildProtocol() {
   return `DEV-${year}${month}-${suffix}`;
 }
 
-function buildTicketId() { const id = nextGeneratedTicketId; nextGeneratedTicketId += 1; return id; }
-function buildHistoryId(ticketId: number) { const id = `history-${ticketId}-${nextGeneratedHistoryId}`; nextGeneratedHistoryId += 1; return id; }
-function buildCommentId(ticketId: number) { const id = `comment-${ticketId}-${nextGeneratedCommentId}`; nextGeneratedCommentId += 1; return id; }
+function buildHistoryId(ticketId: number) {
+  return `history-${ticketId}-${Date.now()}`;
+}
 
 function getPriority(score: number) {
   if (score >= 12) return { label: 'CRÍTICO', badgeClassName: 'border-[#fecaca] bg-[#fef2f2] text-[#dc2626]', borderClassName: 'border-l-[#dc2626]', scoreClassName: 'text-[#dc2626]' };
@@ -213,7 +245,9 @@ function FormLabel({ children }: { children: React.ReactNode }) {
 }
 
 export function DevKanbanPage() {
-  const [tickets, setTickets] = useState<DevTicket[]>(() => normalizeInitialTickets(INITIAL_DEV_TICKETS));
+  const [tickets, setTickets] = useState<DevTicket[]>([]);
+  const [devUsers, setDevUsers] = useState<DevApiUser[]>([]);
+  const [devSprints, setDevSprints] = useState<DevApiSprint[]>([]);
   const [statusFilter, setStatusFilter] = useState<'all' | DevStatus>('all');
   const [typeFilter, setTypeFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
@@ -231,12 +265,42 @@ export function DevKanbanPage() {
   const [deadlineDraft, setDeadlineDraft] = useState('');
   const [deadlineReason, setDeadlineReason] = useState('');
 
-  const usersById = DEV_USERS.reduce<Record<string, (typeof DEV_USERS)[number]>>((acc, user) => { acc[user.id] = user; return acc; }, {});
-  const sprintsById = DEV_SPRINTS.reduce<Record<string, (typeof DEV_SPRINTS)[number]>>((acc, sprint) => { acc[sprint.id] = sprint; return acc; }, {});
+  useEffect(() => {
+    let active = true;
+
+    async function load() {
+      try {
+        const [lookups, backendTickets] = await Promise.all([fetchDevLookups(), fetchDevTickets()]);
+        if (!active) return;
+        setDevUsers(lookups.users || []);
+        setDevSprints(lookups.sprints || []);
+        setTickets((backendTickets || []).map(mapApiTicket));
+      } catch {
+        if (!active) return;
+        setDevUsers([]);
+        setDevSprints([]);
+        setTickets([]);
+      }
+    }
+
+    void load();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const usersById = useMemo(
+    () => devUsers.reduce<Record<string, DevApiUser>>((acc, user) => { acc[user.id] = user; return acc; }, {}),
+    [devUsers],
+  );
+  const sprintsById = useMemo(
+    () => devSprints.reduce<Record<string, DevApiSprint>>((acc, sprint) => { acc[sprint.id] = sprint; return acc; }, {}),
+    [devSprints],
+  );
   const epicMap = tickets.reduce<Record<number, string>>((acc, ticket) => { if (ticket.devType === 'Epic') { acc[ticket.id] = ticket.title; } return acc; }, {});
 
   const selectedTicket = tickets.find((ticket) => ticket.id === selectedTicketId) ?? null;
-  const currentUser = DEV_USERS.find((user) => user.id === CURRENT_USER_ID) ?? DEV_USERS[0];
+  const currentUser = selectedTicket?.createdBy ? usersById[selectedTicket.createdBy] : devUsers[0];
   const selectedDeadlineTicket = tickets.find((ticket) => ticket.id === deadlineTicketId) ?? null;
   const selectedTagTicket = tickets.find((ticket) => ticket.id === tagPickerTicketId) ?? null;
   const tagsById = DEV_TAGS.reduce<Record<string, DevTag>>((acc, tag) => { acc[tag.id] = tag; return acc; }, {});
@@ -256,13 +320,13 @@ export function DevKanbanPage() {
     .filter((ticket) => (sprintFilter ? ticket.sprintId === sprintFilter : true));
 
   const visibleTickets = statusFilter === 'all' ? filteredOpenTickets : filteredOpenTickets.filter((ticket) => ticket.devStatus === statusFilter);
-  const responsibleUsers = DEV_USERS.filter((user) => tickets.some((ticket) => ticket.resp === user.id));
+  const responsibleUsers = devUsers.filter((user) => tickets.some((ticket) => ticket.resp === user.id));
 
   const formCriteria: DevCriteria = { imp: Number(formState.imp) || 0, ris: Number(formState.ris) || 0, fre: Number(formState.fre) || 0, esf: Number(formState.esf) || 0, deb: Number(formState.deb) || 0 };
   const formScore = calcScore(formCriteria);
 
   function updateFormField<Key extends keyof TicketFormState>(key: Key, value: TicketFormState[Key]) { setFormState((current) => ({ ...current, [key]: value })); }
-  function openCreateModal(type: DevType) { setFormState({ ...EMPTY_FORM, devType: type }); setEditingTicketId(null); setFormMode('create'); }
+  function openCreateModal(type: DevType) { setFormState({ ...EMPTY_FORM, devType: type, resp: devUsers[0]?.id ?? '', sprintId: devSprints.find((sprint) => !sprint.closed)?.id ?? '' }); setEditingTicketId(null); setFormMode('create'); }
   
   function openEditModal(ticket: DevTicket) {
     setFormState({ title: ticket.title, category: ticket.category, devType: ticket.devType, devStatus: ticket.devStatus, resp: ticket.resp, sprintId: ticket.sprintId ?? '', parentId: ticket.parentId ? String(ticket.parentId) : '', clientName: ticket.clientName ?? '', protoExt: ticket.protoExt ?? '', instance: ticket.instance ?? '', cnpj: ticket.cnpj ?? '', clientPhone: ticket.clientPhone ?? '', startDate: ticket.startDate ?? '', deadline: ticket.deadline ?? '', imp: String(ticket.criteria.imp), ris: String(ticket.criteria.ris), fre: String(ticket.criteria.fre), esf: String(ticket.criteria.esf), deb: String(ticket.criteria.deb), description: ticket.description });
@@ -272,24 +336,120 @@ export function DevKanbanPage() {
   function closeFormModal() { setFormMode(null); setEditingTicketId(null); }
   function appendHistory(ticket: DevTicket, message: string) { return [...ticket.history, { id: buildHistoryId(ticket.id), user: currentUser?.name ?? 'Sistema', message, createdAt: formatDateTime() }]; }
   function updateTicket(ticketId: number, updater: (ticket: DevTicket) => DevTicket) { setTickets((current) => current.map((ticket) => (ticket.id === ticketId ? updater(ticket) : ticket))); }
-  function moveTicket(ticketId: number, nextStatus: DevStatus) { updateTicket(ticketId, (ticket) => ({ ...ticket, devStatus: nextStatus, history: ticket.devStatus === nextStatus ? ticket.history : appendHistory(ticket, `Status: ${ticket.devStatus} -> ${nextStatus}`) })); }
-  function handleConcludeSelectedTicket() { if (!selectedTicket) return; updateTicket(selectedTicket.id, (ticket) => ({ ...ticket, devStatus: 'Concluído', history: appendHistory(ticket, 'Task concluida') })); setSelectedTicketId(null); }
-  function handleAddComment() { if (!selectedTicket || !commentDraft.trim()) return; updateTicket(selectedTicket.id, (ticket) => ({ ...ticket, comments: [...ticket.comments, { id: buildCommentId(ticket.id), author: currentUser?.name ?? 'Usuario', message: commentDraft.trim(), createdAt: formatDateTime() }], history: appendHistory(ticket, 'Comentou') })); setCommentDraft(''); }
-  function toggleTag(ticketId: number, tagId: string) { updateTicket(ticketId, (ticket) => ({ ...ticket, tags: ticket.tags.includes(tagId) ? ticket.tags.filter((currentTagId) => currentTagId !== tagId) : [...ticket.tags, tagId], history: appendHistory(ticket, 'Etiquetas atualizadas') })); }
+  function replaceTicketFromApi(ticket: DevApiTicket) {
+    const mapped = mapApiTicket(ticket);
+    setTickets((current) => current.map((item) => (item.id === mapped.id ? mapped : item)));
+    return mapped;
+  }
+
+  function persistTicket(ticketId: number, patch: Partial<DevApiTicket>) {
+    return updateDevTicket(ticketId, patch).then(replaceTicketFromApi);
+  }
+
+  function moveTicket(ticketId: number, nextStatus: DevStatus) {
+    const ticket = tickets.find((item) => item.id === ticketId);
+    if (!ticket || ticket.devStatus === nextStatus) return;
+    const history = appendHistory(ticket, `Status: ${ticket.devStatus} -> ${nextStatus}`);
+    updateTicket(ticketId, (current) => ({ ...current, devStatus: nextStatus, history }));
+    void persistTicket(ticketId, { devStatus: nextStatus, history });
+  }
+
+  function handleConcludeSelectedTicket() {
+    if (!selectedTicket) return;
+    const history = appendHistory(selectedTicket, 'Task concluida');
+    updateTicket(selectedTicket.id, (ticket) => ({ ...ticket, devStatus: 'Concluído', history }));
+    void persistTicket(selectedTicket.id, { devStatus: 'Concluído', concludedAt: new Date().toISOString(), history });
+    setSelectedTicketId(null);
+  }
+
+  function handleAddComment() {
+    if (!selectedTicket || !commentDraft.trim()) return;
+    const message = commentDraft.trim();
+    const history = appendHistory(selectedTicket, 'Comentou');
+    setCommentDraft('');
+    void createDevComment(selectedTicket.id, message)
+      .then((comment) => {
+        setTickets((current) => current.map((ticket) => (
+          ticket.id === selectedTicket.id
+            ? { ...ticket, comments: [...ticket.comments, { ...comment, createdAt: formatDateTimeFromApi(comment.createdAt) }], history }
+            : ticket
+        )));
+        return persistTicket(selectedTicket.id, { history });
+      });
+  }
+
+  function toggleTag(ticketId: number, tagId: string) {
+    const ticket = tickets.find((item) => item.id === ticketId);
+    if (!ticket) return;
+    const tags = ticket.tags.includes(tagId) ? ticket.tags.filter((currentTagId) => currentTagId !== tagId) : [...ticket.tags, tagId];
+    const history = appendHistory(ticket, 'Etiquetas atualizadas');
+    updateTicket(ticketId, (current) => ({ ...current, tags, history }));
+    void persistTicket(ticketId, { tags, history });
+  }
   function openDeadlineModal(ticketId: number) { const ticket = tickets.find((currentTicket) => currentTicket.id === ticketId); setDeadlineTicketId(ticketId); setDeadlineDraft(ticket?.deadline ?? ''); setDeadlineReason(''); }
   function closeDeadlineModal() { setDeadlineTicketId(null); setDeadlineDraft(''); setDeadlineReason(''); }
-  function handleSaveDeadline() { if (!selectedDeadlineTicket || !deadlineDraft || !deadlineReason.trim()) return; const previousDeadline = selectedDeadlineTicket.deadline; updateTicket(selectedDeadlineTicket.id, (ticket) => ({ ...ticket, deadline: deadlineDraft, history: appendHistory(ticket, `Prazo alterado: ${formatDate(previousDeadline)} -> ${formatDate(deadlineDraft)}. Motivo: ${deadlineReason.trim()}`) })); closeDeadlineModal(); }
-  function handleDeleteSelectedTicket() { if (!selectedTicket) return; if (!window.confirm('Remover este ticket do kanban?')) return; setTickets((current) => current.filter((ticket) => ticket.id !== selectedTicket.id)); setSelectedTicketId(null); }
+  function handleSaveDeadline() {
+    if (!selectedDeadlineTicket || !deadlineDraft || !deadlineReason.trim()) return;
+    const previousDeadline = selectedDeadlineTicket.deadline;
+    const history = appendHistory(selectedDeadlineTicket, `Prazo alterado: ${formatDate(previousDeadline)} -> ${formatDate(deadlineDraft)}. Motivo: ${deadlineReason.trim()}`);
+    updateTicket(selectedDeadlineTicket.id, (ticket) => ({ ...ticket, deadline: deadlineDraft, history }));
+    void persistTicket(selectedDeadlineTicket.id, { deadline: deadlineDraft, history });
+    closeDeadlineModal();
+  }
+  function handleDeleteSelectedTicket() {
+    if (!selectedTicket) return;
+    if (!window.confirm('Remover este ticket do kanban?')) return;
+    const ticketId = selectedTicket.id;
+    setTickets((current) => current.filter((ticket) => ticket.id !== ticketId));
+    setSelectedTicketId(null);
+    void deleteDevTicket(ticketId);
+  }
   function handleExport() { const rows = [['Protocolo', 'Tipo', 'Titulo', 'Categoria', 'Status', 'Responsavel', 'Score', 'Sprint'], ...visibleTickets.map((ticket) => [ticket.proto, ticket.devType, ticket.title, ticket.category, ticket.devStatus, usersById[ticket.resp]?.name ?? '-', String(ticket.score), ticket.sprintId ? sprintsById[ticket.sprintId]?.name ?? '-' : '-'])]; const csv = rows.map((row) => row.map((value) => `"${String(value).replaceAll('"', '""')}"`).join(',')).join('\n'); const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = 'kanban-dev.csv'; link.click(); URL.revokeObjectURL(url); }
   
-  function handleSaveTicket() {
+  function getComplexityByScore(score: number): DevApiTicket['complexity'] {
+    if (score >= 9) return 'Complexa';
+    if (score >= 6) return 'Média';
+    return 'Simples';
+  }
+
+  async function handleSaveTicket() {
     if (!formState.title.trim()) return;
+    const payload = {
+      title: formState.title.trim(),
+      category: formState.category,
+      devType: formState.devType,
+      devStatus: formState.devStatus,
+      resp: formState.resp,
+      score: formScore,
+      totalPts: formScore,
+      complexity: getComplexityByScore(formScore),
+      sprintId: formState.sprintId || undefined,
+      parentId: formState.parentId ? Number(formState.parentId) : undefined,
+      clientName: formState.clientName.trim() || undefined,
+      protoExt: formState.protoExt.trim() || undefined,
+      instance: formState.instance.trim() || undefined,
+      cnpj: formState.cnpj.trim() || undefined,
+      clientPhone: formState.clientPhone.trim() || undefined,
+      startDate: formState.startDate || undefined,
+      deadline: formState.deadline || undefined,
+      description: formState.description.trim(),
+      criteria: formCriteria,
+    };
+
     if (formMode === 'edit' && editingTicketId) {
-      setTickets((current) => current.map((ticket) => ticket.id === editingTicketId ? { ...ticket, title: formState.title.trim(), category: formState.category, devType: formState.devType, devStatus: formState.devStatus, resp: formState.resp, score: formScore, sprintId: formState.sprintId || undefined, parentId: formState.parentId ? Number(formState.parentId) : undefined, clientName: formState.clientName.trim() || undefined, protoExt: formState.protoExt.trim() || undefined, instance: formState.instance.trim() || undefined, cnpj: formState.cnpj.trim() || undefined, clientPhone: formState.clientPhone.trim() || undefined, startDate: formState.startDate || undefined, deadline: formState.deadline || undefined, description: formState.description.trim(), criteria: formCriteria, history: appendHistory(ticket, 'Ticket editado') } : ticket));
+      const ticket = tickets.find((item) => item.id === editingTicketId);
+      const history = ticket ? appendHistory(ticket, 'Ticket editado') : undefined;
+      const updated = await updateDevTicket(editingTicketId, { ...payload, history });
+      replaceTicketFromApi(updated);
     } else {
-      const nextTicketId = buildTicketId();
-      const nextTicket: DevTicket = { id: nextTicketId, proto: buildProtocol(), title: formState.title.trim(), category: formState.category, devType: formState.devType, devStatus: formState.devStatus, resp: formState.resp, score: formScore, createdAt: new Date().toISOString().slice(0, 10), sprintId: formState.sprintId || undefined, parentId: formState.parentId ? Number(formState.parentId) : undefined, clientName: formState.clientName.trim() || undefined, protoExt: formState.protoExt.trim() || undefined, instance: formState.instance.trim() || undefined, cnpj: formState.cnpj.trim() || undefined, clientPhone: formState.clientPhone.trim() || undefined, startDate: formState.startDate || undefined, deadline: formState.deadline || undefined, description: formState.description.trim(), comments: [], createdBy: currentUser?.id ?? CURRENT_USER_ID, tags: [], criteria: formCriteria, history: [{ id: buildHistoryId(nextTicketId), user: currentUser?.name ?? 'Sistema', message: 'Ticket criado', createdAt: formatDateTime() }] };
-      setTickets((current) => [nextTicket, ...current]);
+      const created = await createDevTicket({
+        ...payload,
+        proto: buildProtocol(),
+        tags: [],
+        history: [{ id: buildHistoryId(Date.now()), user: currentUser?.name ?? 'Sistema', message: 'Ticket criado', createdAt: formatDateTime() }],
+      });
+      const mapped = mapApiTicket(created);
+      setTickets((current) => [mapped, ...current]);
     }
     closeFormModal();
   }
@@ -351,10 +511,10 @@ export function DevKanbanPage() {
                 {responsibleUsers.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
              </select>
 
-             {DEV_SPRINTS.length > 0 && (
+             {devSprints.length > 0 && (
                <select value={sprintFilter} onChange={(e) => setSprintFilter(e.target.value)} className="h-9 min-w-[140px] rounded-[6px] border border-[#e2e8f0] bg-transparent px-3 text-[13px] text-[#0f172a] outline-none focus:border-[#2563eb]">
                   <option value="">Todas as sprints</option>
-                  {DEV_SPRINTS.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  {devSprints.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                </select>
              )}
 
@@ -769,7 +929,7 @@ export function DevKanbanPage() {
           <div className="flex flex-col gap-1.5">
             <FormLabel>Responsável</FormLabel>
             <select value={formState.resp} onChange={(e) => updateFormField('resp', e.target.value)} className="h-9 w-full rounded-[6px] border border-[#e2e8f0] bg-white px-3 text-[13px] outline-none focus:border-[#2563eb]">
-               {DEV_USERS.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+              {devUsers.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
             </select>
           </div>
           <div className="flex flex-col gap-1.5">
@@ -784,7 +944,7 @@ export function DevKanbanPage() {
             <FormLabel>Sprint Vinculada</FormLabel>
             <select value={formState.sprintId} onChange={(e) => updateFormField('sprintId', e.target.value)} className="h-9 w-full rounded-[6px] border border-[#e2e8f0] bg-white px-3 text-[13px] outline-none focus:border-[#2563eb]">
               <option value="">Nenhuma / Backlog</option>
-              {DEV_SPRINTS.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              {devSprints.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           </div>
 

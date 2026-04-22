@@ -1,6 +1,6 @@
 'use client';
 
-import { useDeferredValue, useMemo, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import {
   CalendarDays,
   CheckCircle2,
@@ -11,20 +11,16 @@ import {
   X,
 } from 'lucide-react';
 
-import { leads as initialLeads, tickets as initialTickets, users } from '@/components/data';
 import { ModalShell } from '@/components/modal-shell';
-import type { Ticket, TicketStatus } from '@/components/types';
 import { formatMoney, sumBy } from '@/components/utils';
 
-type BillingTicketRecord = Ticket & {
-  company: string;
-  cnpj: string;
-  contact: string;
-  plan: string;
-  paymentMethod: string;
-  sellerName: string;
-  leadId?: string;
-};
+import {
+  confirmFinanceContract,
+  fetchFinanceContracts,
+  type FinanceContractRecord,
+} from './finance-contracts-api';
+
+type BillingTicketRecord = FinanceContractRecord;
 
 function formatDate(value: string) {
   return new Date(value).toLocaleDateString('pt-BR', {
@@ -34,28 +30,8 @@ function formatDate(value: string) {
   });
 }
 
-function buildBillingTickets(): BillingTicketRecord[] {
-  return initialTickets
-    .map((ticket) => {
-      const linkedLead =
-        initialLeads.find((lead) => lead.generatedTicketId === ticket.id) ?? null;
-      const seller = users.find((user) => user.id === linkedLead?.sellerId);
-
-      return {
-        ...ticket,
-        company: linkedLead?.company ?? `Ticket ${ticket.id}`,
-        cnpj: linkedLead?.cnpj ?? '-',
-        contact: linkedLead?.contact ?? '-',
-        plan: linkedLead?.isLite ? 'Lite' : 'Profissional',
-        paymentMethod: linkedLead?.paymentMethod ?? 'Boleto',
-        sellerName: seller?.name ?? 'Sem responsável',
-        leadId: linkedLead?.id,
-      };
-    })
-    .sort(
-      (left, right) =>
-        new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
-    );
+function sellerName(ticket: BillingTicketRecord) {
+  return ticket.lead?.seller?.name || ticket.assignee?.name || 'Sem responsavel';
 }
 
 function downloadCsv(rows: BillingTicketRecord[]) {
@@ -74,15 +50,15 @@ function downloadCsv(rows: BillingTicketRecord[]) {
   ];
 
   const body = rows.map((row) => [
-    row.id,
+    row.code,
     row.company,
-    row.cnpj,
-    row.contact,
-    row.plan,
-    row.paymentMethod,
+    row.cnpj || '',
+    row.contact || '',
+    row.plan || '',
+    row.paymentMethod || '',
     String(row.setupAmount),
     String(row.recurringAmount),
-    row.sellerName,
+    sellerName(row),
     row.status,
     row.createdAt,
   ]);
@@ -108,18 +84,19 @@ function downloadCsv(rows: BillingTicketRecord[]) {
   URL.revokeObjectURL(url);
 }
 
-function statusLabel(status: TicketStatus) {
-  if (status === 'pendente_financeiro') return 'Ag. Cobrança';
-  if (status === 'pagamento_confirmado') return 'Cobrança gerada';
-  if (status === 'em_implantacao') return 'Em implantação';
-  if (status === 'concluido') return 'Concluído';
+function statusLabel(status: BillingTicketRecord['status']) {
+  if (status === 'pendente_financeiro') return 'Ag. Cobranca';
+  if (status === 'pagamento_confirmado') return 'Cobranca gerada';
+  if (status === 'em_implantacao') return 'Em implantacao';
+  if (status === 'concluido') return 'Concluido';
   return 'Cancelado';
 }
 
 export function FinanceBillingContract() {
-  const [tickets, setTickets] = useState<BillingTicketRecord[]>(() =>
-    buildBillingTickets(),
-  );
+  const [tickets, setTickets] = useState<BillingTicketRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState<string | null>(null);
+  const [error, setError] = useState('');
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'cards' | 'lista'>('cards');
   const [search, setSearch] = useState('');
@@ -129,23 +106,55 @@ export function FinanceBillingContract() {
   const deferredSearch = useDeferredValue(search);
   const normalizedSearch = deferredSearch.trim().toLowerCase();
 
+  useEffect(() => {
+    let active = true;
+
+    async function load() {
+      setIsLoading(true);
+      setError('');
+
+      try {
+        const nextTickets = await fetchFinanceContracts();
+        if (!active) return;
+        setTickets(nextTickets);
+      } catch (nextError) {
+        if (!active) return;
+        setError(
+          nextError instanceof Error
+            ? nextError.message
+            : 'Falha ao carregar cobrancas e contratos.',
+        );
+      } finally {
+        if (active) setIsLoading(false);
+      }
+    }
+
+    void load();
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const pendingTickets = useMemo(
-    () =>
-      tickets.filter((ticket) => ticket.status === 'pendente_financeiro'),
+    () => tickets.filter((ticket) => ticket.status === 'pendente_financeiro'),
     [tickets],
   );
 
   const sellerOptions = useMemo(
     () =>
-      users.filter((user) =>
-        pendingTickets.some((ticket) => ticket.assignee === user.id),
-      ),
+      [...new Map(
+        pendingTickets
+          .filter((ticket) => ticket.assignee)
+          .map((ticket) => [ticket.assignee!.id, ticket.assignee!]),
+      ).values()],
     [pendingTickets],
   );
 
   const paymentOptions = useMemo(
     () =>
-      [...new Set(pendingTickets.map((ticket) => ticket.paymentMethod))].sort(),
+      [...new Set(
+        pendingTickets.map((ticket) => ticket.paymentMethod).filter(Boolean),
+      )].sort(),
     [pendingTickets],
   );
 
@@ -153,22 +162,18 @@ export function FinanceBillingContract() {
     return pendingTickets.filter((ticket) => {
       const matchesSearch = normalizedSearch
         ? [
-            ticket.id,
+            ticket.code,
             ticket.company,
-            ticket.cnpj,
-            ticket.contact,
-            ticket.sellerName,
+            ticket.cnpj || '',
+            ticket.contact || '',
+            sellerName(ticket),
           ]
             .join(' ')
             .toLowerCase()
             .includes(normalizedSearch)
         : true;
-      const matchesSeller = sellerFilter
-        ? ticket.assignee === sellerFilter
-        : true;
-      const matchesPayment = paymentFilter
-        ? ticket.paymentMethod === paymentFilter
-        : true;
+      const matchesSeller = sellerFilter ? ticket.assignee?.id === sellerFilter : true;
+      const matchesPayment = paymentFilter ? ticket.paymentMethod === paymentFilter : true;
 
       return matchesSearch && matchesSeller && matchesPayment;
     });
@@ -178,22 +183,28 @@ export function FinanceBillingContract() {
     tickets.find((ticket) => ticket.id === selectedTicketId) ?? null;
 
   const totalSetup = sumBy(pendingTickets, (ticket) => ticket.setupAmount);
-  const totalRecurring = sumBy(
-    pendingTickets,
-    (ticket) => ticket.recurringAmount,
-  );
+  const totalRecurring = sumBy(pendingTickets, (ticket) => ticket.recurringAmount);
   const hasFilters = Boolean(search || sellerFilter || paymentFilter);
 
-  function confirmBilling(ticketId: string) {
-    setTickets((current) =>
-      current.map((ticket) =>
-        ticket.id === ticketId
-          ? { ...ticket, status: 'pagamento_confirmado' }
-          : ticket,
-      ),
-    );
+  async function confirmBilling(ticketId: string) {
+    setIsSaving(ticketId);
+    setError('');
 
-    setSelectedTicketId((current) => (current === ticketId ? null : current));
+    try {
+      const updated = await confirmFinanceContract(ticketId);
+      setTickets((current) =>
+        current.map((ticket) => (ticket.id === ticketId ? updated : ticket)),
+      );
+      setSelectedTicketId((current) => (current === ticketId ? null : current));
+    } catch (nextError) {
+      setError(
+        nextError instanceof Error
+          ? nextError.message
+          : 'Falha ao confirmar cobranca.',
+      );
+    } finally {
+      setIsSaving(null);
+    }
   }
 
   return (
@@ -202,10 +213,10 @@ export function FinanceBillingContract() {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <div className="text-[19px] font-extrabold tracking-[-0.4px] text-[#0f172a]">
-              Cobrança e Contrato
+              Cobranca e Contrato
             </div>
             <div className="mt-[2px] text-[13px] text-[#64748b]">
-              Tickets aguardando cobrança
+              Tickets aguardando cobranca
             </div>
           </div>
 
@@ -213,9 +224,7 @@ export function FinanceBillingContract() {
             <button
               type="button"
               onClick={() =>
-                setViewMode((current) =>
-                  current === 'cards' ? 'lista' : 'cards',
-                )
+                setViewMode((current) => (current === 'cards' ? 'lista' : 'cards'))
               }
               className="inline-flex items-center gap-2 self-start rounded-[10px] border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
             >
@@ -241,7 +250,7 @@ export function FinanceBillingContract() {
             Setup: {formatMoney(totalSetup)}
           </span>
           <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5">
-            Recorrência: {formatMoney(totalRecurring)}
+            Recorrencia: {formatMoney(totalRecurring)}
           </span>
         </div>
       </section>
@@ -263,7 +272,7 @@ export function FinanceBillingContract() {
             onChange={(event) => setSellerFilter(event.target.value)}
             className="rounded-[10px] border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none transition-colors focus:border-emerald-500"
           >
-            <option value="">Todos os responsáveis</option>
+            <option value="">Todos os responsaveis</option>
             {sellerOptions.map((user) => (
               <option key={user.id} value={user.id}>
                 {user.name}
@@ -305,8 +314,18 @@ export function FinanceBillingContract() {
         </div>
       </section>
 
+      {error ? (
+        <div className="mb-4 rounded-[10px] border border-[#fecaca] bg-[#fff5f5] px-4 py-3 text-[13px] text-[#b91c1c]">
+          {error}
+        </div>
+      ) : null}
+
       <section className="mt-6">
-        {filteredTickets.length === 0 ? (
+        {isLoading ? (
+          <div className="rounded-[24px] border border-slate-200 bg-white px-6 py-14 text-center shadow-sm text-sm text-slate-500">
+            Carregando cobrancas e contratos...
+          </div>
+        ) : filteredTickets.length === 0 ? (
           <div className="rounded-[24px] border border-dashed border-slate-300 bg-white/80 px-6 py-14 text-center shadow-sm">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
               <CheckCircle2 className="h-7 w-7" />
@@ -334,16 +353,16 @@ export function FinanceBillingContract() {
                       Setup
                     </th>
                     <th className="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">
-                      Recorrência
+                      Recorrencia
                     </th>
                     <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">
-                      Responsável
+                      Responsavel
                     </th>
                     <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">
                       Criado em
                     </th>
                     <th className="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">
-                      Ação
+                      Acao
                     </th>
                   </tr>
                 </thead>
@@ -359,18 +378,18 @@ export function FinanceBillingContract() {
                           {ticket.company}
                         </div>
                         <div className="mt-1 text-xs text-slate-500">
-                          {ticket.id}
+                          {ticket.code}
                         </div>
                       </td>
                       <td className="px-4 py-3 text-sm text-slate-600">
-                        {ticket.cnpj}
+                        {ticket.cnpj || '-'}
                       </td>
                       <td className="px-4 py-3 text-sm text-slate-600">
                         <div className="font-medium text-slate-800">
-                          {ticket.plan}
+                          {ticket.plan || '-'}
                         </div>
                         <div className="mt-1 text-xs text-slate-500">
-                          {ticket.paymentMethod}
+                          {ticket.paymentMethod || '-'}
                         </div>
                       </td>
                       <td className="px-4 py-3 text-right text-sm font-semibold text-slate-900">
@@ -380,7 +399,7 @@ export function FinanceBillingContract() {
                         {formatMoney(ticket.recurringAmount)}
                       </td>
                       <td className="px-4 py-3 text-sm text-slate-600">
-                        {ticket.sellerName}
+                        {sellerName(ticket)}
                       </td>
                       <td className="px-4 py-3 text-sm text-slate-600">
                         {formatDate(ticket.createdAt)}
@@ -390,12 +409,13 @@ export function FinanceBillingContract() {
                           type="button"
                           onClick={(event) => {
                             event.stopPropagation();
-                            confirmBilling(ticket.id);
+                            void confirmBilling(ticket.id);
                           }}
-                          className="inline-flex items-center gap-2 rounded-[10px] bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-emerald-700"
+                          disabled={isSaving === ticket.id}
+                          className="inline-flex items-center gap-2 rounded-[10px] bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           <CheckCircle2 className="h-3.5 w-3.5" />
-                          Cobrança Gerada
+                          Cobranca Gerada
                         </button>
                       </td>
                     </tr>
@@ -426,7 +446,7 @@ export function FinanceBillingContract() {
                       {ticket.company}
                     </div>
                     <div className="mt-1 text-sm text-slate-500">
-                      CNPJ: {ticket.cnpj}
+                      CNPJ: {ticket.cnpj || '-'}
                     </div>
                   </div>
 
@@ -438,9 +458,9 @@ export function FinanceBillingContract() {
                 <div className="mt-3 text-sm text-slate-500">
                   Plano:{' '}
                   <strong className="font-semibold text-slate-700">
-                    {ticket.plan}
+                    {ticket.plan || '-'}
                   </strong>{' '}
-                  · {ticket.paymentMethod}
+                  · {ticket.paymentMethod || '-'}
                 </div>
 
                 <div className="mt-2 text-sm text-slate-600">
@@ -448,7 +468,7 @@ export function FinanceBillingContract() {
                   <strong className="font-semibold text-slate-900">
                     {formatMoney(ticket.setupAmount)}
                   </strong>{' '}
-                  · Recorrência:{' '}
+                  · Recorrencia:{' '}
                   <strong className="font-semibold text-slate-900">
                     {formatMoney(ticket.recurringAmount)}
                   </strong>
@@ -461,10 +481,10 @@ export function FinanceBillingContract() {
                   </span>
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-500">
                     <User className="h-3.5 w-3.5" />
-                    {ticket.sellerName}
+                    {sellerName(ticket)}
                   </span>
                   <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-500">
-                    {ticket.id}
+                    {ticket.code}
                   </span>
                 </div>
 
@@ -473,12 +493,13 @@ export function FinanceBillingContract() {
                     type="button"
                     onClick={(event) => {
                       event.stopPropagation();
-                      confirmBilling(ticket.id);
+                      void confirmBilling(ticket.id);
                     }}
-                    className="inline-flex items-center gap-2 rounded-[10px] bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
+                    disabled={isSaving === ticket.id}
+                    className="inline-flex items-center gap-2 rounded-[10px] bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <CheckCircle2 className="h-4 w-4" />
-                    Cobrança Gerada
+                    Cobranca Gerada
                   </button>
                 </div>
               </article>
@@ -489,7 +510,7 @@ export function FinanceBillingContract() {
 
       <ModalShell
         open={Boolean(selectedTicket)}
-        title={selectedTicket ? `Ticket ${selectedTicket.id}` : 'Detalhes do ticket'}
+        title={selectedTicket ? `Ticket ${selectedTicket.code}` : 'Detalhes do ticket'}
         description="Resumo financeiro e comercial do ticket selecionado."
         maxWidthClassName="max-w-[760px]"
         onClose={() => setSelectedTicketId(null)}
@@ -506,11 +527,12 @@ export function FinanceBillingContract() {
               {selectedTicket.status === 'pendente_financeiro' ? (
                 <button
                   type="button"
-                  onClick={() => confirmBilling(selectedTicket.id)}
-                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
+                  onClick={() => void confirmBilling(selectedTicket.id)}
+                  disabled={isSaving === selectedTicket.id}
+                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <CheckCircle2 className="h-4 w-4" />
-                  Confirmar cobrança
+                  Confirmar cobranca
                 </button>
               ) : null}
             </>
@@ -526,7 +548,7 @@ export function FinanceBillingContract() {
                     Protocolo interno
                   </div>
                   <div className="mt-1 font-mono text-xl font-bold text-[#2563eb]">
-                    {selectedTicket.id}
+                    {selectedTicket.code}
                   </div>
                 </div>
 
@@ -535,7 +557,7 @@ export function FinanceBillingContract() {
                     {statusLabel(selectedTicket.status)}
                   </span>
                   <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
-                    {selectedTicket.plan}
+                    {selectedTicket.plan || '-'}
                   </span>
                 </div>
               </div>
@@ -550,10 +572,10 @@ export function FinanceBillingContract() {
                   {selectedTicket.company}
                 </div>
                 <div className="mt-3 text-sm text-slate-500">
-                  CNPJ: {selectedTicket.cnpj}
+                  CNPJ: {selectedTicket.cnpj || '-'}
                 </div>
                 <div className="mt-1 text-sm text-slate-500">
-                  Contato: {selectedTicket.contact}
+                  Contato: {selectedTicket.contact || '-'}
                 </div>
                 <div className="mt-1 text-sm text-slate-500">
                   Lead vinculado: {selectedTicket.leadId ?? '-'}
@@ -562,15 +584,15 @@ export function FinanceBillingContract() {
 
               <div className="rounded-2xl border border-slate-200 bg-white p-4">
                 <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
-                  Condições comerciais
+                  Condicoes comerciais
                 </div>
                 <div className="mt-3 flex items-center gap-2 text-sm text-slate-600">
                   <CreditCard className="h-4 w-4 text-slate-400" />
-                  {selectedTicket.paymentMethod}
+                  {selectedTicket.paymentMethod || '-'}
                 </div>
                 <div className="mt-2 flex items-center gap-2 text-sm text-slate-600">
                   <User className="h-4 w-4 text-slate-400" />
-                  {selectedTicket.sellerName}
+                  {sellerName(selectedTicket)}
                 </div>
                 <div className="mt-2 flex items-center gap-2 text-sm text-slate-600">
                   <CalendarDays className="h-4 w-4 text-slate-400" />
@@ -591,7 +613,7 @@ export function FinanceBillingContract() {
 
               <div className="rounded-2xl border border-slate-200 bg-emerald-50 p-4">
                 <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-emerald-700">
-                  Recorrência
+                  Recorrencia
                 </div>
                 <div className="mt-2 text-2xl font-bold text-emerald-700">
                   {formatMoney(selectedTicket.recurringAmount)}

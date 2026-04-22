@@ -212,7 +212,7 @@ export function CommercialCrmLeadTasks() {
       <div className="mb-6 flex flex-col gap-1">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">Tarefas dos Leads</h1>
         <p className="text-sm text-slate-500">
-          Visão consolidada das tarefas do CRM, sem dados mockados.
+          Visão consolidada das tarefas do CRM.
         </p>
       </div>
 

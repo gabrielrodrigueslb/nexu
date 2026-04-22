@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from 'react';
 import {
   BriefcaseBusiness,
   CalendarDays,
@@ -14,39 +14,13 @@ import {
   UserRoundPlus,
   Wrench,
   X,
-} from "lucide-react";
+} from 'lucide-react';
 
-import { rankIcon } from "@/components/ui";
-import { cn } from "@/lib/utils";
+import { rankIcon } from '@/components/ui';
+import { apiRequest } from '@/lib/api-client';
+import { cn } from '@/lib/utils';
 
-type CommercialStatus =
-  | "lead"
-  | "qualification"
-  | "awaitingApproval"
-  | "approved"
-  | "lost";
-
-type PriorityLevel = "CRITICO" | "ALTO" | "MEDIO" | "BAIXO";
-type TicketKind = "novo" | "upsell";
-type BadgeTone = "red" | "orange" | "yellow" | "green" | "blue" | "gray";
-
-type CommercialTicket = {
-  id: string;
-  createdAt: string;
-  seller: string;
-  status: CommercialStatus;
-  kind: TicketKind;
-  product: string;
-  integrations: string[];
-  setupAmount: number;
-  recurringAmount: number;
-};
-
-type DevTicket = {
-  id: string;
-  createdAt: string;
-  priority: PriorityLevel;
-};
+type BadgeTone = 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'gray';
 
 type RankingRow = {
   name: string;
@@ -55,171 +29,48 @@ type RankingRow = {
   recurring: number;
 };
 
-const commercialStatusMeta: Record<
-  CommercialStatus,
-  { label: string; tone: BadgeTone }
-> = {
-  lead: { label: "Lead recebido", tone: "gray" },
-  qualification: { label: "Em qualificação", tone: "blue" },
-  awaitingApproval: { label: "Aguardando aprovação", tone: "orange" },
-  approved: { label: "Aprovado", tone: "green" },
-  lost: { label: "Perdido", tone: "red" },
-};
-
-const priorityMeta: Record<PriorityLevel, { label: string; tone: BadgeTone }> = {
-  CRITICO: { label: "CRÍTICO", tone: "red" },
-  ALTO: { label: "ALTO", tone: "orange" },
-  MEDIO: { label: "MÉDIO", tone: "yellow" },
-  BAIXO: { label: "BAIXO", tone: "green" },
+type OverviewPayload = {
+  totals: {
+    expectedSetup: number;
+    expectedRecurring: number;
+    expectedTotal: number;
+    approvedSetup: number;
+    approvedRecurring: number;
+    approvedTotal: number;
+    pendingSetup: number;
+    pendingRecurring: number;
+    pendingTotal: number;
+    totalCommercialTickets: number;
+    newClientsCount: number;
+    upsellCount: number;
+    totalDevTickets: number;
+    criticalDevCount: number;
+  };
+  charts: {
+    products: Array<[string, number]>;
+    integrations: Array<[string, number]>;
+    ranking: RankingRow[];
+    commercialStatuses: Array<{ label: string; count: number; tone: BadgeTone }>;
+    devPriorities: Array<{ label: string; count: number; tone: BadgeTone }>;
+  };
 };
 
 const badgeToneClassName: Record<BadgeTone, string> = {
-  red: "border-[#fecaca] bg-[#fef2f2] text-[#dc2626]",
-  orange: "border-[#fde68a] bg-[#fffbeb] text-[#d97706]",
-  yellow: "border-[#fde68a] bg-[#fefce8] text-[#854d0e]",
-  green: "border-[#a7f3d0] bg-[#ecfdf5] text-[#059669]",
-  blue: "border-[#bfdbfe] bg-[#eff6ff] text-[#2563eb]",
-  gray: "border-[#e2e8f0] bg-[#f1f5f9] text-[#475569]",
+  red: 'border-[#fecaca] bg-[#fef2f2] text-[#dc2626]',
+  orange: 'border-[#fde68a] bg-[#fffbeb] text-[#d97706]',
+  yellow: 'border-[#fde68a] bg-[#fefce8] text-[#854d0e]',
+  green: 'border-[#a7f3d0] bg-[#ecfdf5] text-[#059669]',
+  blue: 'border-[#bfdbfe] bg-[#eff6ff] text-[#2563eb]',
+  gray: 'border-[#e2e8f0] bg-[#f1f5f9] text-[#475569]',
 };
 
-const commercialTickets: CommercialTicket[] = [
-  {
-    id: "CM-101",
-    createdAt: "2026-03-02",
-    seller: "Bianca",
-    status: "approved",
-    kind: "novo",
-    product: "Nexu CRM",
-    integrations: ["WhatsApp", "ERP"],
-    setupAmount: 4200,
-    recurringAmount: 1490,
-  },
-  {
-    id: "CM-102",
-    createdAt: "2026-03-04",
-    seller: "Lucas",
-    status: "awaitingApproval",
-    kind: "upsell",
-    product: "Financeiro Pro",
-    integrations: ["Conta Azul"],
-    setupAmount: 2600,
-    recurringAmount: 990,
-  },
-  {
-    id: "CM-103",
-    createdAt: "2026-03-07",
-    seller: "Bianca",
-    status: "qualification",
-    kind: "novo",
-    product: "Nexu CRM",
-    integrations: ["WhatsApp", "Slack"],
-    setupAmount: 3100,
-    recurringAmount: 1190,
-  },
-  {
-    id: "CM-104",
-    createdAt: "2026-03-09",
-    seller: "Carla",
-    status: "approved",
-    kind: "upsell",
-    product: "Implantação Plus",
-    integrations: ["Google Meet"],
-    setupAmount: 1800,
-    recurringAmount: 690,
-  },
-  {
-    id: "CM-105",
-    createdAt: "2026-03-12",
-    seller: "Lucas",
-    status: "lead",
-    kind: "novo",
-    product: "Nexu CRM",
-    integrations: ["Pipedrive"],
-    setupAmount: 3900,
-    recurringAmount: 1290,
-  },
-  {
-    id: "CM-106",
-    createdAt: "2026-03-15",
-    seller: "Carla",
-    status: "awaitingApproval",
-    kind: "upsell",
-    product: "Financeiro Pro",
-    integrations: ["Conta Azul", "WhatsApp"],
-    setupAmount: 2100,
-    recurringAmount: 890,
-  },
-  {
-    id: "CM-107",
-    createdAt: "2026-03-18",
-    seller: "Bianca",
-    status: "lost",
-    kind: "novo",
-    product: "Implantação Plus",
-    integrations: ["Slack"],
-    setupAmount: 1600,
-    recurringAmount: 640,
-  },
-];
-
-const devTickets: DevTicket[] = [
-  { id: "DV-301", createdAt: "2026-03-03", priority: "CRITICO" },
-  { id: "DV-302", createdAt: "2026-03-05", priority: "ALTO" },
-  { id: "DV-303", createdAt: "2026-03-08", priority: "MEDIO" },
-  { id: "DV-304", createdAt: "2026-03-10", priority: "CRITICO" },
-  { id: "DV-305", createdAt: "2026-03-13", priority: "BAIXO" },
-  { id: "DV-306", createdAt: "2026-03-17", priority: "ALTO" },
-  { id: "DV-307", createdAt: "2026-03-19", priority: "MEDIO" },
-];
-
 function formatMoney(value: number) {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(value);
-}
-
-function isDateInRange(date: string, from: string, to: string) {
-  if (from && date < from) return false;
-  if (to && date > to) return false;
-  return true;
-}
-
-function sumBy<T>(items: T[], pick: (item: T) => number) {
-  return items.reduce((total, item) => total + pick(item), 0);
-}
-
-function getCountRows(values: string[]) {
-  const counts = values.reduce<Record<string, number>>((accumulator, value) => {
-    accumulator[value] = (accumulator[value] ?? 0) + 1;
-    return accumulator;
-  }, {});
-
-  return Object.entries(counts).sort((left, right) => right[1] - left[1]);
-}
-
-function getRankingRows(items: CommercialTicket[]) {
-  const grouped = items.reduce<Record<string, RankingRow>>((accumulator, item) => {
-    const current = accumulator[item.seller] ?? {
-      name: item.seller,
-      tickets: 0,
-      setup: 0,
-      recurring: 0,
-    };
-
-    current.tickets += 1;
-    current.setup += item.setupAmount;
-    current.recurring += item.recurringAmount;
-    accumulator[item.seller] = current;
-    return accumulator;
-  }, {});
-
-  return Object.values(grouped).sort(
-    (left, right) =>
-      right.setup + right.recurring - (left.setup + left.recurring),
-  );
 }
 
 function Badge({
@@ -232,7 +83,7 @@ function Badge({
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full border px-[9px] py-[3px] text-[11px] font-bold whitespace-nowrap",
+        'inline-flex items-center rounded-full border px-[9px] py-[3px] text-[11px] font-bold whitespace-nowrap',
         badgeToneClassName[tone],
       )}
     >
@@ -251,7 +102,7 @@ function DashboardCard({
   return (
     <article
       className={cn(
-        "rounded-[10px] border border-[#e2e8f0] bg-white p-[18px] shadow-[0_1px_3px_rgba(0,0,0,.08)]",
+        'rounded-[10px] border border-[#e2e8f0] bg-white p-[18px] shadow-[0_1px_3px_rgba(0,0,0,.08)]',
         className,
       )}
     >
@@ -279,12 +130,7 @@ function SummaryMetricCard({
     <DashboardCard>
       <div className="mb-[10px] flex items-start justify-between">
         <div>
-          <div
-            className={cn(
-              "text-[26px] leading-none font-extrabold",
-              valueClassName,
-            )}
-          >
+          <div className={cn('text-[26px] leading-none font-extrabold', valueClassName)}>
             {value}
           </div>
           <div className="mt-[3px] text-xs text-[#64748b]">{label}</div>
@@ -292,7 +138,7 @@ function SummaryMetricCard({
 
         <div
           className={cn(
-            "flex size-10 items-center justify-center rounded-[10px] text-lg",
+            'flex size-10 items-center justify-center rounded-[10px] text-lg',
             iconClassName,
           )}
         >
@@ -300,9 +146,7 @@ function SummaryMetricCard({
         </div>
       </div>
 
-      {footer ? (
-        <div className="mt-[6px] text-[11px] text-[#64748b]">{footer}</div>
-      ) : null}
+      {footer ? <div className="mt-[6px] text-[11px] text-[#64748b]">{footer}</div> : null}
     </DashboardCard>
   );
 }
@@ -318,9 +162,7 @@ function BarChartCard({
   fillClassName: string;
   icon: React.ReactNode;
 }) {
-  const maxValue = rows.length
-    ? Math.max(...rows.map(([, count]) => count), 1)
-    : 1;
+  const maxValue = rows.length ? Math.max(...rows.map(([, count]) => count), 1) : 1;
 
   return (
     <DashboardCard className="rounded-[10px] p-[18px]">
@@ -332,16 +174,11 @@ function BarChartCard({
       <div className="flex flex-col gap-2">
         {rows.length ? (
           rows.map(([name, count]) => (
-            <div
-              key={name}
-              className="flex items-center gap-[10px] text-xs text-[#0f172a]"
-            >
-              <div className="w-[140px] truncate font-semibold text-[#64748b]">
-                {name}
-              </div>
+            <div key={name} className="flex items-center gap-[10px] text-xs text-[#0f172a]">
+              <div className="w-[140px] truncate font-semibold text-[#64748b]">{name}</div>
               <div className="h-[10px] flex-1 overflow-hidden rounded-full bg-[#e2e8f0]">
                 <div
-                  className={cn("h-full rounded-full transition-[width]", fillClassName)}
+                  className={cn('h-full rounded-full transition-[width]', fillClassName)}
                   style={{ width: `${Math.round((count / maxValue) * 100)}%` }}
                 />
               </div>
@@ -349,9 +186,7 @@ function BarChartCard({
             </div>
           ))
         ) : (
-          <div className="px-5 py-5 text-center text-[13px] text-[#64748b]">
-            Sem dados
-          </div>
+          <div className="px-5 py-5 text-center text-[13px] text-[#64748b]">Sem dados</div>
         )}
       </div>
     </DashboardCard>
@@ -379,8 +214,8 @@ function DistributionCard({
           <div
             key={row.label}
             className={cn(
-              "flex items-center justify-between py-[7px] text-[13px]",
-              index !== rows.length - 1 && "border-b border-[#e2e8f0]",
+              'flex items-center justify-between py-[7px] text-[13px]',
+              index !== rows.length - 1 && 'border-b border-[#e2e8f0]',
             )}
           >
             <span>{row.label}</span>
@@ -396,7 +231,7 @@ function RankingTable({ rows }: { rows: RankingRow[] }) {
   if (!rows.length) {
     return (
       <DashboardCard className="px-5 py-5 text-center text-[13px] text-[#64748b]">
-        Sem dados de vendas - atribua responsáveis nos tickets.
+        Sem dados de vendas.
       </DashboardCard>
     );
   }
@@ -406,7 +241,7 @@ function RankingTable({ rows }: { rows: RankingRow[] }) {
       <table className="min-w-full border-collapse">
         <thead>
           <tr className="border-b border-[#e2e8f0] bg-[#f8fafc]">
-            {["#", "Vendedor", "Tickets", "Setup", "Total"].map((column) => (
+            {['#', 'Responsável', 'Tickets', 'Setup', 'Total'].map((column) => (
               <th
                 key={column}
                 className="px-[14px] py-[10px] text-left text-[11px] font-bold tracking-[0.06em] text-[#64748b] uppercase"
@@ -429,9 +264,7 @@ function RankingTable({ rows }: { rows: RankingRow[] }) {
               <td className="px-[14px] py-[11px] text-[13px]">
                 <Badge tone="blue">{row.tickets}</Badge>
               </td>
-              <td className="px-[14px] py-[11px] text-[13px]">
-                {formatMoney(row.setup)}
-              </td>
+              <td className="px-[14px] py-[11px] text-[13px]">{formatMoney(row.setup)}</td>
               <td className="px-[14px] py-[11px] text-[13px]">
                 <strong>{formatMoney(row.setup + row.recurring)}</strong>
               </td>
@@ -443,99 +276,116 @@ function RankingTable({ rows }: { rows: RankingRow[] }) {
   );
 }
 
+const EMPTY_DATA: OverviewPayload = {
+  totals: {
+    expectedSetup: 0,
+    expectedRecurring: 0,
+    expectedTotal: 0,
+    approvedSetup: 0,
+    approvedRecurring: 0,
+    approvedTotal: 0,
+    pendingSetup: 0,
+    pendingRecurring: 0,
+    pendingTotal: 0,
+    totalCommercialTickets: 0,
+    newClientsCount: 0,
+    upsellCount: 0,
+    totalDevTickets: 0,
+    criticalDevCount: 0,
+  },
+  charts: {
+    products: [],
+    integrations: [],
+    ranking: [],
+    commercialStatuses: [],
+    devPriorities: [],
+  },
+};
+
 export function DashboardOverview() {
   const [dateRange, setDateRange] = useState({
-    dashFrom: "",
-    dashTo: "",
+    dashFrom: '',
+    dashTo: '',
   });
+  const [data, setData] = useState<OverviewPayload>(EMPTY_DATA);
+  const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>('loading');
 
-  const filteredCommercialTickets = commercialTickets.filter((ticket) =>
-    isDateInRange(ticket.createdAt, dateRange.dashFrom, dateRange.dashTo),
-  );
-  const filteredDevTickets = devTickets.filter((ticket) =>
-    isDateInRange(ticket.createdAt, dateRange.dashFrom, dateRange.dashTo),
-  );
+  useEffect(() => {
+    let active = true;
+
+    async function load() {
+      const params = new URLSearchParams();
+      if (dateRange.dashFrom) params.set('from', `${dateRange.dashFrom}T00:00:00.000Z`);
+      if (dateRange.dashTo) params.set('to', `${dateRange.dashTo}T23:59:59.999Z`);
+
+      try {
+        setLoadState('loading');
+        const payload = (await apiRequest(
+          `/api/backend/overview${params.size ? `?${params.toString()}` : ''}`,
+        )) as OverviewPayload;
+        if (!active) return;
+        setData(payload);
+        setLoadState('ready');
+      } catch {
+        if (!active) return;
+        setLoadState('error');
+      }
+    }
+
+    void load();
+    return () => {
+      active = false;
+    };
+  }, [dateRange.dashFrom, dateRange.dashTo]);
+
   const hasDateFilter = Boolean(dateRange.dashFrom || dateRange.dashTo);
+  const hasDevData = data.totals.totalDevTickets > 0 || data.charts.devPriorities.length > 0;
+  const commercialStatusRows = useMemo(
+    () =>
+      data.charts.commercialStatuses.map((row) => ({
+        label: row.label,
+        badge: <Badge tone={row.tone}>{row.count}</Badge>,
+      })),
+    [data.charts.commercialStatuses],
+  );
+  const priorityRows = useMemo(
+    () =>
+      data.charts.devPriorities.map((row) => ({
+        label: row.label,
+        badge: <Badge tone={row.tone}>{row.count}</Badge>,
+      })),
+    [data.charts.devPriorities],
+  );
 
-  const totalExpected = sumBy(
-    filteredCommercialTickets,
-    (ticket) => ticket.setupAmount + ticket.recurringAmount,
-  );
-  const expectedSetup = sumBy(filteredCommercialTickets, (ticket) => ticket.setupAmount);
-  const expectedRecurring = sumBy(filteredCommercialTickets, (ticket) => ticket.recurringAmount);
+  if (loadState === 'error') {
+    return (
+      <DashboardCard className="p-8 text-center">
+        <div className="text-[16px] font-extrabold text-[#0f172a]">
+          Nao foi possivel carregar o dashboard.
+        </div>
+        <div className="mt-2 text-[13px] text-[#64748b]">
+          Tente novamente em alguns instantes ou acione o suporte.
+        </div>
+      </DashboardCard>
+    );
+  }
 
-  const approvedTickets = filteredCommercialTickets.filter(
-    (ticket) => ticket.status === "approved",
-  );
-  const pendingTickets = filteredCommercialTickets.filter(
-    (ticket) => ticket.status === "awaitingApproval",
-  );
-  const approvedTotal = sumBy(
-    approvedTickets,
-    (ticket) => ticket.setupAmount + ticket.recurringAmount,
-  );
-  const approvedSetup = sumBy(approvedTickets, (ticket) => ticket.setupAmount);
-  const approvedRecurring = sumBy(approvedTickets, (ticket) => ticket.recurringAmount);
-  const pendingTotal = sumBy(
-    pendingTickets,
-    (ticket) => ticket.setupAmount + ticket.recurringAmount,
-  );
-  const pendingSetup = sumBy(pendingTickets, (ticket) => ticket.setupAmount);
-  const pendingRecurring = sumBy(pendingTickets, (ticket) => ticket.recurringAmount);
-
-  const newClientsCount = filteredCommercialTickets.filter(
-    (ticket) => ticket.kind === "novo",
-  ).length;
-  const upsellCount = filteredCommercialTickets.filter(
-    (ticket) => ticket.kind === "upsell",
-  ).length;
-  const criticalDevCount = filteredDevTickets.filter(
-    (ticket) => ticket.priority === "CRITICO",
-  ).length;
-
-  const productRows = getCountRows(
-    filteredCommercialTickets.map((ticket) => ticket.product),
-  );
-  const integrationRows = getCountRows(
-    filteredCommercialTickets.flatMap((ticket) => ticket.integrations),
-  );
-  const rankingRows = getRankingRows(filteredCommercialTickets);
-
-  const commercialStatusRows = (
-    Object.entries(commercialStatusMeta) as Array<
-      [CommercialStatus, (typeof commercialStatusMeta)[CommercialStatus]]
-    >
-  ).map(([status, meta]) => ({
-    label: meta.label,
-    badge: (
-      <Badge tone={meta.tone}>
-        {filteredCommercialTickets.filter((ticket) => ticket.status === status).length}
-      </Badge>
-    ),
-  }));
-
-  const priorityRows = (
-    Object.entries(priorityMeta) as Array<
-      [PriorityLevel, (typeof priorityMeta)[PriorityLevel]]
-    >
-  ).map(([priority, meta]) => ({
-    label: meta.label,
-    badge: (
-      <Badge tone={meta.tone}>
-        {filteredDevTickets.filter((ticket) => ticket.priority === priority).length}
-      </Badge>
-    ),
-  }));
+  if (loadState === 'loading') {
+    return (
+      <DashboardCard className="p-8 text-center text-[13px] font-semibold text-[#64748b]">
+        Carregando indicadores...
+      </DashboardCard>
+    );
+  }
 
   return (
     <div className="grid gap-4 animate-in fade-in-0 slide-in-from-bottom-2 duration-300">
-      <div className="mb-0 flex flex-wrap items-center gap-[10px] rounded-[10px] border border-[#e2e8f0] bg-white px-4 py-3">
+      <div className="mb-0 flex flex-wrap items-center justify-between gap-[10px] rounded-[10px] border border-[#e2e8f0] bg-white px-4 py-3">
         <span className="flex items-center gap-2 text-[13px] font-bold text-[#64748b]">
           <CalendarDays className="size-4 text-[#2563eb]" />
           Período
         </span>
-
-        <label className="text-xs text-[#64748b]" htmlFor="dash-from">
+<span className='flex items-center gap-2'>        <label className="text-xs text-[#64748b]" htmlFor="dash-from">
           De:
         </label>
         <input
@@ -570,107 +420,104 @@ export function DashboardOverview() {
         {hasDateFilter ? (
           <button
             type="button"
-            onClick={() => setDateRange({ dashFrom: "", dashTo: "" })}
+            onClick={() => setDateRange({ dashFrom: '', dashTo: '' })}
             className="inline-flex items-center gap-1 rounded-[6px] border border-[#e2e8f0] bg-transparent px-3 py-1.5 text-xs font-semibold text-[#64748b] transition-colors hover:bg-[#f8fafc] hover:text-[#0f172a]"
           >
             <X className="size-3.5" />
             Limpar
           </button>
-        ) : null}
+        ) : null}</span>
 
-        {hasDateFilter ? (
-          <span className="ml-1 text-[11px] font-semibold text-[#2563eb]">
-            {filteredCommercialTickets.length} ticket(s) no período
-          </span>
-        ) : null}
       </div>
 
       <section className="grid gap-[14px] xl:grid-cols-3">
         <SummaryMetricCard
-          value={formatMoney(totalExpected)}
+          value={formatMoney(data.totals.expectedTotal)}
           label="Valor Total Esperado"
           valueClassName="text-[#2563eb]"
           icon={<Package2 className="size-5 text-[#2563eb]" />}
           iconClassName="bg-[#eff6ff]"
           footer={
             <>
-              Setup: <strong>{formatMoney(expectedSetup)}</strong> · Recorrência:{" "}
-              <strong>{formatMoney(expectedRecurring)}</strong>
+              Setup: <strong>{formatMoney(data.totals.expectedSetup)}</strong> · Recorrência:{' '}
+              <strong>{formatMoney(data.totals.expectedRecurring)}</strong>
             </>
           }
         />
         <SummaryMetricCard
-          value={formatMoney(approvedTotal)}
+          value={formatMoney(data.totals.approvedTotal)}
           label="Valor Aprovado"
           valueClassName="text-[#059669]"
           icon={<CircleCheckBig className="size-5 text-[#059669]" />}
           iconClassName="bg-[#ecfdf5]"
           footer={
             <>
-              Setup: <strong>{formatMoney(approvedSetup)}</strong> · Recorrência:{" "}
-              <strong>{formatMoney(approvedRecurring)}</strong>
+              Setup: <strong>{formatMoney(data.totals.approvedSetup)}</strong> · Recorrência:{' '}
+              <strong>{formatMoney(data.totals.approvedRecurring)}</strong>
             </>
           }
         />
         <SummaryMetricCard
-          value={formatMoney(pendingTotal)}
+          value={formatMoney(data.totals.pendingTotal)}
           label="Aguardando Aprovação"
           valueClassName="text-[#d97706]"
           icon={<Clock3 className="size-5 text-[#d97706]" />}
           iconClassName="bg-[#fffbeb]"
           footer={
             <>
-              Setup: <strong>{formatMoney(pendingSetup)}</strong> · Recorrência:{" "}
-              <strong>{formatMoney(pendingRecurring)}</strong>
+              Setup: <strong>{formatMoney(data.totals.pendingSetup)}</strong> · Recorrência:{' '}
+              <strong>{formatMoney(data.totals.pendingRecurring)}</strong>
             </>
           }
         />
       </section>
 
-      <section className="grid gap-[14px] md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-[14px] md:grid-cols-2 xl:grid-cols-3">
         <SummaryMetricCard
-          value={filteredCommercialTickets.length}
+          value={data.totals.totalCommercialTickets}
           label="Total Tickets Comercial"
           icon={<BriefcaseBusiness className="size-5 text-[#7c3aed]" />}
           iconClassName="bg-[#f5f3ff]"
         />
         <SummaryMetricCard
-          value={newClientsCount}
+          value={data.totals.newClientsCount}
           label="Clientes Novos"
           valueClassName="text-[#059669]"
           icon={<UserRoundPlus className="size-5 text-[#059669]" />}
           iconClassName="bg-[#ecfdf5]"
         />
         <SummaryMetricCard
-          value={upsellCount}
+          value={data.totals.upsellCount}
           label="Inclusões / Upsell"
           valueClassName="text-[#7c3aed]"
           icon={<TrendingUp className="size-5 text-[#7c3aed]" />}
           iconClassName="bg-[#f5f3ff]"
         />
-        <SummaryMetricCard
-          value={filteredDevTickets.length}
+        {hasDevData ? (
+          <SummaryMetricCard
+          value={data.totals.totalDevTickets}
           label="Tickets Dev"
           icon={<Wrench className="size-5 text-[#dc2626]" />}
           iconClassName="bg-[#fef2f2]"
           footer={
             <span className="font-semibold text-[#dc2626]">
-              {criticalDevCount} críticos
+              {data.totals.criticalDevCount} críticos
             </span>
           }
-        />
+          />
+        ) : null}
       </section>
 
       <section className="grid gap-[14px] xl:grid-cols-2">
         <BarChartCard
           title="Vendas por Produto"
-          rows={productRows}
+          rows={data.charts.products}
           fillClassName="bg-[#2563eb]"
           icon={<Package2 className="size-4 text-[#2563eb]" />}
         />
         <BarChartCard
           title="Integrações Mais Vendidas"
-          rows={integrationRows}
+          rows={data.charts.integrations}
           fillClassName="bg-[#7c3aed]"
           icon={<Link2 className="size-4 text-[#7c3aed]" />}
         />
@@ -682,11 +529,13 @@ export function DashboardOverview() {
           rows={commercialStatusRows}
           icon={<ChartPie className="size-4 text-[#2563eb]" />}
         />
-        <DistributionCard
+        {hasDevData ? (
+          <DistributionCard
           title="Dev por Prioridade"
           rows={priorityRows}
           icon={<Wrench className="size-4 text-[#dc2626]" />}
-        />
+          />
+        ) : null}
       </section>
 
       <div>
@@ -694,7 +543,7 @@ export function DashboardOverview() {
           <Trophy className="size-4 text-[#d97706]" />
           Ranking Comercial
         </h3>
-        <RankingTable rows={rankingRows} />
+        <RankingTable rows={data.charts.ranking} />
       </div>
     </div>
   );

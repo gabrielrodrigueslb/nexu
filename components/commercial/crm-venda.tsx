@@ -285,7 +285,7 @@ export function CommercialCrmVenda() {
             CRM de Venda
           </h1>
           <p className="mt-0.5 text-[13px] text-[#64748b]">
-            Pipeline comercial com dados vivos da API.
+            Pipeline comercial — Kanban de Leads
           </p>
         </div>
 

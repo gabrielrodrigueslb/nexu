@@ -1,5 +1,7 @@
 'use client';
 
+import { useState } from 'react';
+
 import {
   CalendarDays,
   ExternalLink,
@@ -10,13 +12,13 @@ import {
   Wrench,
 } from 'lucide-react';
 
-import { techs } from '@/components/dashboard-support/data';
 import { formatMoney } from '@/components/utils';
 import { TicketDetailsView } from '@/components/shared/ticket-details-view';
 
 import {
   formatDatePt,
   getTechNameById,
+  getTechOptions,
   IMPLANTACAO_COLUMNS,
   type ImplantacaoTicket,
   sumRecurring,
@@ -69,9 +71,13 @@ export function ImplantacaoTicketModal({
   onChangeTech: (ticketId: string, techId: string) => void;
   onChangeLabel: (ticketId: string, label: ImplantacaoTicket['csStatus']) => void;
 }) {
+  const [editingTicketId, setEditingTicketId] = useState<string | null>(null);
+  const isEditing = Boolean(open && ticket?.id && editingTicketId === ticket.id);
+
   if (!ticket) return null;
 
   const labelOptions: ImplantacaoTicket['csStatus'][] = [...IMPLANTACAO_COLUMNS, 'Concluído'];
+  const techOptions = getTechOptions();
 
   return (
     <TicketDetailsView
@@ -124,9 +130,10 @@ export function ImplantacaoTicketModal({
           <select
             value={ticket.respTec}
             onChange={(event) => onChangeTech(ticket.id, event.target.value)}
-            className="min-w-[150px] bg-transparent text-[11px] font-semibold text-[#0f172a] outline-none"
+            disabled={!isEditing}
+            className="min-w-[150px] bg-transparent text-[11px] font-semibold text-[#0f172a] outline-none disabled:cursor-default"
           >
-            {techs.map((tech) => (
+            {techOptions.map((tech) => (
               <option key={tech.id} value={tech.id}>
                 {tech.name}
               </option>
@@ -144,7 +151,8 @@ export function ImplantacaoTicketModal({
             onChange={(event) =>
               onChangeLabel(ticket.id, event.target.value as ImplantacaoTicket['csStatus'])
             }
-            className="min-w-[150px] bg-transparent text-[11px] font-semibold text-[#0f172a] outline-none"
+            disabled={!isEditing}
+            className="min-w-[150px] bg-transparent text-[11px] font-semibold text-[#0f172a] outline-none disabled:cursor-default"
           >
             {labelOptions.map((option) => (
               <option key={option} value={option}>
@@ -203,7 +211,7 @@ export function ImplantacaoTicketModal({
             ? 'Integrações'
             : 'Tarefas',
       }))}
-      onToggleTask={(taskId) => onToggleTask(ticket.id, taskId)}
+      onToggleTask={isEditing ? (taskId) => onToggleTask(ticket.id, taskId) : undefined}
       valueTables={[
         {
           title: 'Produtos',
@@ -222,7 +230,7 @@ export function ImplantacaoTicketModal({
         emptyText: 'Sem anexos',
         actionLabel: 'Clique para adicionar PDF, imagem ou documento',
         items: ticket.attachments,
-        onAdd: (files) => onAddAttachments(ticket.id, files),
+        onAdd: isEditing ? (files) => onAddAttachments(ticket.id, files) : undefined,
       }}
       historyItems={ticket.history.map((item) => ({
         id: item.id,
@@ -250,12 +258,33 @@ export function ImplantacaoTicketModal({
         onSubmit: (message) => onAddComment(ticket.id, message),
       }}
       footer={
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-[8px] border border-[#e2e8f0] bg-white px-4 py-[9px] text-[13px] font-semibold text-[#64748b]"
+          >
+            Fechar
+          </button>
+          {isEditing ? (
+            <button
+              type="button"
+              onClick={() => setEditingTicketId(null)}
+              className="rounded-[8px] bg-[#2563eb] px-4 py-[9px] text-[13px] font-semibold text-white"
+            >
+              Concluir edição
+            </button>
+          ) : null}
+        </div>
+      }
+      headerActions={
         <button
           type="button"
-          onClick={onClose}
-          className="rounded-[8px] border border-[#e2e8f0] bg-white px-4 py-[9px] text-[13px] font-semibold text-[#64748b]"
+          onClick={() => setEditingTicketId(ticket.id)}
+          disabled={isEditing}
+          className="rounded-[8px] border-[1.5px] border-[#e2e8f0] px-4 py-2 text-[13px] font-bold text-[#0f172a] hover:bg-[#f8fafc] disabled:cursor-default disabled:opacity-60"
         >
-          Fechar
+          Editar
         </button>
       }
     />

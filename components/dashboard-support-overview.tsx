@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 
-import { techs } from './dashboard-support/data';
+import { getTechOptions, useImplantacaoTickets } from './implantacao/implantacao-shared';
 import { getSupportTicketsByKind, useSupportDashboard } from './dashboard-support/hooks';
 import type { TicketListKind } from './dashboard-support/types';
 import {
@@ -19,8 +19,10 @@ import {
 export function DashboardSupportOverview() {
   const [dateRange, setDateRange] = useState({ from: '', to: '' });
   const [modalKind, setModalKind] = useState<TicketListKind | null>(null);
+  const [tickets] = useImplantacaoTickets();
+  const techs = getTechOptions();
 
-  const data = useSupportDashboard(dateRange.from, dateRange.to);
+  const data = useSupportDashboard(tickets, techs, dateRange.from, dateRange.to);
   const hasFilter = Boolean(dateRange.from || dateRange.to);
 
   const techNameById = useMemo(
@@ -29,7 +31,7 @@ export function DashboardSupportOverview() {
         accumulator[tech.id] = tech.name;
         return accumulator;
       }, {}),
-    [],
+    [techs],
   );
 
   const novosAtPhase = useMemo(

@@ -169,7 +169,8 @@ export function DashboardCrmOverview() {
             Dashboard CRM
           </div>
           <div className="mt-[2px] text-[13px] text-[#64748b]">
-            Visão 360 do pipeline com dados dinâmicos da API
+            Visão 360° do pipeline — leads, SDRs, vendedores, tarefas e metas
+Visão Geral
             {hasFilter ? (
               <span className="ml-2 rounded-full bg-[#eff6ff] px-[9px] py-[2px] text-[11px] font-bold text-[#2563eb]">
                 Período filtrado

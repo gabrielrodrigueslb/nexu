@@ -1,22 +1,23 @@
 import { useMemo } from 'react';
 
-import { supportTickets, techs } from './data';
-import type { SupportTicket } from './types';
+import type { ImplantacaoTicket } from '@/components/implantacao/implantacao-shared';
+import type { SupportTech, SupportTicket } from './types';
 import { buildTimeBuckets, diffDays, inRange, percentage, sumBy } from './utils';
 
-const TODAY = new Date('2026-03-22T12:00:00').getTime();
+const TODAY = Date.now();
 
-export function useSupportDashboard(dateFrom: string, dateTo: string) {
+export function useSupportDashboard(
+  tickets: ImplantacaoTicket[],
+  techs: SupportTech[],
+  dateFrom: string,
+  dateTo: string,
+) {
   return useMemo(() => {
-    const activeTickets = supportTickets.filter((ticket) => ticket.status === 'active');
-    const allCompletedTickets = supportTickets.filter(
-      (ticket) => ticket.status === 'done' && ticket.updatedAt,
-    );
+    const activeTickets = tickets.filter((ticket) => ticket.status === 'active');
+    const allCompletedTickets = tickets.filter((ticket) => ticket.status === 'done' && ticket.updatedAt);
     const filteredCompletedTickets =
       dateFrom || dateTo
-        ? allCompletedTickets.filter((ticket) =>
-            inRange(ticket.updatedAt!, dateFrom, dateTo),
-          )
+        ? allCompletedTickets.filter((ticket) => inRange(ticket.updatedAt!, dateFrom, dateTo))
         : allCompletedTickets;
 
     const activeTasks = activeTickets.flatMap((ticket) => ticket.tasks);
@@ -32,9 +33,7 @@ export function useSupportDashboard(dateFrom: string, dateTo: string) {
     ).length;
     const pctGeral = percentage(doneTasks.length, activeTasks.length);
 
-    const withTime = filteredCompletedTickets.filter(
-      (ticket) => ticket.createdAt && ticket.updatedAt,
-    );
+    const withTime = filteredCompletedTickets.filter((ticket) => ticket.createdAt && ticket.updatedAt);
     const timeValues = withTime.map((ticket) => diffDays(ticket.createdAt, ticket.updatedAt!));
     const avgDays = timeValues.length
       ? sumBy(timeValues, (value) => value) / timeValues.length
@@ -56,15 +55,13 @@ export function useSupportDashboard(dateFrom: string, dateTo: string) {
     const fastest = withTime.length
       ? [...withTime].sort(
           (left, right) =>
-            diffDays(left.createdAt, left.updatedAt!) -
-            diffDays(right.createdAt, right.updatedAt!),
+            diffDays(left.createdAt, left.updatedAt!) - diffDays(right.createdAt, right.updatedAt!),
         )[0]
       : null;
     const slowest = withTime.length
       ? [...withTime].sort(
           (left, right) =>
-            diffDays(right.createdAt, right.updatedAt!) -
-            diffDays(left.createdAt, left.updatedAt!),
+            diffDays(right.createdAt, right.updatedAt!) - diffDays(left.createdAt, left.updatedAt!),
         )[0]
       : null;
     const minDays = timeValues.length ? Math.min(...timeValues) : 0;
@@ -77,29 +74,19 @@ export function useSupportDashboard(dateFrom: string, dateTo: string) {
     }, {});
     const phaseCount = Object.entries(phaseMap).map(([col, n]) => ({ col, n }));
 
-    const productTotals = supportTickets.reduce<Record<string, number>>(
-      (accumulator, ticket) => {
-        accumulator[ticket.produto] = (accumulator[ticket.produto] ?? 0) + 1;
-        return accumulator;
-      },
-      {},
-    );
-    const productDone = allCompletedTickets.reduce<Record<string, number>>(
-      (accumulator, ticket) => {
-        accumulator[ticket.produto] = (accumulator[ticket.produto] ?? 0) + 1;
-        return accumulator;
-      },
-      {},
-    );
+    const productTotals = tickets.reduce<Record<string, number>>((accumulator, ticket) => {
+      accumulator[ticket.produto] = (accumulator[ticket.produto] ?? 0) + 1;
+      return accumulator;
+    }, {});
+    const productDone = allCompletedTickets.reduce<Record<string, number>>((accumulator, ticket) => {
+      accumulator[ticket.produto] = (accumulator[ticket.produto] ?? 0) + 1;
+      return accumulator;
+    }, {});
 
     const novosAtivos = activeTickets.filter((ticket) => ticket.tipo === 'novo').length;
     const upsellAtivos = activeTickets.filter((ticket) => ticket.tipo === 'inclusao').length;
-    const novosConcl = filteredCompletedTickets.filter(
-      (ticket) => ticket.tipo === 'novo',
-    ).length;
-    const upsellConcl = filteredCompletedTickets.filter(
-      (ticket) => ticket.tipo === 'inclusao',
-    ).length;
+    const novosConcl = filteredCompletedTickets.filter((ticket) => ticket.tipo === 'novo').length;
+    const upsellConcl = filteredCompletedTickets.filter((ticket) => ticket.tipo === 'inclusao').length;
 
     const techStats = techs.map((tech) => {
       const myCards = activeTickets.filter((ticket) => ticket.respTec === tech.id);
@@ -109,15 +96,11 @@ export function useSupportDashboard(dateFrom: string, dateTo: string) {
         (task) => !task.done && task.endDate && new Date(task.endDate).getTime() < TODAY,
       ).length;
       const myPct = percentage(myDone.length, myTasks.length);
-      const myConclPeriod = filteredCompletedTickets.filter(
-        (ticket) => ticket.respTec === tech.id,
-      );
+      const myConclPeriod = filteredCompletedTickets.filter((ticket) => ticket.respTec === tech.id);
       const myAvg = myConclPeriod.length
         ? Math.round(
-            sumBy(
-              myConclPeriod,
-              (ticket) => diffDays(ticket.createdAt, ticket.updatedAt!),
-            ) / myConclPeriod.length,
+            sumBy(myConclPeriod, (ticket) => diffDays(ticket.createdAt, ticket.updatedAt!)) /
+              myConclPeriod.length,
           )
         : null;
 
@@ -135,19 +118,19 @@ export function useSupportDashboard(dateFrom: string, dateTo: string) {
     });
 
     return {
-      activeTickets,
-      filteredCompletedTickets,
-      overdueTickets,
+      activeTickets: activeTickets as SupportTicket[],
+      filteredCompletedTickets: filteredCompletedTickets as SupportTicket[],
+      overdueTickets: overdueTickets as SupportTicket[],
       pendTasks,
       doneTasks,
       overdue,
       pctGeral,
-      withTime,
+      withTime: withTime as SupportTicket[],
       avgDays,
       avgNovos,
       avgUps,
-      fastest,
-      slowest,
+      fastest: fastest as SupportTicket | null,
+      slowest: slowest as SupportTicket | null,
       minDays,
       maxDays,
       buckets,
@@ -160,7 +143,7 @@ export function useSupportDashboard(dateFrom: string, dateTo: string) {
       upsellConcl,
       techStats,
     };
-  }, [dateFrom, dateTo]);
+  }, [dateFrom, dateTo, techs, tickets]);
 }
 
 export function getSupportTicketsByKind(

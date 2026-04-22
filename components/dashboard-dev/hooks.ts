@@ -1,6 +1,6 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
-import { devTickets, devUsers, sprints } from './data';
+import { fetchDevLookups, fetchDevTickets, type DevApiTicket, type DevApiUser } from '@/components/dev/api';
 import { DEV_COLS } from './types';
 import type { DevTicket, DevType, DevUser } from './types';
 import {
@@ -12,7 +12,31 @@ import {
   sumBy,
 } from './utils';
 
-const TODAY = new Date('2026-03-22T12:00:00').getTime();
+let devUsersDirectory: DevUser[] = [];
+const TODAY = Date.now();
+
+function normalizeTicket(ticket: DevApiTicket): DevTicket {
+  return {
+    id: ticket.id,
+    title: ticket.title,
+    devStatus: ticket.devStatus,
+    devType: ticket.devType === 'Epic' ? 'Feature' : (ticket.devType as DevType),
+    category: ticket.category,
+    complexity: ticket.complexity,
+    resp: ticket.resp,
+    createdAt: ticket.createdAt,
+    updatedAt: ticket.concludedAt || ticket.updatedAt || undefined,
+    deadline: ticket.deadline || undefined,
+    totalPts: ticket.totalPts,
+    sprintId: ticket.sprintId || undefined,
+    docDone: ticket.docDone,
+    prodBug: ticket.prodBug,
+    reopened: ticket.reopened,
+    incident: ticket.incident,
+    compliment: ticket.compliment,
+    criticalBug: ticket.criticalBug,
+  };
+}
 
 function calculateTicketScore(ticket: DevTicket) {
   const base = complexityBasePoints(ticket.complexity);
@@ -46,16 +70,48 @@ function calculateTicketScore(ticket: DevTicket) {
 }
 
 export function useDevDashboard(dateFrom: string, dateTo: string) {
+  const [tickets, setTickets] = useState<DevTicket[]>([]);
+  const [users, setUsers] = useState<DevUser[]>([]);
+  const [sprints, setSprints] = useState<Array<{ id: string; name: string; closed: boolean }>>([]);
+
+  useEffect(() => {
+    let active = true;
+
+    async function load() {
+      try {
+        const [lookups, devTickets] = await Promise.all([fetchDevLookups(), fetchDevTickets()]);
+        if (!active) return;
+        const nextUsers: DevUser[] = (lookups.users || []).map((user: DevApiUser) => ({
+          id: user.id,
+          name: user.name,
+        }));
+        devUsersDirectory = nextUsers;
+        setUsers(nextUsers);
+        setSprints((lookups.sprints || []).map((sprint) => ({ id: sprint.id, name: sprint.name, closed: sprint.closed })));
+        setTickets(devTickets.map(normalizeTicket));
+      } catch {
+        if (!active) return;
+        devUsersDirectory = [];
+        setUsers([]);
+        setSprints([]);
+        setTickets([]);
+      }
+    }
+
+    void load();
+    return () => {
+      active = false;
+    };
+  }, []);
+
   return useMemo(() => {
     const doneStatus = DEV_COLS[DEV_COLS.length - 1];
     const hasFilter = Boolean(dateFrom || dateTo);
-    const resolvedAll = devTickets.filter(
-      (ticket) => ticket.devStatus === doneStatus && ticket.updatedAt,
-    );
+    const resolvedAll = tickets.filter((ticket) => ticket.devStatus === doneStatus && ticket.updatedAt);
     const resolvedT = hasFilter
       ? resolvedAll.filter((ticket) => inRange(ticket.updatedAt!, dateFrom, dateTo))
       : resolvedAll;
-    const openTickets = devTickets.filter((ticket) => ticket.devStatus !== doneStatus);
+    const openTickets = tickets.filter((ticket) => ticket.devStatus !== doneStatus);
     const totalOpen = openTickets.length;
     const completedCount = resolvedT.length;
 
@@ -63,7 +119,7 @@ export function useDevDashboard(dateFrom: string, dateTo: string) {
       accumulator[status] =
         status === doneStatus
           ? completedCount
-          : devTickets.filter((ticket) => ticket.devStatus === status).length;
+          : tickets.filter((ticket) => ticket.devStatus === status).length;
       return accumulator;
     }, {});
 
@@ -72,14 +128,14 @@ export function useDevDashboard(dateFrom: string, dateTo: string) {
       ? Math.round(sumBy(cycleValues, (value) => value) / cycleValues.length)
       : null;
     const bugRate = Math.round(
-      percentage(devTickets.filter((ticket) => ticket.devType === 'Bug').length, devTickets.length),
+      percentage(tickets.filter((ticket) => ticket.devType === 'Bug').length, tickets.length),
     );
 
     const maxByStatus = Math.max(1, ...Object.values(byStatus));
     const velocityByS = sprints
       .filter((sprint) => sprint.closed)
       .map((sprint) => {
-        const sprintTickets = devTickets.filter((ticket) => ticket.sprintId === sprint.id);
+        const sprintTickets = tickets.filter((ticket) => ticket.sprintId === sprint.id);
         const completed = sprintTickets.filter((ticket) => ticket.devStatus === doneStatus);
         return {
           id: sprint.id,
@@ -90,44 +146,31 @@ export function useDevDashboard(dateFrom: string, dateTo: string) {
       });
 
     const activeSp = sprints.find((sprint) => !sprint.closed) ?? null;
-    const spT = activeSp
-      ? devTickets.filter((ticket) => ticket.sprintId === activeSp.id)
-      : [];
+    const spT = activeSp ? tickets.filter((ticket) => ticket.sprintId === activeSp.id) : [];
     const spDone = spT.filter((ticket) => ticket.devStatus === doneStatus);
     const spVelocity = sumBy(spDone, (ticket) => ticket.totalPts);
     const spPct = percentage(spDone.length, spT.length);
     const spBugs = spT.filter((ticket) => ticket.devType === 'Bug');
 
-    const resAvg = cycleValues.length
-      ? sumBy(cycleValues, (value) => value) / cycleValues.length
-      : 0;
+    const resAvg = cycleValues.length ? sumBy(cycleValues, (value) => value) / cycleValues.length : 0;
     const resMin = cycleValues.length ? Math.min(...cycleValues) : 0;
     const resMax = cycleValues.length ? Math.max(...cycleValues) : 0;
     const resFastest = resolvedT.length
       ? [...resolvedT].sort(
-          (left, right) =>
-            diffDays(left.createdAt, left.updatedAt!) -
-            diffDays(right.createdAt, right.updatedAt!),
+          (left, right) => diffDays(left.createdAt, left.updatedAt!) - diffDays(right.createdAt, right.updatedAt!),
         )[0]
       : null;
     const resSlowest = resolvedT.length
       ? [...resolvedT].sort(
-          (left, right) =>
-            diffDays(right.createdAt, right.updatedAt!) -
-            diffDays(left.createdAt, left.updatedAt!),
+          (left, right) => diffDays(right.createdAt, right.updatedAt!) - diffDays(left.createdAt, left.updatedAt!),
         )[0]
       : null;
 
-    const resByType = (['Feature', 'Task', 'Bug'] as DevType[]).reduce<
-      Record<DevType, number | null>
-    >(
+    const resByType = (['Feature', 'Task', 'Bug'] as DevType[]).reduce<Record<DevType, number | null>>(
       (accumulator, type) => {
         const items = resolvedT.filter((ticket) => ticket.devType === type);
         accumulator[type] = items.length
-          ? Math.round(
-              sumBy(items, (ticket) => diffDays(ticket.createdAt, ticket.updatedAt!)) /
-                items.length,
-            )
+          ? Math.round(sumBy(items, (ticket) => diffDays(ticket.createdAt, ticket.updatedAt!)) / items.length)
           : null;
         return accumulator;
       },
@@ -144,7 +187,7 @@ export function useDevDashboard(dateFrom: string, dateTo: string) {
       return days >= 0 && days <= 14;
     });
 
-    const leaderboard = devUsers
+    const leaderboard = users
       .map((user) => {
         const mine = resolvedT.filter((ticket) => ticket.resp === user.id);
         const inDev = openTickets.filter((ticket) => ticket.resp === user.id).length;
@@ -180,7 +223,7 @@ export function useDevDashboard(dateFrom: string, dateTo: string) {
       .slice()
       .reverse()
       .map((sprint) => {
-        const sprintTickets = devTickets.filter((ticket) => ticket.sprintId === sprint.id);
+        const sprintTickets = tickets.filter((ticket) => ticket.sprintId === sprint.id);
         const sprintDone = sprintTickets.filter((ticket) => ticket.devStatus === doneStatus);
         const pct = percentage(sprintDone.length, sprintTickets.length);
         const vel = sumBy(sprintDone, (ticket) => ticket.totalPts);
@@ -192,10 +235,6 @@ export function useDevDashboard(dateFrom: string, dateTo: string) {
           vel,
         };
       });
-
-    const listOpen = openTickets;
-    const listDone = resolvedT;
-    const listOverdue = overdueT;
 
     return {
       hasFilter,
@@ -224,13 +263,13 @@ export function useDevDashboard(dateFrom: string, dateTo: string) {
       nearT,
       leaderboard,
       sprintHistory,
-      listOpen,
-      listDone,
-      listOverdue,
+      listOpen: openTickets,
+      listDone: resolvedT,
+      listOverdue: overdueT,
     };
-  }, [dateFrom, dateTo]);
+  }, [dateFrom, dateTo, sprints, tickets, users]);
 }
 
 export function findUserById(id: string): DevUser | undefined {
-  return devUsers.find((user) => user.id === id);
+  return devUsersDirectory.find((user) => user.id === id);
 }

@@ -21,8 +21,11 @@ import {
 } from 'lucide-react';
 
 import { formatMoney } from '@/components/utils';
-
-const STORAGE_KEY = 'nx_fluxo_importado';
+import {
+  clearFinanceCashFlow,
+  fetchFinanceCashFlow,
+  saveFinanceCashFlow,
+} from './finance-cash-flow-api';
 
 type FlowTab = 'caixa' | 'despesas' | 'receitas' | 'atrasadas';
 type GroupBy = '' | 'cc' | 'conta';
@@ -112,7 +115,7 @@ type SavedFlowData = {
   receitas: LedgerRevenueRow[];
   atrasadas: LedgerRevenueRow[];
   importedAt: string | null;
-  mode?: 'mock' | 'imported' | null;
+  mode?: 'imported' | null;
 };
 
 type Notice = {
@@ -147,7 +150,7 @@ const GROUP_OPTIONS: Array<{ value: GroupBy; label: string }> = [
 ];
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-function createMockFlowData(): SavedFlowData {
+function createSeedFlowData(): SavedFlowData {
   const despesas: LedgerExpenseRow[] = [
     {
       fornecedor: 'Amazon AWS',
@@ -362,7 +365,7 @@ function createMockFlowData(): SavedFlowData {
     receitas,
     atrasadas,
     importedAt: null,
-    mode: 'mock',
+    mode: null,
   };
 }
 
@@ -467,56 +470,6 @@ function formatCompactMoney(value: number) {
 
 function formatPercent(value: number) {
   return `${(value * 100).toFixed(1)}%`;
-}
-
-function loadSavedFlowData(): SavedFlowData {
-  if (typeof window === 'undefined') {
-    return EMPTY_FLOW_DATA;
-  }
-
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      return EMPTY_FLOW_DATA;
-    }
-
-    const parsed = JSON.parse(raw) as Partial<SavedFlowData>;
-
-    if (parsed.mode === 'mock') {
-      return EMPTY_FLOW_DATA;
-    }
-
-    const normalized: SavedFlowData = {
-      caixa: parsed.caixa ?? null,
-      despesas: Array.isArray(parsed.despesas) ? parsed.despesas : [],
-      receitas: Array.isArray(parsed.receitas) ? parsed.receitas : [],
-      atrasadas: Array.isArray(parsed.atrasadas) ? parsed.atrasadas : [],
-      importedAt:
-        typeof parsed.importedAt === 'string' ? parsed.importedAt : null,
-      mode: parsed.mode === 'imported' ? parsed.mode : null,
-    };
-
-    if (
-      !normalized.caixa &&
-      normalized.despesas.length === 0 &&
-      normalized.receitas.length === 0 &&
-      normalized.atrasadas.length === 0
-    ) {
-      return EMPTY_FLOW_DATA;
-    }
-
-    return normalized;
-  } catch {
-    return EMPTY_FLOW_DATA;
-  }
-}
-
-function saveFlowData(data: SavedFlowData) {
-  if (typeof window === 'undefined') {
-    return;
-  }
-
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
 function isExpenseRow(row: LedgerRow): row is LedgerExpenseRow {
@@ -968,7 +921,7 @@ function MetricCard({
 
 export function FinanceCashFlow() {
   const [savedData, setSavedData] = useState<SavedFlowData>(EMPTY_FLOW_DATA);
-  const [hydrated, setHydrated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [tab, setTab] = useState<FlowTab>('caixa');
   const [groupBy, setGroupBy] = useState<GroupBy>('');
   const [ccFilter, setCcFilter] = useState('');
@@ -977,19 +930,66 @@ export function FinanceCashFlow() {
   const [dateTo, setDateTo] = useState('');
   const [notice, setNotice] = useState<Notice | null>(null);
   const [importingTab, setImportingTab] = useState<FlowTab | null>(null);
+  const [isPersisting, setIsPersisting] = useState(false);
 
   useEffect(() => {
-    setSavedData(loadSavedFlowData());
-    setHydrated(true);
-  }, []);
+    let active = true;
 
-  useEffect(() => {
-    if (!hydrated) {
-      return;
+    async function load() {
+      setIsLoading(true);
+
+      try {
+        const payload = await fetchFinanceCashFlow();
+        if (!active) return;
+
+        setSavedData({
+          caixa: payload?.caixa ?? null,
+          despesas: payload?.despesas ?? [],
+          receitas: payload?.receitas ?? [],
+          atrasadas: payload?.atrasadas ?? [],
+          importedAt: payload?.importedAt ?? null,
+          mode: payload?.importedAt ? 'imported' : null,
+        });
+      } catch (error) {
+        if (!active) return;
+
+        setNotice({
+          tone: 'error',
+          text:
+            error instanceof Error
+              ? error.message
+              : 'Falha ao carregar o fluxo financeiro.',
+        });
+      } finally {
+        if (active) {
+          setIsLoading(false);
+        }
+      }
     }
 
-    saveFlowData(savedData);
-  }, [hydrated, savedData]);
+    void load();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  async function persistData(nextData: SavedFlowData) {
+    setIsPersisting(true);
+
+    try {
+      await saveFinanceCashFlow({
+        caixa: nextData.caixa,
+        despesas: nextData.despesas,
+        receitas: nextData.receitas,
+        atrasadas: nextData.atrasadas,
+        importedAt: nextData.importedAt,
+      });
+      setSavedData(nextData);
+    } finally {
+      setIsPersisting(false);
+    }
+  }
 
   const despesas = savedData.despesas;
   const receitas = savedData.receitas;
@@ -1142,26 +1142,23 @@ export function FinanceCashFlow() {
 
     try {
       const parsed = await parseFluxoSheet(file, targetTab);
+      const nextImportedAt = new Date().toISOString();
+      const nextData =
+        targetTab === 'caixa'
+          ? {
+              ...savedData,
+              caixa: parsed as CashFlowSummary,
+              importedAt: nextImportedAt,
+              mode: 'imported' as const,
+            }
+          : {
+              ...savedData,
+              [targetTab]: parsed,
+              importedAt: nextImportedAt,
+              mode: 'imported' as const,
+            };
 
-      setSavedData((current) => {
-        const nextImportedAt = new Date().toISOString();
-
-        if (targetTab === 'caixa') {
-          return {
-            ...current,
-            caixa: parsed as CashFlowSummary,
-            importedAt: nextImportedAt,
-            mode: 'imported',
-          };
-        }
-
-        return {
-          ...current,
-          [targetTab]: parsed,
-          importedAt: nextImportedAt,
-          mode: 'imported',
-        };
-      });
+      await persistData(nextData);
 
       setTab(targetTab);
       setNotice({
@@ -1189,11 +1186,13 @@ export function FinanceCashFlow() {
     }
   }
 
-  function clearImportedData() {
+  async function clearImportedData() {
     if (!window.confirm('Limpar os arquivos importados do fluxo financeiro?')) {
       return;
     }
 
+    setIsPersisting(true);
+    await clearFinanceCashFlow();
     setSavedData(EMPTY_FLOW_DATA);
     setTab('caixa');
     setGroupBy('');
@@ -1205,14 +1204,14 @@ export function FinanceCashFlow() {
       tone: 'success',
       text: 'Arquivos importados removidos com sucesso.',
     });
-    window.localStorage.removeItem(STORAGE_KEY);
+    setIsPersisting(false);
   }
 
   const today = new Date().toLocaleDateString('pt-BR');
   const isExpenseTab = tab === 'despesas';
   const isDelayedTab = tab === 'atrasadas';
 
-  if (!hydrated) {
+  if (isLoading) {
     return (
       <div className="grid gap-0 pb-2">
         <div className="mb-4">
@@ -1272,15 +1271,18 @@ export function FinanceCashFlow() {
                 Limpar período
               </button>
             ) : null}
-            <label className="inline-flex cursor-pointer items-center gap-2 rounded-[12px] border border-[#2563eb] bg-[#2563eb] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1d4ed8]">
+            <label className={`inline-flex items-center gap-2 rounded-[12px] border border-[#2563eb] bg-[#2563eb] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1d4ed8] ${importingTab || isPersisting ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}`}>
               <Upload className="h-4 w-4" />
               <span>
-                {importingTab === tab ? 'Importando...' : `Importar ${activeTabMeta.label}`}
+                {importingTab === tab || isPersisting
+                  ? 'Importando...'
+                  : `Importar ${activeTabMeta.label}`}
               </span>
               <input
                 type="file"
                 accept=".xlsx,.xls"
                 className="hidden"
+                disabled={Boolean(importingTab) || isPersisting}
                 onChange={(event) => {
                   void handleImport(event, tab);
                 }}
@@ -1297,8 +1299,9 @@ export function FinanceCashFlow() {
             {lastImportedAt ? (
               <button
                 type="button"
-                onClick={clearImportedData}
-                className="inline-flex items-center gap-2 rounded-[12px] border border-[#fecaca] bg-white px-4 py-2 text-sm font-semibold text-[#dc2626] shadow-sm transition-colors hover:bg-[#fef2f2]"
+                onClick={() => void clearImportedData()}
+                disabled={isPersisting}
+                className="inline-flex items-center gap-2 rounded-[12px] border border-[#fecaca] bg-white px-4 py-2 text-sm font-semibold text-[#dc2626] shadow-sm transition-colors hover:bg-[#fef2f2] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <Trash2 className="h-4 w-4" />
                 Limpar

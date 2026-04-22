@@ -102,7 +102,7 @@ export function CommercialLostLeads() {
             Leads Perdidos
           </h1>
           <p className="mt-0.5 text-[13px] text-[#64748b]">
-            Análise de perdas com motivos reais vindos da API.
+            Análise de perdas, motivos e histórico comercial.
           </p>
         </div>
       </div>
