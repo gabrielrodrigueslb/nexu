@@ -1,5 +1,5 @@
-import { AdminSdrsPage } from '@/components/admin-sdrs-page';
+import { redirect } from 'next/navigation';
 
 export default function SdrsPage() {
-  return <AdminSdrsPage />;
+  redirect('/usuarios');
 }

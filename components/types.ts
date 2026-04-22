@@ -20,7 +20,6 @@ export type TicketStatus =
 
 export type User = { id: string; name: string; sector: string };
 export type Origin = { id: string; name: string };
-export type SDR = { id: string; name: string };
 
 export type LeadTask = {
   title: string;

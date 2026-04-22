@@ -3,12 +3,12 @@ export const DEV_COLS = [
   'Em Desenvolvimento',
   'Code Review',
   'QA',
-  'Concluido',
+  'Concluído',
 ] as const;
 
 export type DevStatus = (typeof DEV_COLS)[number];
 export type DevType = 'Feature' | 'Task' | 'Bug';
-export type Complexity = 'Simples' | 'Media' | 'Complexa';
+export type Complexity = 'Simples' | 'Média' | 'Complexa';
 export type DevListKind = 'open' | 'done' | 'overdue';
 
 export type DevUser = {

@@ -56,6 +56,9 @@ function toModulePermissionMap(items: UserModulePermissionRecord[] = []) {
     items.map((item) => [item.moduleKey, item.accessLevel]),
   );
 }
+function getBaseRole(role: UserRole) {
+  return role === 'sdr' ? 'basic' : role;
+}
 function FormLabel({ children }: { children: React.ReactNode }) {
   return (
     <label className="mb-1 block text-[11px] font-bold tracking-[.06em] text-[#64748b] uppercase">
@@ -89,7 +92,7 @@ export function AdminUsersPage() {
 
   const editingUser = users.find((user) => user.id === editingUserId) ?? null;
   const availablePresets = useMemo(
-    () => presets.filter((preset) => preset.role === draft.role),
+    () => presets.filter((preset) => getBaseRole(preset.role) === getBaseRole(draft.role)),
     [draft.role, presets],
   );
 

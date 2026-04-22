@@ -372,7 +372,7 @@ function CommentsEditor({
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           rows={2}
-          placeholder="Adicionar comentario..."
+          placeholder="Adicionar comentário..."
           className="min-h-[80px] flex-1 rounded-[8px] border-[1.5px] border-[#e2e8f0] bg-[#f8fafc] px-3 py-[9px] text-[13px] outline-none"
         />
         <button
@@ -778,7 +778,7 @@ export function LeadModal({
         {sectionTitle('Responsáveis')}
         <div className="mb-[10px] grid gap-[14px] md:grid-cols-2">
           <div>
-            {label('SDR (captacao)')}
+            {label('SDR (captação)')}
             <select
               value={draft.sdrId ?? ''}
               onChange={(event) => updateDraft({ sdrId: event.target.value })}
@@ -826,43 +826,12 @@ export function LeadModal({
             </select>
           </div>
           <div>
-            {label('Comissao rep. (R$)')}
+            {label('Comissão rep. (R$)')}
             <input
               value={currencyInputValue(representativeCommission)}
               readOnly
               className="w-full cursor-default rounded-[7px] border-[1.5px] border-[#e2e8f0] bg-[#f8fafc] px-3 py-[9px] text-[13px] font-bold text-[#2563eb] outline-none"
               placeholder="Calculado sobre Setup"
-            />
-          </div>
-        </div>
-
-        <div className="mb-[10px] grid gap-[14px] md:grid-cols-2">
-          <div>
-            {label('Indicador de Lead')}
-            <select
-              value={draft.indicatorId ?? ''}
-              onChange={(event) => updateDraft({ indicatorId: event.target.value })}
-              className={appFieldClassName}
-            >
-              <option value="">Nenhum</option>
-              {indicatorOptions.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            {label('Repasse ao indicador (R$)')}
-            <input
-              type="text"
-              inputMode="numeric"
-              value={currencyInputValue(draft.passThroughAmount)}
-              onChange={(event) =>
-                updateDraft({ passThroughAmount: parseCurrencyInput(event.target.value) })
-              }
-              className={appFieldClassName}
-              placeholder="0,00"
             />
           </div>
         </div>
@@ -907,7 +876,7 @@ export function LeadModal({
           <label className="cursor-pointer text-[13px] text-[#0f172a]">
             Plano <strong>Lite</strong>{' '}
             <span className="text-[11px] text-[#64748b]">
-              (versao simplificada do sistema)
+              (versão simplificada do sistema)
             </span>
           </label>
         </div>

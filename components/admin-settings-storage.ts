@@ -17,12 +17,6 @@ export type OriginRecord = {
   active: boolean;
 };
 
-export type SDRRecord = {
-  id: string;
-  name: string;
-  active: boolean;
-};
-
 export type IndicatorRecord = {
   id: string;
   name: string;
@@ -108,7 +102,7 @@ export function useAdminTags() {
   };
 }
 
-function createSimpleSettingsHook<T extends OriginRecord | SDRRecord>(path: string) {
+function createSimpleSettingsHook<T extends OriginRecord>(path: string) {
   return function useSimpleSettings() {
     const resource = useRemoteCollection<T>(path);
 
@@ -141,7 +135,6 @@ function createSimpleSettingsHook<T extends OriginRecord | SDRRecord>(path: stri
 export const useAdminOrigins = createSimpleSettingsHook<OriginRecord>(
   "/api/backend/catalog/origins",
 );
-export const useAdminSdrs = createSimpleSettingsHook<SDRRecord>("/api/backend/catalog/sdrs");
 
 export function useAdminIndicators() {
   const resource = useRemoteCollection<IndicatorRecord>("/api/backend/catalog/indicators");

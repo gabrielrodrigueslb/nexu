@@ -9,7 +9,7 @@ import {
   Users,
 } from 'lucide-react';
 
-import { leads, origins, sdrs, tickets as commercialTickets, users } from './data';
+import { leads, origins, tickets as commercialTickets, users } from './data';
 import { devTickets, devUsers, sprints } from './dashboard-dev/data';
 import { supportTickets, techs } from './dashboard-support/data';
 import { Panel, SmallPill } from './ui';
@@ -98,7 +98,7 @@ function formatSupportType(tipo: string) {
 function buildIndex(): SearchResult[] {
   const leadResults: SearchResult[] = leads.map((lead) => {
     const seller = users.find((user) => user.id === lead.sellerId)?.name;
-    const sdr = sdrs.find((item) => item.id === lead.sdrId)?.name;
+    const sdr = users.find((item) => item.id === lead.sdrId)?.name;
     const origin = origins.find((item) => item.id === lead.originId)?.name;
 
     return {
@@ -198,7 +198,7 @@ function buildIndex(): SearchResult[] {
         {
           label: statusLabel,
           tone:
-            ticket.devStatus === 'Concluido'
+            ticket.devStatus === 'Concluído'
               ? 'success'
               : ticket.devStatus === 'Backlog'
                 ? 'neutral'

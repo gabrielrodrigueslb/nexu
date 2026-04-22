@@ -1,34 +1,23 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Pencil, Plus, Trash2, Lock, ListTodo, UserCircle } from 'lucide-react';
+import { Pencil, Plus, Trash2, Lock, ListTodo } from 'lucide-react';
 
 import { ModalShell } from '@/components/modal-shell';
 import { useCurrentAdminUser } from '@/components/admin-users-storage';
 import { hasModuleAccess } from '@/lib/auth';
 
 type SimpleItem = { id: string; name: string; active: boolean };
-type PageType = 'origins' | 'sdrs';
+type PageType = 'origins';
 
 function getMeta(type: PageType) {
-  if (type === 'origins') {
-    return {
-      title: 'Origens CRM',
-      subtitle: 'Cadastro de origens de leads',
-      primaryLabel: 'Nova Origem',
-      modalCreateTitle: 'Nova Origem',
-      modalEditTitle: 'Editar Origem',
-      emptyTitle: 'Nenhuma origem',
-      emptyDescription: 'Clique em "+ Nova" para iniciar',
-    };
-  }
   return {
-    title: 'SDRs',
-    subtitle: 'Sales Development Representatives',
-    primaryLabel: 'Novo SDR',
-    modalCreateTitle: 'Novo SDR',
-    modalEditTitle: 'Editar SDR',
-    emptyTitle: 'Nenhum SDR',
+    title: 'Origens CRM',
+    subtitle: 'Cadastro de origens de leads',
+    primaryLabel: 'Nova Origem',
+    modalCreateTitle: 'Nova Origem',
+    modalEditTitle: 'Editar Origem',
+    emptyTitle: 'Nenhuma origem',
     emptyDescription: 'Clique em "+ Novo" para iniciar',
   };
 }
@@ -234,11 +223,7 @@ export function AdminSimpleSettingsPage<T extends SimpleItem>({
         ) : (
           <div className="rounded-[12px] px-6 py-12 text-center">
             <div className="mx-auto mb-3 inline-flex size-14 items-center justify-center rounded-full bg-[#eff6ff] text-[#2563eb]">
-              {type === 'origins' ? (
-                <ListTodo className="size-6" />
-              ) : (
-                <UserCircle className="size-6" />
-              )}
+              <ListTodo className="size-6" />
             </div>
             <div className="mt-3 text-[15px] font-bold text-[#0f172a]">
               {meta.emptyTitle}

@@ -3,7 +3,7 @@ export const ACCESS_TOKEN_COOKIE_NAME = "nexu_access_token";
 export const REFRESH_TOKEN_COOKIE_NAME = "nexu_refresh_token";
 
 export type AccessLevel = "none" | "view" | "edit" | "manage";
-export type UserRole = "basic" | "leader" | "admin";
+export type UserRole = "basic" | "leader" | "admin" | "sdr";
 export type UserSector =
   | "CS"
   | "Comercial"

@@ -34,7 +34,7 @@ export type UserModulePermissionRecord = {
 
 export type AdminUserRecord = SessionUser;
 
-export const ROLE_OPTIONS: UserRole[] = ["basic", "leader", "admin"];
+export const ROLE_OPTIONS: UserRole[] = ["basic", "leader", "admin", "sdr"];
 export const SECTOR_OPTIONS: UserSector[] = [
   "CS",
   "Comercial",
@@ -54,8 +54,15 @@ export function getRoleMeta(role: UserRole) {
 
   if (role === "leader") {
     return {
-      label: "Lider",
+      label: "Líder",
       className: "border-[#fbcfe8] bg-[#fdf2f8] text-[#be185d]",
+    };
+  }
+
+  if (role === "sdr") {
+    return {
+      label: "SDR",
+      className: "border-[#bbf7d0] bg-[#f0fdf4] text-[#15803d]",
     };
   }
 

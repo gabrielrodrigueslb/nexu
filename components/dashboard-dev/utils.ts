@@ -39,7 +39,7 @@ export function percentage(part: number, total: number) {
 
 export function complexityBasePoints(complexity: Complexity) {
   if (complexity === 'Simples') return 1;
-  if (complexity === 'Media') return 2;
+  if (complexity === 'Média') return 2;
   return 3;
 }
 

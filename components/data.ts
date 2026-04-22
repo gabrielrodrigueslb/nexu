@@ -1,9 +1,12 @@
-import type { GoalsState, Lead, Origin, SDR, Ticket, User } from './types';
+import type { GoalsState, Lead, Origin, Ticket, User } from './types';
 
 export const users: User[] = [
   { id: 'u1', name: 'Bianca Souza', sector: 'Closer Comercial' },
   { id: 'u2', name: 'Lucas Lima', sector: 'Closer Comercial' },
   { id: 'u3', name: 'Carla Mendes', sector: 'Closer Comercial' },
+  { id: 's1', name: 'Marina', sector: 'SDR' },
+  { id: 's2', name: 'Leo', sector: 'SDR' },
+  { id: 's3', name: 'Joao', sector: 'SDR' },
 ];
 
 export const origins: Origin[] = [
@@ -11,12 +14,6 @@ export const origins: Origin[] = [
   { id: 'o2', name: 'Indicacao' },
   { id: 'o3', name: 'Meta Ads' },
   { id: 'o4', name: 'Evento' },
-];
-
-export const sdrs: SDR[] = [
-  { id: 's1', name: 'Marina' },
-  { id: 's2', name: 'Leo' },
-  { id: 's3', name: 'Joao' },
 ];
 
 export const leads: Lead[] = [

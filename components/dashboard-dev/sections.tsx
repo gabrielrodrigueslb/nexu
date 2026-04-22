@@ -461,7 +461,7 @@ export function DeadlineManagementCard({
 }) {
   return (
     <Panel className="mb-4 p-[18px]">
-      <Title icon={<CalendarDays className="size-4" />}>Gest?o de Vencimentos</Title>
+      <Title icon={<CalendarDays className="size-4" />}>Gestão de Vencimentos</Title>
       {!overdueT.length && !nearT.length ? (
         <div className="py-3 text-center text-[13px] text-[#059669]">
           Nenhum ticket atrasado ou proximo do prazo
@@ -478,7 +478,7 @@ export function DeadlineManagementCard({
       {nearT.length ? (
         <>
           <div className={`mb-2 text-[11px] font-bold uppercase text-[#d97706] ${overdueT.length ? 'mt-3' : ''}`}>
-            Proximos 14 dias ({nearT.length})
+            Próximos 14 dias ({nearT.length})
           </div>
           <DeadlineTable mode="near" tickets={nearT} />
         </>
@@ -757,7 +757,7 @@ export function SprintHistoryCard({
 
   return (
     <Panel className="p-[18px]">
-      <Title icon={<SquareTerminal className="size-4" />}>Hist?rico de Sprints</Title>
+      <Title icon={<SquareTerminal className="size-4" />}>Histórico de Sprints</Title>
       {rows.map((row) => (
         <div key={row.sprint.id} className="flex items-center gap-3 border-b border-[#e2e8f0] py-2 last:border-b-0">
           <div className="flex-1">

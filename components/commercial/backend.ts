@@ -68,6 +68,7 @@ type BackendLead = {
   updatedAt: string;
   status: Lead['status'];
   value: number;
+  sdrId?: string | null;
   paymentMethod?: string | null;
   isLite?: boolean;
   wonAt?: string | null;
@@ -209,6 +210,13 @@ export async function fetchCommercialLookups(): Promise<CommercialLookups> {
     name: user.name,
     sector: user.sector,
   }));
+  const sdrs = (usersPayload.items || [])
+    .filter((user) => String(user.role || '').trim().toLowerCase() === 'sdr')
+    .map((user) => ({
+      id: user.id,
+      name: user.name,
+      active: user.isActive,
+    }));
   const catalogItemMap = Object.fromEntries(
     [...lookupPayload.products, ...lookupPayload.integrations].map((item) => [item.id, item]),
   );
@@ -216,7 +224,7 @@ export async function fetchCommercialLookups(): Promise<CommercialLookups> {
   return {
     users,
     origins: lookupPayload.origins || [],
-    sdrs: lookupPayload.sdrs || [],
+    sdrs,
     indicators: lookupPayload.indicators || [],
     products: lookupPayload.products || [],
     integrations: lookupPayload.integrations || [],
@@ -238,7 +246,7 @@ export function mapBackendLeadToCommercialLead(
     status: lead.status,
     value: lead.value,
     sellerId: lead.seller?.id ?? undefined,
-    sdrId: lead.sdr?.id ?? undefined,
+    sdrId: lead.sdr?.id ?? lead.sdrId ?? undefined,
     originId: lead.origin?.id ?? undefined,
     paymentMethod: lead.paymentMethod ?? undefined,
     isLite: lead.isLite ?? false,
@@ -261,7 +269,7 @@ export function mapBackendLeadToCommercialLead(
     integrations: buildPriceRows(lead.catalogItems, lookups.integrations, 'INTEGRATION'),
     comments: (lead.comments || []).map((comment) => ({
       id: comment.id,
-      author: comment.author?.name || 'Usuario',
+      author: comment.author?.name || 'Usuário',
       message: comment.message,
       createdAt: toDisplayDateTime(comment.createdAt),
     })),
@@ -347,7 +355,7 @@ export function mapBackendLeadToDashboardLead(lead: BackendLead): Lead {
     status: lead.status,
     value: lead.value,
     sellerId: lead.seller?.id ?? undefined,
-    sdrId: lead.sdr?.id ?? undefined,
+    sdrId: lead.sdr?.id ?? lead.sdrId ?? undefined,
     originId: lead.origin?.id ?? undefined,
     paymentMethod: lead.paymentMethod ?? undefined,
     isLite: lead.isLite ?? false,

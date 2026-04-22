@@ -74,7 +74,7 @@ const NAV: NavSection[] = [
       {
         type: "group",
         id: "implantacao",
-        label: "Implantacao",
+        label: "Implantação",
         moduleKey: "IMPLANTACAO",
         children: [
           { type: "link", label: "Kanban Implantação", href: "/implantacao/kanban-implantacao", moduleKey: "IMPLANTACAO" },
@@ -115,7 +115,6 @@ const NAV: NavSection[] = [
       { type: "link", label: "Produtos", href: "/produtos", moduleKey: "CADASTROS", accessLevel: "view" },
       { type: "link", label: "Etiquetas", href: "/etiquetas", moduleKey: "CADASTROS", accessLevel: "view" },
       { type: "link", label: "Origens CRM", href: "/origens-crm", moduleKey: "CADASTROS", accessLevel: "view" },
-      { type: "link", label: "SDRs", href: "/sdrs", moduleKey: "CADASTROS", accessLevel: "view" },
       { type: "link", label: "Indicadores", href: "/indicadores", moduleKey: "CADASTROS", accessLevel: "view" },
       { type: "link", label: "Lixeira", href: "/lixeira", moduleKey: "LIXEIRA", accessLevel: "view" },
     ],
