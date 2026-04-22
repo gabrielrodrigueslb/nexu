@@ -68,6 +68,7 @@ const NAV: NavSection[] = [
         moduleKey: "FINANCEIRO",
         children: [
           { type: "link", label: "Cobrança e Contrato", href: "/financeiro/cobranca-contrato", moduleKey: "FINANCEIRO" },
+          { type: "link", label: "Pagamento Indicadores", href: "/financeiro/pagamento-indicadores", moduleKey: "FINANCEIRO" },
           { type: "link", label: "Fluxo", href: "/financeiro/fluxo", moduleKey: "FINANCEIRO" },
         ],
       },

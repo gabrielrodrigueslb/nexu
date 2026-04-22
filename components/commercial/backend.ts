@@ -321,7 +321,7 @@ export function mapCommercialLeadToPayload(
     sellerId: lead.sellerId || null,
     sdrId: lead.sdrId || null,
     originId: lead.originId || null,
-    indicatorId: lead.indicatorId || null,
+    indicatorId: lead.indicatorId || lead.representativeId || null,
     consultant: lead.consultant || null,
     validUntil: lead.validUntil || null,
     agents: lead.agents || 0,
