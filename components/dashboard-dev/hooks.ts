@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { fetchDevLookups, fetchDevTickets, type DevApiTicket, type DevApiUser } from '@/components/dev/api';
 import { DEV_COLS } from './types';
-import type { DevTicket, DevType, DevUser } from './types';
+import type { DevTicket, DevType, DevUser, Sprint } from './types';
 import {
   buildResolutionBuckets,
   complexityBasePoints,
@@ -16,10 +16,20 @@ let devUsersDirectory: DevUser[] = [];
 const TODAY = Date.now();
 
 function normalizeTicket(ticket: DevApiTicket): DevTicket {
+  const statusMap: Record<DevApiTicket['devStatus'], DevTicket['devStatus']> = {
+    Backlog: 'Backlog',
+    'Análise': 'Backlog',
+    'Pronto para Desenvolver': 'Backlog',
+    'Em Desenvolvimento': 'Em Desenvolvimento',
+    Testes: 'QA',
+    'Code Review': 'Code Review',
+    'Concluído': 'Concluído',
+  };
+
   return {
     id: ticket.id,
     title: ticket.title,
-    devStatus: ticket.devStatus,
+    devStatus: statusMap[ticket.devStatus],
     devType: ticket.devType === 'Epic' ? 'Feature' : (ticket.devType as DevType),
     category: ticket.category,
     complexity: ticket.complexity,
@@ -72,7 +82,7 @@ function calculateTicketScore(ticket: DevTicket) {
 export function useDevDashboard(dateFrom: string, dateTo: string) {
   const [tickets, setTickets] = useState<DevTicket[]>([]);
   const [users, setUsers] = useState<DevUser[]>([]);
-  const [sprints, setSprints] = useState<Array<{ id: string; name: string; closed: boolean }>>([]);
+  const [sprints, setSprints] = useState<Sprint[]>([]);
 
   useEffect(() => {
     let active = true;
@@ -87,7 +97,16 @@ export function useDevDashboard(dateFrom: string, dateTo: string) {
         }));
         devUsersDirectory = nextUsers;
         setUsers(nextUsers);
-        setSprints((lookups.sprints || []).map((sprint) => ({ id: sprint.id, name: sprint.name, closed: sprint.closed })));
+        setSprints(
+          (lookups.sprints || []).map((sprint) => ({
+            id: sprint.id,
+            name: sprint.name,
+            start: sprint.start,
+            end: sprint.end,
+            goal: sprint.goal || undefined,
+            closed: sprint.closed,
+          })),
+        );
         setTickets(devTickets.map(normalizeTicket));
       } catch {
         if (!active) return;

@@ -2,8 +2,10 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import { CalendarDays, CheckCircle2, Circle, ClipboardList, MessageSquareText, Search, FolderPlus } from 'lucide-react';
+import { CalendarDays, CheckCircle2, Circle, ClipboardList, MessageSquareText, Search, FolderPlus, Plus } from 'lucide-react';
 
+import { appFieldClassName } from '@/components/app-ui-kit';
+import { syncCatalogRows } from '@/components/admin-catalogs';
 import { ModalShell } from '@/components/modal-shell';
 import { apiRequest } from '@/lib/api-client';
 
@@ -33,6 +35,12 @@ type CatalogRow = {
   } | null;
 };
 
+type CatalogLookupItem = {
+  id: string;
+  name: string;
+  type: CatalogType;
+};
+
 type LeadReference = {
   id: string;
   company: string;
@@ -53,8 +61,10 @@ type LeadReference = {
   tasks?: Array<{
     id: string;
     title: string;
+    type?: string | null;
     done: boolean;
     dueDate?: string | null;
+    notes?: string | null;
   }>;
   comments?: TicketComment[];
 };
@@ -87,27 +97,97 @@ type TicketRecord = {
     id: string;
     title: string;
     done: boolean;
+    assigneeId?: string | null;
     dueDate?: string | null;
     assignee?: { id: string; name: string } | null;
   }>;
   comments?: TicketComment[];
 };
 
+type EditableCatalogRow = {
+  id: string;
+  catalogItemId: string;
+  name: string;
+  enabled: boolean;
+  setup: number;
+  recurring: number;
+};
+
+type EditableLeadTask = {
+  id: string;
+  title: string;
+  type: string;
+  done: boolean;
+  dueDate: string;
+  notes: string;
+};
+
+type EditableTicketTask = {
+  id: string;
+  title: string;
+  done: boolean;
+  dueDate: string;
+  assigneeId: string;
+};
+
 type EditState = {
+  company: string;
+  cnpj: string;
+  contact: string;
+  email: string;
+  phone: string;
+  instance: string;
+  plan: string;
+  paymentMethod: string;
+  installment: string;
   status: string;
   csStatus: string;
   assigneeId: string;
   technicalAssigneeId: string;
   notes: string;
+  products: EditableCatalogRow[];
+  integrations: EditableCatalogRow[];
+  leadTasks: EditableLeadTask[];
+  ticketTasks: EditableTicketTask[];
 };
 
-function buildEditState(ticket: TicketRecord): EditState {
+function buildEditState(
+  ticket: TicketRecord,
+  productOptions: CatalogLookupItem[],
+  integrationOptions: CatalogLookupItem[],
+): EditState {
   return {
+    company: ticket.company || ticket.lead?.company || '',
+    cnpj: ticket.cnpj || ticket.lead?.cnpj || '',
+    contact: ticket.contact || ticket.lead?.contact || '',
+    email: ticket.email || ticket.lead?.email || '',
+    phone: ticket.phone || ticket.lead?.phone || '',
+    instance: ticket.instance || '',
+    plan: ticket.plan || (ticket.lead?.isLite ? 'Lite' : 'Profissional'),
+    paymentMethod: ticket.paymentMethod || ticket.lead?.paymentMethod || '',
+    installment: ticket.installment || ticket.lead?.installment || '',
     status: ticket.status,
     csStatus: ticket.csStatus || '',
     assigneeId: ticket.assignee?.id || '',
     technicalAssigneeId: ticket.technicalAssignee?.id || '',
     notes: ticket.notes || ticket.lead?.observations || '',
+    products: buildEditableCatalogRows(ticket, 'PRODUCT', productOptions),
+    integrations: buildEditableCatalogRows(ticket, 'INTEGRATION', integrationOptions),
+    leadTasks: (ticket.lead?.tasks || []).map((task) => ({
+      id: task.id,
+      title: task.title,
+      type: task.type || 'outro',
+      done: task.done,
+      dueDate: task.dueDate ? toDateTimeLocal(task.dueDate) : '',
+      notes: task.notes || '',
+    })),
+    ticketTasks: (ticket.tasks || []).map((task) => ({
+      id: task.id,
+      title: task.title,
+      done: task.done,
+      dueDate: task.dueDate ? toDateTimeLocal(task.dueDate) : '',
+      assigneeId: task.assigneeId || task.assignee?.id || '',
+    })),
   };
 }
 
@@ -142,8 +222,97 @@ function formatDateTime(value?: string | null) {
   })}`;
 }
 
+function toDateTimeLocal(value?: string | null) {
+  if (!value) return '';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return '';
+  const offsetMs = parsed.getTimezoneOffset() * 60_000;
+  return new Date(parsed.getTime() - offsetMs).toISOString().slice(0, 16);
+}
+
 function centsToMoney(value?: number | null) {
   return (value || 0) / 100;
+}
+
+function onlyDigits(value: string) {
+  return value.replace(/\D/g, '');
+}
+
+function formatCnpjInput(value: string) {
+  const digits = onlyDigits(value).slice(0, 14);
+
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 5) return `${digits.slice(0, 2)}.${digits.slice(2)}`;
+  if (digits.length <= 8) return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5)}`;
+  if (digits.length <= 12) {
+    return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8)}`;
+  }
+
+  return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8, 12)}-${digits.slice(12)}`;
+}
+
+function formatPhoneInput(value: string) {
+  const digits = onlyDigits(value).slice(0, 11);
+
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+}
+
+function parseCurrencyInput(value: string) {
+  const digits = onlyDigits(value);
+  return digits ? Number(digits) / 100 : 0;
+}
+
+function currencyInputValue(value?: number | null) {
+  if (!value) return '';
+
+  return value.toLocaleString('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+function buildEditableCatalogRows(
+  ticket: TicketRecord,
+  type: CatalogType,
+  options: CatalogLookupItem[],
+): EditableCatalogRow[] {
+  const selectedItems = (ticket.lead?.catalogItems || []).filter(
+    (item) => item.catalogItem?.type === type,
+  );
+
+  return syncCatalogRows(
+    selectedItems.map((item) => ({
+      id: item.id,
+      catalogItemId: item.catalogItem?.id || item.id,
+      name: item.catalogItem?.name || '',
+      enabled: item.enabled,
+      setup: centsToMoney(item.setupInCents),
+      recurring: centsToMoney(item.recurringInCents),
+    })),
+    options.map((item) => item.name),
+    (name) => {
+      const option = options.find((item) => item.name === name);
+      return {
+        id: option?.id || name,
+        catalogItemId: option?.id || '',
+        name,
+        enabled: false,
+        setup: 0,
+        recurring: 0,
+      };
+    },
+  ).map((row) => {
+    const option = options.find((item) => item.name === row.name);
+    return {
+      ...row,
+      id: row.id || option?.id || row.name,
+      catalogItemId: row.catalogItemId || option?.id || '',
+    };
+  });
 }
 
 function statusLabel(status: string) {
@@ -348,6 +517,279 @@ function ValueTable({ emptyLabel, label, rows }: { emptyLabel: string; label: st
   );
 }
 
+function CatalogEditor({
+  rows,
+  onChange,
+  title,
+}: {
+  rows: EditableCatalogRow[];
+  onChange: (rows: EditableCatalogRow[]) => void;
+  title: string;
+}) {
+  return (
+    <div>
+      <SectionTitle>{title}</SectionTitle>
+      <div className="space-y-2">
+        {rows.map((row) => (
+          <div
+            key={row.id}
+            className="grid gap-2 rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] px-3 py-3 md:grid-cols-[2fr_1fr_1fr_auto]"
+          >
+            <button
+              type="button"
+              onClick={() =>
+                onChange(
+                  rows.map((item) =>
+                    item.id === row.id ? { ...item, enabled: !item.enabled } : item,
+                  ),
+                )
+              }
+              className={`flex items-center gap-2 rounded-[7px] border px-3 py-2 text-left text-[13px] font-medium ${
+                row.enabled
+                  ? 'border-[#bfdbfe] bg-[#eff6ff] text-[#2563eb]'
+                  : 'border-[#e2e8f0] bg-white text-[#0f172a]'
+              }`}
+            >
+              <span
+                className={`flex h-4 w-4 items-center justify-center rounded-[4px] border text-[10px] ${
+                  row.enabled
+                    ? 'border-[#2563eb] bg-[#2563eb] text-white'
+                    : 'border-[#cbd5e1] bg-white text-transparent'
+                }`}
+              >
+                ✓
+              </span>
+              <span>{row.name}</span>
+            </button>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={currencyInputValue(row.setup)}
+              disabled={!row.enabled}
+              onChange={(event) =>
+                onChange(
+                  rows.map((item) =>
+                    item.id === row.id
+                      ? { ...item, setup: parseCurrencyInput(event.target.value) }
+                      : item,
+                  ),
+                )
+              }
+              className={`${appFieldClassName} disabled:opacity-50`}
+              placeholder="Setup"
+            />
+            <input
+              type="text"
+              inputMode="numeric"
+              value={currencyInputValue(row.recurring)}
+              disabled={!row.enabled}
+              onChange={(event) =>
+                onChange(
+                  rows.map((item) =>
+                    item.id === row.id
+                      ? { ...item, recurring: parseCurrencyInput(event.target.value) }
+                      : item,
+                  ),
+                )
+              }
+              className={`${appFieldClassName} disabled:opacity-50`}
+              placeholder="Recorrência"
+            />
+            <button
+              type="button"
+              onClick={() =>
+                onChange(
+                  rows.map((item) =>
+                    item.id === row.id ? { ...item, enabled: false, setup: 0, recurring: 0 } : item,
+                  ),
+                )
+              }
+              className="rounded-[8px] border border-[#fecaca] bg-white px-3 py-2 text-[12px] font-semibold text-[#dc2626]"
+            >
+              Remover
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function LeadTaskEditor({
+  tasks,
+  onChange,
+}: {
+  tasks: EditableLeadTask[];
+  onChange: (tasks: EditableLeadTask[]) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      {tasks.map((task) => (
+        <div key={task.id} className="rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] p-3">
+          <div className="mb-2 flex items-center gap-2">
+            <input
+              checked={task.done}
+              onChange={() =>
+                onChange(tasks.map((item) => (item.id === task.id ? { ...item, done: !item.done } : item)))
+              }
+              type="checkbox"
+              className="size-4 accent-[#2563eb]"
+            />
+            <input
+              value={task.title}
+              onChange={(event) =>
+                onChange(tasks.map((item) => (item.id === task.id ? { ...item, title: event.target.value } : item)))
+              }
+              className={appFieldClassName}
+              placeholder="Título da tarefa"
+            />
+          </div>
+          <div className="grid gap-2 md:grid-cols-[160px_180px_auto]">
+            <select
+              value={task.type}
+              onChange={(event) =>
+                onChange(tasks.map((item) => (item.id === task.id ? { ...item, type: event.target.value } : item)))
+              }
+              className={appFieldClassName}
+            >
+              <option value="outro">Outro</option>
+              <option value="reuniao">Reunião</option>
+              <option value="ligacao">Ligação</option>
+              <option value="whatsapp">WhatsApp</option>
+              <option value="email">E-mail</option>
+              <option value="demo">Demo</option>
+              <option value="follow">Follow-up</option>
+              <option value="visita">Visita</option>
+            </select>
+            <input
+              type="datetime-local"
+              value={task.dueDate}
+              onChange={(event) =>
+                onChange(tasks.map((item) => (item.id === task.id ? { ...item, dueDate: event.target.value } : item)))
+              }
+              className={appFieldClassName}
+            />
+            <button
+              type="button"
+              onClick={() => onChange(tasks.filter((item) => item.id !== task.id))}
+              className="rounded-[8px] border border-[#fecaca] bg-white px-3 py-2 text-[12px] font-semibold text-[#dc2626]"
+            >
+              Remover
+            </button>
+          </div>
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={() =>
+          onChange([
+            ...tasks,
+            {
+              id: `lead-task-${Date.now()}`,
+              title: '',
+              type: 'outro',
+              done: false,
+              dueDate: '',
+              notes: '',
+            },
+          ])
+        }
+        className="flex w-full items-center justify-center gap-2 rounded-[8px] border border-[#e2e8f0] bg-white px-3 py-2 text-[12px] font-semibold text-[#64748b]"
+      >
+        <Plus className="size-4" />
+        Adicionar tarefa do lead
+      </button>
+    </div>
+  );
+}
+
+function TicketTaskEditor({
+  tasks,
+  users,
+  onChange,
+}: {
+  tasks: EditableTicketTask[];
+  users: UserRecord[];
+  onChange: (tasks: EditableTicketTask[]) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      {tasks.map((task) => (
+        <div key={task.id} className="rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] p-3">
+          <div className="mb-2 flex items-center gap-2">
+            <input
+              checked={task.done}
+              onChange={() =>
+                onChange(tasks.map((item) => (item.id === task.id ? { ...item, done: !item.done } : item)))
+              }
+              type="checkbox"
+              className="size-4 accent-[#2563eb]"
+            />
+            <input
+              value={task.title}
+              onChange={(event) =>
+                onChange(tasks.map((item) => (item.id === task.id ? { ...item, title: event.target.value } : item)))
+              }
+              className={appFieldClassName}
+              placeholder="Título da tarefa"
+            />
+          </div>
+          <div className="grid gap-2 md:grid-cols-[1fr_180px_auto]">
+            <select
+              value={task.assigneeId}
+              onChange={(event) =>
+                onChange(tasks.map((item) => (item.id === task.id ? { ...item, assigneeId: event.target.value } : item)))
+              }
+              className={appFieldClassName}
+            >
+              <option value="">Sem responsável</option>
+              {users.map((user) => (
+                <option key={user.id} value={user.id}>
+                  {user.name}
+                </option>
+              ))}
+            </select>
+            <input
+              type="datetime-local"
+              value={task.dueDate}
+              onChange={(event) =>
+                onChange(tasks.map((item) => (item.id === task.id ? { ...item, dueDate: event.target.value } : item)))
+              }
+              className={appFieldClassName}
+            />
+            <button
+              type="button"
+              onClick={() => onChange(tasks.filter((item) => item.id !== task.id))}
+              className="rounded-[8px] border border-[#fecaca] bg-white px-3 py-2 text-[12px] font-semibold text-[#dc2626]"
+            >
+              Remover
+            </button>
+          </div>
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={() =>
+          onChange([
+            ...tasks,
+            {
+              id: `ticket-task-${Date.now()}`,
+              title: '',
+              done: false,
+              dueDate: '',
+              assigneeId: '',
+            },
+          ])
+        }
+        className="flex w-full items-center justify-center gap-2 rounded-[8px] border border-[#e2e8f0] bg-white px-3 py-2 text-[12px] font-semibold text-[#64748b]"
+      >
+        <Plus className="size-4" />
+        Adicionar tarefa do ticket
+      </button>
+    </div>
+  );
+}
+
 function Journey({ status }: { status: string }) {
   const activeIndex =
     status === 'concluido'
@@ -388,6 +830,8 @@ function Journey({ status }: { status: string }) {
 
 export function CommercialClosedClients() {
   const [users, setUsers] = useState<UserRecord[]>([]);
+  const [productOptions, setProductOptions] = useState<CatalogLookupItem[]>([]);
+  const [integrationOptions, setIntegrationOptions] = useState<CatalogLookupItem[]>([]);
   const [tickets, setTickets] = useState<TicketRecord[]>([]);
   const [error, setError] = useState('');
   const [isConfirmingPayment, setIsConfirmingPayment] = useState(false);
@@ -397,11 +841,24 @@ export function CommercialClosedClients() {
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [commentDraft, setCommentDraft] = useState('');
   const [editState, setEditState] = useState<EditState>({
+    company: '',
+    cnpj: '',
+    contact: '',
+    email: '',
+    phone: '',
+    instance: '',
+    plan: '',
+    paymentMethod: '',
+    installment: '',
     status: '',
     csStatus: '',
     assigneeId: '',
     technicalAssigneeId: '',
     notes: '',
+    products: [],
+    integrations: [],
+    leadTasks: [],
+    ticketTasks: [],
   });
 
   useEffect(() => {
@@ -410,19 +867,27 @@ export function CommercialClosedClients() {
     async function load() {
       try {
         setError('');
-        const [ticketPayload, usersPayload] = await Promise.all([
+        const [ticketPayload, usersPayload, catalogPayload] = await Promise.all([
           apiRequest('/api/backend/tickets/closed-clients?page=1&limit=100') as Promise<{ items: TicketRecord[] }>,
           apiRequest('/api/backend/users/directory?active=true') as Promise<{ items: UserRecord[] }>,
+          apiRequest('/api/backend/catalog/lookups') as Promise<{
+            products: CatalogLookupItem[];
+            integrations: CatalogLookupItem[];
+          }>,
         ]);
 
         if (!active) return;
         setTickets(ticketPayload.items || []);
         setUsers(usersPayload.items || []);
+        setProductOptions(catalogPayload.products || []);
+        setIntegrationOptions(catalogPayload.integrations || []);
       } catch (nextError) {
         if (!active) return;
         setError(nextError instanceof Error ? nextError.message : 'Falha ao carregar clientes fechados.');
         setTickets([]);
         setUsers([]);
+        setProductOptions([]);
+        setIntegrationOptions([]);
       }
     }
 
@@ -459,12 +924,18 @@ export function CommercialClosedClients() {
   const selectedHistory = selectedTicket ? buildHistory(selectedTicket) : [];
   const totalSetup = [...selectedProducts, ...selectedIntegrations].reduce((sum, item) => sum + item.setup, 0);
   const totalRecurring = [...selectedProducts, ...selectedIntegrations].reduce((sum, item) => sum + item.recurring, 0);
+  const editingSetup = [...editState.products, ...editState.integrations]
+    .filter((item) => item.enabled)
+    .reduce((sum, item) => sum + item.setup, 0);
+  const editingRecurring = [...editState.products, ...editState.integrations]
+    .filter((item) => item.enabled)
+    .reduce((sum, item) => sum + item.recurring, 0);
 
   function openTicket(ticket: TicketRecord) {
     setSelectedTicketId(ticket.id);
     setIsEditing(false);
     setError('');
-    setEditState(buildEditState(ticket));
+    setEditState(buildEditState(ticket, productOptions, integrationOptions));
   }
 
   function closeTicket() {
@@ -475,8 +946,12 @@ export function CommercialClosedClients() {
 
   function cancelEdit() {
     if (!selectedTicket) return;
-    setEditState(buildEditState(selectedTicket));
+    setEditState(buildEditState(selectedTicket, productOptions, integrationOptions));
     setIsEditing(false);
+  }
+
+  function updateEditState<K extends keyof EditState>(key: K, value: EditState[K]) {
+    setEditState((current) => ({ ...current, [key]: value }));
   }
 
   async function refreshTicket(ticketId: string) {
@@ -484,6 +959,7 @@ export function CommercialClosedClients() {
     setTickets((current) =>
       current.map((ticket) => (ticket.id === refreshed.item.id ? refreshed.item : ticket)),
     );
+    setEditState(buildEditState(refreshed.item, productOptions, integrationOptions));
     return refreshed.item;
   }
 
@@ -495,17 +971,52 @@ export function CommercialClosedClients() {
       const response = (await apiRequest(`/api/backend/tickets/closed-clients/${selectedTicket.id}`, {
         method: 'PATCH',
         body: JSON.stringify({
+          company: editState.company || null,
+          cnpj: editState.cnpj || null,
+          contact: editState.contact || null,
+          email: editState.email || null,
+          phone: editState.phone || null,
+          instance: editState.instance || null,
+          plan: editState.plan || null,
+          paymentMethod: editState.paymentMethod || null,
+          installment: editState.installment || null,
           status: editState.status,
           csStatus: editState.csStatus || null,
           assigneeId: editState.assigneeId || undefined,
           technicalAssigneeId: editState.technicalAssigneeId || null,
           notes: editState.notes || null,
+          catalogItems: [...editState.products, ...editState.integrations]
+            .filter((item) => item.catalogItemId)
+            .map((item) => ({
+              catalogItemId: item.catalogItemId,
+              enabled: item.enabled,
+              setupAmount: item.setup,
+              recurringAmount: item.recurring,
+            })),
+          leadTasks: editState.leadTasks
+            .filter((task) => task.title.trim())
+            .map((task) => ({
+              title: task.title.trim(),
+              type: task.type || 'outro',
+              done: task.done,
+              dueDate: task.dueDate ? new Date(task.dueDate).toISOString() : null,
+              notes: task.notes || null,
+            })),
+          tasks: editState.ticketTasks
+            .filter((task) => task.title.trim())
+            .map((task) => ({
+              title: task.title.trim(),
+              assigneeId: task.assigneeId || null,
+              done: task.done,
+              dueDate: task.dueDate ? new Date(task.dueDate).toISOString() : null,
+            })),
         }),
       })) as { item: TicketRecord };
 
       setTickets((current) =>
         current.map((ticket) => (ticket.id === response.item.id ? response.item : ticket)),
       );
+      setEditState(buildEditState(response.item, productOptions, integrationOptions));
       setIsEditing(false);
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : 'Falha ao salvar cliente fechado.');
@@ -526,11 +1037,7 @@ export function CommercialClosedClients() {
       setTickets((current) =>
         current.map((ticket) => (ticket.id === response.item.id ? response.item : ticket)),
       );
-      setEditState((current) => ({
-        ...current,
-        status: response.item.status,
-        csStatus: response.item.csStatus || current.csStatus,
-      }));
+      setEditState(buildEditState(response.item, productOptions, integrationOptions));
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : 'Falha ao confirmar pagamento.');
     } finally {
@@ -552,11 +1059,7 @@ export function CommercialClosedClients() {
       setTickets((current) =>
         current.map((ticket) => (ticket.id === response.item.id ? response.item : ticket)),
       );
-      setEditState((current) => ({
-        ...current,
-        status: response.item.status,
-        csStatus: response.item.csStatus || current.csStatus,
-      }));
+      setEditState(buildEditState(response.item, productOptions, integrationOptions));
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : 'Falha ao aprovar implantação.');
     } finally {
@@ -773,20 +1276,64 @@ export function CommercialClosedClients() {
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <FieldCard label="Nome" value={selectedTicket.company || selectedTicket.lead?.company} />
-              <FieldCard label="CNPJ" value={selectedTicket.cnpj || selectedTicket.lead?.cnpj} />
-              <FieldCard label="Telefone" value={selectedTicket.phone || selectedTicket.lead?.phone} />
-              <FieldCard label="Instância" value={selectedTicket.instance} />
-              <FieldCard label="E-mail" value={selectedTicket.email || selectedTicket.lead?.email} />
-              <FieldCard label="Site" value={null} />
-              <FieldCard label="Plano" value={selectedTicket.plan || (selectedTicket.lead?.isLite ? 'Lite' : null)} />
               <div className="rounded-[10px] border border-[#e2e8f0] bg-[#f8fafc] px-4 py-3">
-                <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.08em] text-[#64748b]">
-                  Resp. Solicitação
-                </div>
+                <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.08em] text-[#64748b]">Nome</div>
+                {isEditing ? (
+                  <input value={editState.company} onChange={(event) => updateEditState('company', event.target.value)} className={appFieldClassName} />
+                ) : (
+                  <div className="min-h-[22px] text-[15px] font-medium text-[#0f172a]">{fieldValue(selectedTicket.company || selectedTicket.lead?.company)}</div>
+                )}
+              </div>
+              <div className="rounded-[10px] border border-[#e2e8f0] bg-[#f8fafc] px-4 py-3">
+                <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.08em] text-[#64748b]">CNPJ</div>
+                {isEditing ? (
+                  <input value={editState.cnpj} onChange={(event) => updateEditState('cnpj', formatCnpjInput(event.target.value))} className={appFieldClassName} />
+                ) : (
+                  <div className="min-h-[22px] text-[15px] font-medium text-[#0f172a]">{fieldValue(selectedTicket.cnpj || selectedTicket.lead?.cnpj)}</div>
+                )}
+              </div>
+              <div className="rounded-[10px] border border-[#e2e8f0] bg-[#f8fafc] px-4 py-3">
+                <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.08em] text-[#64748b]">Telefone</div>
+                {isEditing ? (
+                  <input value={editState.phone} onChange={(event) => updateEditState('phone', formatPhoneInput(event.target.value))} className={appFieldClassName} />
+                ) : (
+                  <div className="min-h-[22px] text-[15px] font-medium text-[#0f172a]">{fieldValue(selectedTicket.phone || selectedTicket.lead?.phone)}</div>
+                )}
+              </div>
+              <div className="rounded-[10px] border border-[#e2e8f0] bg-[#f8fafc] px-4 py-3">
+                <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.08em] text-[#64748b]">Instância</div>
+                {isEditing ? (
+                  <input value={editState.instance} onChange={(event) => updateEditState('instance', event.target.value)} className={appFieldClassName} />
+                ) : (
+                  <div className="min-h-[22px] text-[15px] font-medium text-[#0f172a]">{fieldValue(selectedTicket.instance)}</div>
+                )}
+              </div>
+              <div className="rounded-[10px] border border-[#e2e8f0] bg-[#f8fafc] px-4 py-3">
+                <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.08em] text-[#64748b]">E-mail</div>
+                {isEditing ? (
+                  <input value={editState.email} onChange={(event) => updateEditState('email', event.target.value)} className={appFieldClassName} />
+                ) : (
+                  <div className="min-h-[22px] text-[15px] font-medium text-[#0f172a]">{fieldValue(selectedTicket.email || selectedTicket.lead?.email)}</div>
+                )}
+              </div>
+              <FieldCard label="Site" value={null} />
+              <div className="rounded-[10px] border border-[#e2e8f0] bg-[#f8fafc] px-4 py-3">
+                <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.08em] text-[#64748b]">Plano</div>
+                {isEditing ? (
+                  <select value={editState.plan} onChange={(event) => updateEditState('plan', event.target.value)} className={appFieldClassName}>
+                    <option value="">Selecione...</option>
+                    <option value="Lite">Lite</option>
+                    <option value="Profissional">Profissional</option>
+                  </select>
+                ) : (
+                  <div className="min-h-[22px] text-[15px] font-medium text-[#0f172a]">{fieldValue(selectedTicket.plan || (selectedTicket.lead?.isLite ? 'Lite' : null))}</div>
+                )}
+              </div>
+              <div className="rounded-[10px] border border-[#e2e8f0] bg-[#f8fafc] px-4 py-3">
+                <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.08em] text-[#64748b]">Resp. Solicitação</div>
                 <select
                   value={editState.assigneeId}
-                  onChange={(event) => setEditState((current) => ({ ...current, assigneeId: event.target.value }))}
+                  onChange={(event) => updateEditState('assigneeId', event.target.value)}
                   disabled={!isEditing}
                   className="w-full bg-transparent text-[15px] font-medium text-[#0f172a] outline-none disabled:cursor-default"
                 >
@@ -798,12 +1345,37 @@ export function CommercialClosedClients() {
                   ))}
                 </select>
               </div>
-              <FieldCard
-                label="Pagamento"
-                value={[selectedTicket.paymentMethod || selectedTicket.lead?.paymentMethod, selectedTicket.installment || selectedTicket.lead?.installment]
-                  .filter(Boolean)
-                  .join(' · ')}
-              />
+              <div className="rounded-[10px] border border-[#e2e8f0] bg-[#f8fafc] px-4 py-3">
+                <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.08em] text-[#64748b]">Pagamento</div>
+                {isEditing ? (
+                  <div className="grid gap-2 md:grid-cols-2">
+                    <select value={editState.paymentMethod} onChange={(event) => updateEditState('paymentMethod', event.target.value)} className={appFieldClassName}>
+                      <option value="">Selecione...</option>
+                      <option value="Boleto Bancario">Boleto Bancário</option>
+                      <option value="Pix">Pix</option>
+                      <option value="Cartao de Credito">Cartão de Crédito</option>
+                      <option value="Transferencia">Transferência</option>
+                    </select>
+                    <select value={editState.installment} onChange={(event) => updateEditState('installment', event.target.value)} className={appFieldClassName}>
+                      <option value="">Parcelamento</option>
+                      <option value="A vista">À vista</option>
+                      <option value="2x">2x</option>
+                      <option value="3x">3x</option>
+                      <option value="4x">4x</option>
+                      <option value="6x">6x</option>
+                      <option value="12x">12x</option>
+                    </select>
+                  </div>
+                ) : (
+                  <div className="min-h-[22px] text-[15px] font-medium text-[#0f172a]">
+                    {fieldValue(
+                      [selectedTicket.paymentMethod || selectedTicket.lead?.paymentMethod, selectedTicket.installment || selectedTicket.lead?.installment]
+                        .filter(Boolean)
+                        .join(' · '),
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div>
@@ -813,54 +1385,76 @@ export function CommercialClosedClients() {
               <textarea
                 id="closed-client-notes"
                 value={editState.notes}
-                onChange={(event) => setEditState((current) => ({ ...current, notes: event.target.value }))}
+                onChange={(event) => updateEditState('notes', event.target.value)}
                 readOnly={!isEditing}
                 className="min-h-[78px] w-full rounded-[10px] border border-[#e2e8f0] bg-[#f8fafc] px-4 py-3 text-[14px] text-[#0f172a] outline-none read-only:cursor-default"
                 placeholder="Sem observação"
               />
             </div>
 
-            <ValueTable emptyLabel="Nenhum produto registrado." label="Produtos" rows={selectedProducts} />
-            <ValueTable emptyLabel="Nenhuma integração registrada." label="Integrações" rows={selectedIntegrations} />
+            {isEditing ? (
+              <>
+                <CatalogEditor title="Produtos" rows={editState.products} onChange={(products) => updateEditState('products', products)} />
+                <CatalogEditor title="Integrações" rows={editState.integrations} onChange={(integrations) => updateEditState('integrations', integrations)} />
+              </>
+            ) : (
+              <>
+                <ValueTable emptyLabel="Nenhum produto registrado." label="Produtos" rows={selectedProducts} />
+                <ValueTable emptyLabel="Nenhuma integração registrada." label="Integrações" rows={selectedIntegrations} />
+              </>
+            )}
 
             <div className="grid grid-cols-2 gap-4 rounded-[8px] bg-[#0f172a] px-4 py-3 text-white">
               <div>
                 <div className="text-[11px] font-semibold text-[#94a3b8]">Total Setup</div>
-                <div className="text-[18px] font-extrabold">{formatMoney(totalSetup)}</div>
+                <div className="text-[18px] font-extrabold">{formatMoney(isEditing ? editingSetup : totalSetup)}</div>
               </div>
               <div>
                 <div className="text-[11px] font-semibold text-[#94a3b8]">Total Recorrência</div>
-                <div className="text-[18px] font-extrabold">{formatMoney(totalRecurring)}</div>
+                <div className="text-[18px] font-extrabold">{formatMoney(isEditing ? editingRecurring : totalRecurring)}</div>
               </div>
             </div>
 
             <SectionTitle>
               <CheckCircle2 className="size-4 text-[#16a34a]" />
-              Tarefas {selectedTasks.filter((task) => task.done).length}/{selectedTasks.length}
+              Tarefas {isEditing ? [...editState.leadTasks, ...editState.ticketTasks].filter((task) => task.done).length : selectedTasks.filter((task) => task.done).length}/{isEditing ? editState.leadTasks.length + editState.ticketTasks.length : selectedTasks.length}
             </SectionTitle>
-            <div className="space-y-2">
-              {selectedTasks.length ? (
-                selectedTasks.map((task) => (
-                  <div
-                    key={task.id}
-                    className="flex flex-col gap-2 rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2 text-[13px] sm:flex-row sm:items-center sm:justify-between"
-                  >
-                    <label className="flex flex-1 items-center gap-3 text-[#0f172a]">
-                      <input checked={task.done} readOnly type="checkbox" className="size-4 accent-[#2563eb]" />
-                      <span className="font-medium">{task.title}</span>
-                    </label>
-                    <div className="flex items-center gap-4 pl-7 sm:pl-0">
-                      <span className="w-[120px] text-left text-[#64748b]">{task.assignee || '-'}</span>
-                      <span className="w-[90px] text-right text-[#64748b]">{formatDate(task.dueDate)}</span>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="rounded-[8px] border border-dashed border-[#cbd5e1] px-4 py-5 text-center text-[13px] text-[#64748b]">
-                  Nenhuma tarefa registrada.
+            {isEditing ? (
+              <div className="space-y-4">
+                <div>
+                  <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.08em] text-[#64748b]">Tarefas do lead</div>
+                  <LeadTaskEditor tasks={editState.leadTasks} onChange={(leadTasks) => updateEditState('leadTasks', leadTasks)} />
                 </div>
-              )}
-            </div>
+                <div>
+                  <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.08em] text-[#64748b]">Tarefas do ticket</div>
+                  <TicketTaskEditor tasks={editState.ticketTasks} users={users} onChange={(ticketTasks) => updateEditState('ticketTasks', ticketTasks)} />
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {selectedTasks.length ? (
+                  selectedTasks.map((task) => (
+                    <div
+                      key={task.id}
+                      className="flex flex-col gap-2 rounded-[8px] border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2 text-[13px] sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <label className="flex flex-1 items-center gap-3 text-[#0f172a]">
+                        <input checked={task.done} readOnly type="checkbox" className="size-4 accent-[#2563eb]" />
+                        <span className="font-medium">{task.title}</span>
+                      </label>
+                      <div className="flex items-center gap-4 pl-7 sm:pl-0">
+                        <span className="w-[120px] text-left text-[#64748b]">{task.assignee || '-'}</span>
+                        <span className="w-[90px] text-right text-[#64748b]">{formatDate(task.dueDate)}</span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="rounded-[8px] border border-dashed border-[#cbd5e1] px-4 py-5 text-center text-[13px] text-[#64748b]">
+                    Nenhuma tarefa registrada.
+                  </div>
+                )}
+              </div>
+            )}
 
             <SectionTitle>Anexos <span className="text-[11px] font-normal text-[#64748b] ml-1">(clique para adicionar)</span></SectionTitle>
             <div className="flex cursor-pointer items-center justify-center gap-2 rounded-[8px] border border-dashed border-[#cbd5e1] bg-[#f8fafc] px-4 py-4 transition-colors hover:bg-[#fffbeb]">

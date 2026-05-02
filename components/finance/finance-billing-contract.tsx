@@ -286,7 +286,7 @@ export function FinanceBillingContract() {
             className="rounded-[10px] border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none transition-colors focus:border-emerald-500"
           >
             <option value="">Todas as formas</option>
-            {paymentOptions.map((paymentMethod) => (
+            {paymentOptions.filter((paymentMethod): paymentMethod is string => Boolean(paymentMethod)).map((paymentMethod) => (
               <option key={paymentMethod} value={paymentMethod}>
                 {paymentMethod}
               </option>

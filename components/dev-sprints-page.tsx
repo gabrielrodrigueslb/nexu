@@ -212,7 +212,7 @@ export function DevSprintsPage() {
         })}
       </div>
 
-      <ModalShell open={formMode !== null} onClose={() => setFormMode(null)} widthClassName="max-w-[620px]">
+      <ModalShell open={formMode !== null} onClose={() => setFormMode(null)} title="" maxWidthClassName="max-w-[620px]">
         <div className="space-y-4">
           <div className="text-[18px] font-extrabold text-[#0f172a]">
             {formMode === 'edit' ? 'Editar sprint' : 'Nova sprint'}
